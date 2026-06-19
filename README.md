@@ -38,13 +38,14 @@ und nichts lokal zu installieren** – alles geht im Browser über GitHub + Verc
 ## Vollständige Spielerdatenbank einsetzen (optional)
 
 Standardmäßig ist ein kuratierter Demo-Seed (~108 bekannte Spieler) in
-`src/gameData.js` eingebettet. Für den vollen Datensatz:
+`src/players.js` (von der Logik getrennt). Für den vollen Datensatz:
 
-1. In einem **Kaggle-Notebook** (Browser, kein Install) `build_db.py` und
-   `make_game_json.py` laufen lassen – Anleitung dazu hast du separat.
-2. Den Inhalt der erzeugten `players_game.js` kopieren.
-3. In `src/gameData.js` das Array `export const PLAYERS = [ … ];` damit ersetzen
-   (das `export const ` davor stehen lassen).
+1. Das **Kaggle-Notebook** `data-pipeline/kaggle_build.ipynb` laufen lassen
+   (Browser, kein Install) – komplette Anleitung in `data-pipeline/README.md`.
+2. Die erzeugte `players_game.js` herunterladen.
+3. In `src/players.js` das Array `export const PLAYERS = [ … ];` durch den Inhalt
+   ersetzen (bzw. die ganze Datei austauschen – das Notebook schreibt bereits
+   den `export const`-Wrapper).
 4. Änderung zu GitHub committen → Vercel deployt automatisch neu.
 
 ---
