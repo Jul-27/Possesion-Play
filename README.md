@@ -35,17 +35,17 @@ und nichts lokal zu installieren** – alles geht im Browser über GitHub + Verc
 
 ---
 
-## Vollständige Spielerdatenbank einsetzen (optional)
+## Spielerdatenbank aktualisieren
 
-Standardmäßig ist ein kuratierter Demo-Seed (~108 bekannte Spieler) in
-`src/players.js` (von der Logik getrennt). Für den vollen Datensatz:
+Die Spielerdaten liegen in `src/players.js` (von der Logik getrennt) und stammen
+aus dem Transfermarkt-Dataset, erzeugt über die Pipeline in `data-pipeline/`.
+Zum Neu-Erzeugen / Aktualisieren:
 
 1. Das **Kaggle-Notebook** `data-pipeline/kaggle_build.ipynb` laufen lassen
    (Browser, kein Install) – komplette Anleitung in `data-pipeline/README.md`.
 2. Die erzeugte `players_game.js` herunterladen.
-3. In `src/players.js` das Array `export const PLAYERS = [ … ];` durch den Inhalt
-   ersetzen (bzw. die ganze Datei austauschen – das Notebook schreibt bereits
-   den `export const`-Wrapper).
+3. `src/players.js` durch den Inhalt ersetzen (das Notebook schreibt bereits den
+   `export const`-Wrapper, daher 1:1-Tausch).
 4. Änderung zu GitHub committen → Vercel deployt automatisch neu.
 
 ---
