@@ -9,24 +9,30 @@ Kaggle (kein lokales Setup, kein Admin-Recht nötig).
 | Datei | Zweck |
 |-------|-------|
 | `kaggle_build.ipynb` | **Empfohlen.** Lauffähiges Kaggle-Notebook, das die Logik beider Skripte nacheinander ausführt und `players_game.js` schreibt. |
-| `build_db.py` | Lokales Original-Skript: filtert das Dataset auf die Top-5-Ligen seit 2000 und schreibt Zwischen-CSVs nach `./out`. |
-| `make_game_json.py` | Lokales Original-Skript: mappt Spieler auf die ~40 Spiel-Vereine und schreibt `./out/players_game.js`. |
+| `build_db.py` | Lokales Skript: wählt Spieler über Top-5-Einsätze seit 2000 aus und erfasst deren **volle** Vereinshistorie (auch Portugal/NL/Pokale). Schreibt Zwischen-CSVs nach `./out`. |
+| `make_game_json.py` | Lokales Skript: mappt Spieler auf die 40 Spiel-Vereine und schreibt `./out/players_game.js`. |
 
 Das Notebook ist die browserbasierte Zusammenführung der beiden `.py`-Skripte.
 Die Skripte selbst sind als Referenz / für lokale Läufe enthalten.
+
+Datensatz-Anzeigetitel auf Kaggle: **„Football Data from Transfermarkt"**
+(Slug `davidcariboo/player-scores`, Autor `davidcariboo`) — nicht „Player Scores".
 
 ## Schritt für Schritt (Kaggle, empfohlen)
 
 1. Auf https://www.kaggle.com einloggen → **Create → New Notebook**.
 2. Rechts **Add Input → Datasets** → nach **`davidcariboo/player-scores`** suchen
-   und hinzufügen. Das Dataset mountet unter `/kaggle/input/player-scores/`.
+   und hinzufügen. Das Dataset mountet je nach Kaggle-Version unter
+   `/kaggle/input/player-scores/` **oder** `/kaggle/input/datasets/davidcariboo/player-scores/`.
+   `DATA` in Zelle 1 ist auf letzteren Pfad gesetzt — stimmt der Pfad nicht, mit
+   `os.walk("/kaggle/input")` prüfen und `DATA` entsprechend anpassen.
 3. `kaggle_build.ipynb` hochladen (**File → Upload Notebook**) oder seinen Inhalt
    in ein neues Notebook kopieren.
 4. Oben **Run All**.
-5. **Vereins-Prüfbericht** in der Ausgabe kontrollieren: Jeder Spiel-Verein
-   sollte mindestens einen TM-Namen gematcht haben. Steht irgendwo
-   `⚠️ KEIN TREFFER`, den Teilstring in `GAME_CLUBS` (Zelle 1) anpassen und
-   erneut **Run All**.
+5. **Vereins-Prüfbericht** in der Ausgabe kontrollieren: Jeder der 40 Spiel-Vereine
+   sollte **genau einen, korrekten** TM-Namen matchen. Bei `⚠️ KEIN TREFFER` oder
+   einem falschen/mehrfachen Treffer den Teilstring in `GAME_CLUBS` (Zelle 1)
+   anpassen und erneut **Run All**.
 6. Rechts unter **Output → `/kaggle/working/`** die Datei **`players_game.js`**
    herunterladen.
 
@@ -64,12 +70,11 @@ Falls du Python lokal hast und das Dataset selbst herunterlädst:
 pip install kaggle pandas
 kaggle datasets download -d davidcariboo/player-scores -p ./data --unzip
 python build_db.py            # -> ./out/*.csv
-python make_game_json.py      # -> ./out/players_game.js  (schreibt "const PLAYERS")
+python make_game_json.py      # -> ./out/players_game.js  (schreibt "export const PLAYERS")
 ```
 
-Hinweis: Die lokalen Skripte schreiben `const PLAYERS = …`; für `src/players.js`
-muss daraus `export const PLAYERS = …` werden (das Notebook macht das bereits
-automatisch).
+Sowohl Notebook als auch lokales Skript schreiben `export const PLAYERS = …`,
+sodass `players_game.js` 1:1 nach `src/players.js` übernommen werden kann.
 
 ## Caveats (aus den Skripten)
 

@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
 """
-make_game_json.py – Erzeugt das eingebettete PLAYERS-Array für possession_play.jsx
+make_game_json.py – Erzeugt das PLAYERS-Array für src/players.js
                     aus dem Output von build_db.py (./out/*.csv).
 
-Logik: Für jeden Spieler werden seine Vereins-Spells auf die ~45 SPIEL-Vereinskeys
+Logik: Für jeden Spieler werden seine Vereins-Spells auf die ~40 SPIEL-Vereinskeys
 gemappt (FCB, BVB, RMA, …). Nur Spieler mit >=1 Treffer landen im Spiel.
 Nation = Staatsbürgerschaft (Proxy fürs Nationalteam), Jahr = Geburtsjahr.
 
     python make_game_json.py          # -> ./out/players_game.js  (zum Einfügen)
 
-WICHTIG: Die TM-Vereinsnamen unten sind als normalisierte Teilstrings hinterlegt.
-Falls dein Dataset einen Verein anders schreibt, hier den String anpassen.
+Ausgabe beginnt mit "export const PLAYERS = [ … ];", sodass der Inhalt 1:1 nach
+src/players.js übernommen werden kann.
+
+WICHTIG: Die TM-Vereinsnamen unten sind als normalisierte Teilstrings hinterlegt
+und gegen die echte Klubliste des Datasets geprüft. Schreibt das Dataset einen
+Verein anders, hier den String anpassen und den Prüfbericht erneut kontrollieren.
 """
 from pathlib import Path
 import json, unicodedata
@@ -23,19 +27,19 @@ def norm(s: str) -> str:
     return s.lower().strip()
 
 # Spielkey -> Teilstring, der im TM-Vereinsnamen vorkommt
+# (gegen die echte davidcariboo/player-scores-Klubliste verifiziert)
 GAME_CLUBS = {
     "FCB": "bayern", "BVB": "dortmund", "RBL": "leipzig", "B04": "leverkusen",
     "SGE": "frankfurt", "BMG": "gladbach", "VFB": "stuttgart", "WOB": "wolfsburg", "SVW": "bremen",
     "MCI": "manchester city", "MUN": "manchester united", "LIV": "liverpool", "CHE": "chelsea",
-    "ARS": "arsenal", "TOT": "tottenham", "NEW": "newcastle", "EVE": "everton", "AVL": "aston villa",
-    "BAR": "barcelona", "RMA": "real madrid", "ATM": "atletico", "SEV": "sevilla",
+    "ARS": "arsenal football club", "TOT": "tottenham", "NEW": "newcastle", "EVE": "everton", "AVL": "aston villa",
+    "BAR": "futbol club barcelona", "RMA": "real madrid", "ATM": "atletico de madrid", "SEV": "sevilla",
     "VAL": "valencia", "VIL": "villarreal",
-    "JUV": "juventus", "MIL": "ac milan", "INT": "inter", "NAP": "napoli", "ROM": "roma", "LAZ": "lazio",
-    "PSG": "paris", "ASM": "monaco", "OM": "marseille", "OL": "lyon", "LIL": "lille",
-    "POR": "porto", "SLB": "benfica", "SCP": "sporting cp",
-    "AJA": "ajax", "PSV": "psv", "FEY": "feyenoord",
+    "JUV": "juventus", "MIL": "calcio milan", "INT": "internazionale", "NAP": "napoli", "ROM": "roma", "LAZ": "lazio",
+    "PSG": "saint-germain", "ASM": "monaco", "OM": "marseille", "OL": "lyon", "LIL": "lille",
+    "POR": "clube do porto", "SLB": "benfica", "SCP": "clube de portugal",
+    "AJA": "ajax", "PSV": "philips", "FEY": "feyenoord",
 }
-# Inter/Mailand sauber von Inter Miami trennen etc. ist Sache der TM-Namen.
 
 NATION_MAP = {
     "france": "FRA", "germany": "GER", "spain": "ESP", "italy": "ITA", "netherlands": "NED",
@@ -54,8 +58,7 @@ def club_key_for(tm_name: str):
     return None
 
 
-# True  = nur Spieler, die für einen der ~45 Spiel-Vereine gespielt haben
-#         (empfohlen: kompaktes JSON, jeder Spieler kann mind. Vereinsfelder erfüllen)
+# True  = nur Spieler, die für einen der ~40 Spiel-Vereine gespielt haben
 # False = ALLE Spieler aus der DB (auch ohne Spiel-Verein -> clubs:[]; großes JSON)
 ONLY_GAME_CLUBS = True
 
@@ -111,10 +114,11 @@ def main():
 
     out.sort(key=lambda r: r["n"])
     body = ",\n  ".join(json.dumps(r, ensure_ascii=False) for r in out)
-    js = "const PLAYERS = [\n  " + body + "\n];\n"
+    # export const, damit der Inhalt 1:1 nach src/players.js übernommen werden kann
+    js = "export const PLAYERS = [\n  " + body + "\n];\n"
     (OUT / "players_game.js").write_text(js, encoding="utf-8")
     print(f"OK  {len(out)} Spieler -> {OUT}/players_game.js  "
-          f"(in possession_play.jsx das PLAYERS-Array ersetzen)")
+          f"(Inhalt nach src/players.js übernehmen)")
 
 
 if __name__ == "__main__":
