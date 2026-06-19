@@ -64,22 +64,30 @@ ONLY_GAME_CLUBS = True
 
 
 def main():
-    players = pd.read_csv(OUT / "players.csv")
-    clubs   = pd.read_csv(OUT / "clubs.csv")
-    spells  = pd.read_csv(OUT / "player_club_spells.csv")
+    players    = pd.read_csv(OUT / "players.csv")
+    clubs      = pd.read_csv(OUT / "clubs.csv")
+    spells     = pd.read_csv(OUT / "player_club_spells.csv")
+    transfers  = pd.read_csv(OUT / "player_transfers.csv")  # auch Stationen vor ~2012
+    tr_name_cols = [c for c in ("from_club_name", "to_club_name") if c in transfers.columns]
 
-    # tm_club_id -> Spielkey (nur für gemappte Vereine)
+    # tm_club_id -> Spielkey (aus den Einsatz-Vereinen)
     club_key = {}
-    matched_names = {}  # Spielkey -> Menge der TM-Namen, die gematcht haben (Prüfbericht)
     for _, c in clubs.iterrows():
         k = club_key_for(c["name"])
         if k:
             club_key[c["tm_club_id"]] = k
-            matched_names.setdefault(k, set()).add(c["name"])
 
-    # PRÜFBERICHT: zeigt je Spielkey, welche TM-Vereinsnamen zugeordnet wurden.
-    # Hier kontrollieren, ob ein Verein falsch/gar nicht gematcht wurde,
-    # und ggf. den Teilstring in GAME_CLUBS anpassen.
+    # PRÜFBERICHT über ALLE zu mappenden Vereinsnamen (Einsätze + Transfers),
+    # damit auch Transfer-Schreibweisen kontrolliert werden.
+    all_names = set(clubs["name"].dropna())
+    for col in tr_name_cols:
+        all_names |= set(transfers[col].dropna())
+    matched_names = {}
+    for nm in all_names:
+        k = club_key_for(nm)
+        if k:
+            matched_names.setdefault(k, set()).add(nm)
+
     print("── Vereins-Zuordnung (kontrollieren!) ──")
     for k in GAME_CLUBS:
         names = sorted(matched_names.get(k, []))
@@ -87,12 +95,17 @@ def main():
         print(f"  {k}: {', '.join(names) if names else '—'}{flag}")
     print("────────────────────────────────────────")
 
-    # Spieler -> Set der Spielkeys
+    # Spieler -> Set der Spielkeys: (a) aus Einsätzen, (b) aus Transferhistorie
     pclubs = {}
     for _, s in spells.iterrows():
         k = club_key.get(s["tm_club_id"])
         if k:
             pclubs.setdefault(s["tm_player_id"], set()).add(k)
+    for _, t in transfers.iterrows():
+        for col in tr_name_cols:
+            k = club_key_for(t[col])
+            if k:
+                pclubs.setdefault(t["tm_player_id"], set()).add(k)
 
     out = []
     for _, p in players.iterrows():
