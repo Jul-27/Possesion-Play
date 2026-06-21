@@ -83,6 +83,18 @@ export const SPECIALS = [
   { key: "OLD", label: "VOR 1990",  icon: "⏳", name: "Geboren vor 1990",  c1: "#94a3b8", c2: "#475569", test: (p) => p.by < 1990 },
 ].map((s) => ({ ...s, type: "spec" }));
 
+// Liga-Felder: erfüllt, wenn der Spieler einen Verein dieser Liga hat.
+export const LEAGUES = [
+  { key: "BL", label: "BL", name: "Bundesliga",     c1: "#D3010C", c2: "#1a1a1a" },
+  { key: "PL", label: "PL", name: "Premier League", c1: "#3D195B", c2: "#1f0e36" },
+  { key: "LL", label: "LL", name: "La Liga",        c1: "#E03A3E", c2: "#1f1f3c" },
+  { key: "SA", label: "SA", name: "Serie A",        c1: "#0A66B0", c2: "#0a2a4a" },
+  { key: "L1", label: "L1", name: "Ligue 1",        c1: "#091C3E", c2: "#1d6f6f" },
+].map((l) => ({ ...l, type: "league" }));
+
+// Vereins-Key -> Liga-Code (für das Liga-Matching)
+const CLUB_LG = Object.fromEntries(CLUBS.map((c) => [c.key, c.lg]));
+
 /* Spielerdaten sind nach ./players.js ausgelagert, damit der Voll-Datensatz
    (per Kaggle erzeugt, siehe data-pipeline/) durch einen Ein-Datei-Tausch
    eingesetzt werden kann. Re-Export hier hält bestehende Imports stabil. */
@@ -96,6 +108,7 @@ export function playerMatchesHex(player, def) {
   if (def.type === "club") return (player.clubs || []).includes(def.key);
   if (def.type === "nat") return (player.nat || []).includes(def.key);
   if (def.type === "spec") return def.test ? def.test(player) : false;
+  if (def.type === "league") return (player.clubs || []).some((ck) => CLUB_LG[ck] === def.key);
   return false;
 }
 
@@ -136,6 +149,7 @@ const DEF_BY_KEY = {
   club: Object.fromEntries(CLUBS.map((c) => [c.key, c])),
   nat: Object.fromEntries(NATIONS.map((n) => [n.key, n])),
   spec: Object.fromEntries(SPECIALS.map((s) => [s.key, s])),
+  league: Object.fromEntries(LEAGUES.map((l) => [l.key, l])),
 };
 export const lookupDef = (type, key) => DEF_BY_KEY[type]?.[key];
 
