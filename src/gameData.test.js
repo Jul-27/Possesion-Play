@@ -67,3 +67,15 @@ test("playerMatchesHex: honour matcht über player.t", () => {
   assert.equal(playerMatchesHex({ t: [] }, wm), false);
   assert.equal(playerMatchesHex({}, cl), false);
 });
+
+test("buildBoardSerial: 31 Felder mit 1–3 Liga- und 2–4 Honour-Feldern", () => {
+  for (let i = 0; i < 300; i++) {
+    const board = buildBoardSerial();
+    assert.equal(board.length, 31);
+    const leagues = board.filter((c) => c.t === "league").length;
+    const honours = board.filter((c) => c.t === "honour").length;
+    assert.ok(leagues >= 1 && leagues <= 3, `Liga-Anzahl: ${leagues}`);
+    assert.ok(honours >= 2 && honours <= 4, `Honour-Anzahl: ${honours}`);
+    for (const c of board) assert.ok(lookupDef(c.t, c.k), `kein def für ${c.t}/${c.k}`);
+  }
+});
