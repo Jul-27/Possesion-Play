@@ -17,7 +17,7 @@ und gegen die echte Klubliste des Datasets geprüft. Schreibt das Dataset einen
 Verein anders, hier den String anpassen und den Prüfbericht erneut kontrollieren.
 """
 from pathlib import Path
-import json, unicodedata
+import json, re, unicodedata
 import pandas as pd
 
 OUT = Path("./out")
@@ -26,8 +26,9 @@ def norm(s: str) -> str:
     s = unicodedata.normalize("NFD", str(s)).encode("ascii", "ignore").decode()
     return s.lower().strip()
 
-# Spielkey -> Teilstring, der im TM-Vereinsnamen vorkommt
-# (gegen die echte davidcariboo/player-scores-Klubliste verifiziert)
+# Spielkey -> Teilstring im (offiziellen) TM-Vereinsnamen, gegen die echte
+# Klubliste verifiziert. LIL/OL/ROM bewusst spezifisch (Lillestrøm/
+# Lyon-Duchère/Cisco Roma ausschließen).
 GAME_CLUBS = {
     "FCB": "bayern", "BVB": "dortmund", "RBL": "leipzig", "B04": "leverkusen",
     "SGE": "frankfurt", "BMG": "gladbach", "VFB": "stuttgart", "WOB": "wolfsburg", "SVW": "bremen",
@@ -35,8 +36,8 @@ GAME_CLUBS = {
     "ARS": "arsenal football club", "TOT": "tottenham", "NEW": "newcastle", "EVE": "everton", "AVL": "aston villa",
     "BAR": "futbol club barcelona", "RMA": "real madrid", "ATM": "atletico de madrid", "SEV": "sevilla",
     "VAL": "valencia", "VIL": "villarreal",
-    "JUV": "juventus", "MIL": "calcio milan", "INT": "internazionale", "NAP": "napoli", "ROM": "roma", "LAZ": "lazio",
-    "PSG": "saint-germain", "ASM": "monaco", "OM": "marseille", "OL": "lyon", "LIL": "lille",
+    "JUV": "juventus", "MIL": "calcio milan", "INT": "internazionale", "NAP": "napoli", "ROM": "sportiva roma", "LAZ": "lazio",
+    "PSG": "saint-germain", "ASM": "monaco", "OM": "marseille", "OL": "olympique lyon", "LIL": "lille olympique",
     "POR": "clube do porto", "SLB": "benfica", "SCP": "clube de portugal",
     "AJA": "ajax", "PSV": "philips", "FEY": "feyenoord",
 }
@@ -49,8 +50,15 @@ NATION_MAP = {
     "united states": "USA", "usa": "USA",
 }
 
+# Jugend-/Reserve-/B-Team-Erkennung (ganze Tokens im normalisierten Namen)
+_YOUTH = re.compile(r"(?:^| )(u\d{1,2}|sub-?\d{1,2}|ii|iii|b|c|res|reserves?|youth|yth|jugend|castilla|mestalla|amateure?)(?:$| )")
+def is_youth(name) -> bool:
+    return bool(_YOUTH.search(norm(name)))
 
-def club_key_for(tm_name: str):
+
+def club_key_for(tm_name):
+    if is_youth(tm_name):
+        return None
     n = norm(tm_name)
     for key, needle in GAME_CLUBS.items():
         if needle in n:
@@ -68,7 +76,7 @@ def main():
     clubs      = pd.read_csv(OUT / "clubs.csv")
     spells     = pd.read_csv(OUT / "player_club_spells.csv")
     transfers  = pd.read_csv(OUT / "player_transfers.csv")  # auch Stationen vor ~2012
-    tr_name_cols = [c for c in ("from_club_name", "to_club_name") if c in transfers.columns]
+    tr_name_cols = [c for c in ("from_name", "to_name") if c in transfers.columns]
 
     # tm_club_id -> Spielkey (aus den Einsatz-Vereinen)
     club_key = {}
@@ -77,8 +85,8 @@ def main():
         if k:
             club_key[c["tm_club_id"]] = k
 
-    # PRÜFBERICHT über ALLE zu mappenden Vereinsnamen (Einsätze + Transfers),
-    # damit auch Transfer-Schreibweisen kontrolliert werden.
+    # PRÜFBERICHT über ALLE zu mappenden Vereinsnamen (Einsätze + Transfers,
+    # ohne Jugend/Reserve), damit auch Transfer-Namen kontrolliert werden.
     all_names = set(clubs["name"].dropna())
     for col in tr_name_cols:
         all_names |= set(transfers[col].dropna())

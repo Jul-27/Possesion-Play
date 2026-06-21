@@ -97,12 +97,15 @@ def main() -> None:
                       "season_start", "season_end"]
     spells.to_csv(OUT / "player_club_spells.csv", index=False)
 
-    # 8) player_transfers.csv – Transferhistorie (von-/zu-Vereinsnamen).
-    #    Deckt auch Stationen VOR ~2012 ab, die in appearances fehlen.
+    # 8) player_transfers.csv – Transferhistorie, deckt auch Stationen VOR ~2012
+    #    ab. Klub-IDs werden auf den offiziellen Namen (clubs.name) aufgelöst –
+    #    sauberer als die teils abgekürzten *_club_name-Spalten.
     transfers = pd.read_csv(DATA / "transfers.csv")
-    name_cols = [c for c in ["from_club_name", "to_club_name"] if c in transfers.columns]
-    tr = transfers[transfers["player_id"].isin(pids)][["player_id"] + name_cols].copy()
-    tr = tr.rename(columns={"player_id": "tm_player_id"})
+    id2name = dict(zip(clubs["club_id"], clubs["name"]))
+    tr = transfers[transfers["player_id"].isin(pids)].copy()
+    tr["from_name"] = tr["from_club_id"].map(id2name)
+    tr["to_name"]   = tr["to_club_id"].map(id2name)
+    tr = tr[["player_id", "from_name", "to_name"]].rename(columns={"player_id": "tm_player_id"})
     tr.to_csv(OUT / "player_transfers.csv", index=False)
 
     print(f"OK  players={len(pl):>6}  clubs={len(cl):>4}  "
