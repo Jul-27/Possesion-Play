@@ -39,3 +39,43 @@ test("buildBoardSerial: 31 Felder mit 1–3 Liga-Feldern", () => {
     for (const cell of cells) assert.ok(cell.def, "hydratisierte Zelle ohne def");
   }
 });
+
+import { HONOURS } from "./gameData.js";
+
+test("HONOURS enthält 11 Honours als type 'honour'", () => {
+  assert.equal(HONOURS.length, 11);
+  assert.deepEqual(
+    HONOURS.map((h) => h.key).sort(),
+    ["CDR", "CIT", "CL", "DFB", "FAC", "MBL", "ML1", "MLL", "MPL", "MSA", "WM"]
+  );
+  for (const h of HONOURS) {
+    assert.equal(h.type, "honour");
+    assert.ok(h.name && h.label && h.icon && h.c1 && h.c2);
+  }
+});
+
+test("lookupDef löst Honour-Keys auf", () => {
+  assert.equal(lookupDef("honour", "CL").name, "Champions-League-Sieger");
+  assert.equal(lookupDef("honour", "WM").name, "Weltmeister");
+});
+
+test("playerMatchesHex: honour matcht über player.t", () => {
+  const cl = lookupDef("honour", "CL");
+  const wm = lookupDef("honour", "WM");
+  assert.equal(playerMatchesHex({ t: ["CL", "MBL"] }, cl), true);
+  assert.equal(playerMatchesHex({ t: ["MBL"] }, cl), false);
+  assert.equal(playerMatchesHex({ t: [] }, wm), false);
+  assert.equal(playerMatchesHex({}, cl), false);
+});
+
+test("buildBoardSerial: 31 Felder mit 1–3 Liga- und 2–4 Honour-Feldern", () => {
+  for (let i = 0; i < 300; i++) {
+    const board = buildBoardSerial();
+    assert.equal(board.length, 31);
+    const leagues = board.filter((c) => c.t === "league").length;
+    const honours = board.filter((c) => c.t === "honour").length;
+    assert.ok(leagues >= 1 && leagues <= 3, `Liga-Anzahl: ${leagues}`);
+    assert.ok(honours >= 2 && honours <= 4, `Honour-Anzahl: ${honours}`);
+    for (const c of board) assert.ok(lookupDef(c.t, c.k), `kein def für ${c.t}/${c.k}`);
+  }
+});

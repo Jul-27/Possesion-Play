@@ -19,8 +19,11 @@ Verein anders, hier den String anpassen und den Prüfbericht erneut kontrolliere
 from pathlib import Path
 import json, re, unicodedata
 import pandas as pd
+from honours import (detect_competitions, league_champion_by_season,
+                     cup_winner_by_season, squad_player_ids, WC_SQUADS)
 
-OUT = Path("./out")
+OUT  = Path("./out")
+DATA = Path("./data")  # für Honours: games/competitions/appearances
 
 def norm(s: str) -> str:
     s = unicodedata.normalize("NFD", str(s)).encode("ascii", "ignore").decode()
@@ -115,6 +118,39 @@ def main():
             if k:
                 pclubs.setdefault(t["tm_player_id"], set()).add(k)
 
+    # ── Honours (Titel je Spieler) -> player_titles {tm_player_id: set(keys)} ──
+    games_h = pd.read_csv(DATA / "games.csv")
+    comps_h = pd.read_csv(DATA / "competitions.csv")
+    apps_h  = pd.read_csv(DATA / "appearances.csv")
+    if "season" not in apps_h.columns:
+        apps_h = apps_h.merge(games_h[["game_id", "season"]], on="game_id", how="left")
+    comp_ids = detect_competitions(comps_h)
+    player_titles = {}
+    def _add(pid, key): player_titles.setdefault(pid, set()).add(key)
+    for key in ["MBL", "MPL", "MLL", "MSA", "ML1"]:
+        cid = comp_ids.get(key)
+        if not cid:
+            continue
+        for season, club in league_champion_by_season(games_h, cid).items():
+            for pid in squad_player_ids(apps_h, cid, club, season):
+                _add(pid, key)
+    for key in ["DFB", "FAC", "CDR", "CIT", "CL"]:
+        cid = comp_ids.get(key)
+        if not cid:
+            continue
+        winners, _ties = cup_winner_by_season(games_h, cid)
+        for season, club in winners.items():
+            for pid in squad_player_ids(apps_h, cid, club, season):
+                _add(pid, key)
+    name2id = {}
+    for _, p in players.iterrows():
+        name2id.setdefault(norm(p["name"]), p["tm_player_id"])
+    for names in WC_SQUADS.values():
+        for nm in names:
+            pid = name2id.get(norm(nm))
+            if pid is not None:
+                _add(pid, "WM")
+
     out = []
     for _, p in players.iterrows():
         keys = sorted(pclubs.get(p["tm_player_id"], []))
@@ -125,13 +161,17 @@ def main():
             by = int(str(p["date_of_birth"])[:4])
         except Exception:
             continue
-        out.append({
+        rec = {
             "n": p["name"],
             "ln": p["last_name"] if isinstance(p["last_name"], str) and p["last_name"].strip() else p["name"],
             "by": by,
             "nat": [nat] if nat else [],
             "clubs": keys,
-        })
+        }
+        titles = sorted(player_titles.get(p["tm_player_id"], []))
+        if titles:
+            rec["t"] = titles
+        out.append(rec)
 
     out.sort(key=lambda r: r["n"])
     body = ",\n  ".join(json.dumps(r, ensure_ascii=False) for r in out)

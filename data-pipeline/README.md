@@ -10,7 +10,9 @@ Kaggle (kein lokales Setup, kein Admin-Recht nötig).
 |-------|-------|
 | `kaggle_build.ipynb` | **Empfohlen.** Lauffähiges Kaggle-Notebook, das die Logik beider Skripte nacheinander ausführt und `players_game.js` schreibt. |
 | `build_db.py` | Lokales Skript: wählt Spieler über Top-5-Einsätze seit 2000 aus und erfasst deren **volle** Vereinshistorie aus Einsätzen (auch Portugal/NL/Pokale) **plus** Transfers (`player_transfers.csv`, deckt auch Stationen vor ~2012 ab). Schreibt Zwischen-CSVs nach `./out`. |
-| `make_game_json.py` | Lokales Skript: mappt Spieler (Einsätze + Transfers) auf die 40 Spiel-Vereine und schreibt `./out/players_game.js`. |
+| `make_game_json.py` | Lokales Skript: mappt Spieler (Einsätze + Transfers) auf die 40 Spiel-Vereine, ergänzt Titel/Honours (Feld `t`) und schreibt `./out/players_game.js`. |
+| `honours.py` | Honours-Logik: Meister aus Punkten, Pokal/CL-Sieger aus dem Finale, Kader aus Einsätzen, kuratierte WM-Siegerkader. |
+| `honours_probe.ipynb` | Einmalige Kaggle-Probe zur Wettbewerbs-/Finals-Struktur. |
 
 Das Notebook ist die browserbasierte Zusammenführung der beiden `.py`-Skripte.
 Die Skripte selbst sind als Referenz / für lokale Läufe enthalten.
@@ -75,6 +77,17 @@ python make_game_json.py      # -> ./out/players_game.js  (schreibt "export cons
 
 Sowohl Notebook als auch lokales Skript schreiben `export const PLAYERS = …`,
 sodass `players_game.js` 1:1 nach `src/players.js` übernommen werden kann.
+
+## Titel/Honours (Feld `t`)
+
+Das Notebook berechnet zusätzlich pro Spieler die gewonnenen Titel (Feld `t`):
+Meister (MBL/MPL/MLL/MSA/ML1) aus der Punktetabelle, Pokal-/CL-Sieger
+(DFB/FAC/CDR/CIT/CL) aus dem Finalspiel (`round == "Final"`; Elfmeter sind in den
+Toren eingerechnet), Kader-Zuordnung streng über ≥1 Einsatz im Wettbewerb für den
+Sieger in der Saison. Weltmeister (WM) über kuratierte Siegerkader 2002–2022
+(Namensabgleich). Coupe de France ist nicht im Datensatz und entfällt.
+Honours decken praktisch ~2012+ ab (Finals/Einsätze). Prüfberichte im Notebook
+listen Meister/Sieger je Saison sowie die WM-Trefferquote.
 
 ## Vereinszugehörigkeiten: zwei Quellen
 
