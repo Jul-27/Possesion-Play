@@ -34,5 +34,8 @@ test("buildBoardSerial: 31 Felder mit 1–3 Liga-Feldern", () => {
     const leagues = board.filter((c) => c.t === "league").length;
     assert.ok(leagues >= 1 && leagues <= 3, `unerwartete Liga-Anzahl: ${leagues}`);
     for (const c of board) assert.ok(lookupDef(c.t, c.k), `kein def für ${c.t}/${c.k}`);
+    const cells = hydrateBoard(board);
+    assert.equal(cells.length, 31);
+    for (const cell of cells) assert.ok(cell.def, "hydratisierte Zelle ohne def");
   }
 });
