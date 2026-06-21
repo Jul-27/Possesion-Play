@@ -155,11 +155,13 @@ export const lookupDef = (type, key) => DEF_BY_KEY[type]?.[key];
 
 // kompakte, serialisierbare Form: pro Feld nur { t: type, k: key }
 export function buildBoardSerial() {
+  const nLeague = 1 + Math.floor(Math.random() * 3); // 1, 2 oder 3
+  const leagues = pick(LEAGUES, nLeague);
   const specials = pick(SPECIALS, 3);
   const blClubs = pick(CLUBS.filter((c) => c.lg === "BL"), 4);
   const nations = pick(NATIONS, 6);
-  const rest = pick(CLUBS.filter((c) => !blClubs.includes(c)), 31 - 3 - 4 - 6);
-  const chosen = shuffle([...specials, ...blClubs, ...nations, ...rest]);
+  const rest = pick(CLUBS.filter((c) => !blClubs.includes(c)), 31 - 3 - 4 - 6 - nLeague);
+  const chosen = shuffle([...specials, ...blClubs, ...nations, ...rest, ...leagues]);
   return chosen.map((d) => ({ t: d.type, k: d.key }));
 }
 

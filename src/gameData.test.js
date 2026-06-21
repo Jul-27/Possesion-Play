@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { LEAGUES, playerMatchesHex, lookupDef } from "./gameData.js";
+import { LEAGUES, playerMatchesHex, lookupDef, buildBoardSerial, hydrateBoard } from "./gameData.js";
 
 test("LEAGUES enthält die 5 Top-Ligen als type 'league'", () => {
   assert.equal(LEAGUES.length, 5);
@@ -25,4 +25,14 @@ test("playerMatchesHex: league matcht über die Liga der Vereine", () => {
   assert.equal(playerMatchesHex({ clubs: ["BAR"] }, ll), true);
   assert.equal(playerMatchesHex({ clubs: [] }, bl), false);
   assert.equal(playerMatchesHex({ clubs: ["UNBEKANNT"] }, bl), false);
+});
+
+test("buildBoardSerial: 31 Felder mit 1–3 Liga-Feldern", () => {
+  for (let i = 0; i < 200; i++) {
+    const board = buildBoardSerial();
+    assert.equal(board.length, 31);
+    const leagues = board.filter((c) => c.t === "league").length;
+    assert.ok(leagues >= 1 && leagues <= 3, `unerwartete Liga-Anzahl: ${leagues}`);
+    for (const c of board) assert.ok(lookupDef(c.t, c.k), `kein def für ${c.t}/${c.k}`);
+  }
 });
