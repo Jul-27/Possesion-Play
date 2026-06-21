@@ -9,8 +9,8 @@ Kaggle (kein lokales Setup, kein Admin-Recht nötig).
 | Datei | Zweck |
 |-------|-------|
 | `kaggle_build.ipynb` | **Empfohlen.** Lauffähiges Kaggle-Notebook, das die Logik beider Skripte nacheinander ausführt und `players_game.js` schreibt. |
-| `build_db.py` | Lokales Skript: wählt Spieler über Top-5-Einsätze seit 2000 aus und erfasst deren **volle** Vereinshistorie (auch Portugal/NL/Pokale). Schreibt Zwischen-CSVs nach `./out`. |
-| `make_game_json.py` | Lokales Skript: mappt Spieler auf die 40 Spiel-Vereine und schreibt `./out/players_game.js`. |
+| `build_db.py` | Lokales Skript: wählt Spieler über Top-5-Einsätze seit 2000 aus und erfasst deren **volle** Vereinshistorie aus Einsätzen (auch Portugal/NL/Pokale) **plus** Transfers (`player_transfers.csv`, deckt auch Stationen vor ~2012 ab). Schreibt Zwischen-CSVs nach `./out`. |
+| `make_game_json.py` | Lokales Skript: mappt Spieler (Einsätze + Transfers) auf die 40 Spiel-Vereine und schreibt `./out/players_game.js`. |
 
 Das Notebook ist die browserbasierte Zusammenführung der beiden `.py`-Skripte.
 Die Skripte selbst sind als Referenz / für lokale Läufe enthalten.
@@ -76,10 +76,17 @@ python make_game_json.py      # -> ./out/players_game.js  (schreibt "export cons
 Sowohl Notebook als auch lokales Skript schreiben `export const PLAYERS = …`,
 sodass `players_game.js` 1:1 nach `src/players.js` übernommen werden kann.
 
-## Caveats (aus den Skripten)
+## Vereinszugehörigkeiten: zwei Quellen
 
-- Einsatz-Daten auf Spiel-Ebene reichen i.d.R. nur ~2012 zurück, nicht 2000.
-  Für ältere Vereinszugehörigkeiten müsste Transferhistorie ergänzt werden.
+- **Einsätze** (`appearances.csv`): präzise, reichen aber nur ~2012 zurück.
+- **Transferhistorie** (`transfers.csv`): ergänzt Stationen auch **vor 2012**
+  über die von-/zu-Vereinsnamen der Transfers.
+
+## Caveats
+
+- Auch mit der Transferhistorie sind sehr alte / Jugend- / Leihstationen nicht
+  garantiert lückenlos.
 - „seit 2000" bedeutet `games.season >= 2000`.
-- Die TM-Vereinsnamen sind als normalisierte Teilstrings hinterlegt. Schreibt das
-  Dataset einen Verein anders, den Teilstring in `GAME_CLUBS` anpassen.
+- Die TM-Vereinsnamen sind als normalisierte Teilstrings in `GAME_CLUBS`
+  hinterlegt. Der Prüfbericht deckt jetzt Einsatz- **und** Transfer-Namen ab;
+  bei Abweichungen den Teilstring anpassen.

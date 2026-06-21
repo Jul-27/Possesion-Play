@@ -10,7 +10,8 @@ Quelle (einmalig herunterladen, braucht Kaggle-Account + API-Token):
 Danach:
     python build_db.py
 
-Output (-> ./out): leagues.csv, clubs.csv, players.csv, player_club_spells.csv
+Output (-> ./out): leagues.csv, clubs.csv, players.csv, player_club_spells.csv,
+                   player_transfers.csv
 
 Auswahl-Logik:
  * Spieler-AUSWAHL: jeder Spieler mit >=1 Einsatz in einer Top-5-Liga seit 2000
@@ -96,8 +97,19 @@ def main() -> None:
                       "season_start", "season_end"]
     spells.to_csv(OUT / "player_club_spells.csv", index=False)
 
+    # 8) player_transfers.csv – Transferhistorie, deckt auch Stationen VOR ~2012
+    #    ab. Klub-IDs werden auf den offiziellen Namen (clubs.name) aufgelöst –
+    #    sauberer als die teils abgekürzten *_club_name-Spalten.
+    transfers = pd.read_csv(DATA / "transfers.csv")
+    id2name = dict(zip(clubs["club_id"], clubs["name"]))
+    tr = transfers[transfers["player_id"].isin(pids)].copy()
+    tr["from_name"] = tr["from_club_id"].map(id2name)
+    tr["to_name"]   = tr["to_club_id"].map(id2name)
+    tr = tr[["player_id", "from_name", "to_name"]].rename(columns={"player_id": "tm_player_id"})
+    tr.to_csv(OUT / "player_transfers.csv", index=False)
+
     print(f"OK  players={len(pl):>6}  clubs={len(cl):>4}  "
-          f"spells={len(spells):>6}  -> {OUT}/")
+          f"spells={len(spells):>6}  transfers={len(tr):>6}  -> {OUT}/")
 
 
 if __name__ == "__main__":
