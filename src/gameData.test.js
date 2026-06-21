@@ -42,11 +42,11 @@ test("buildBoardSerial: 31 Felder mit 1–3 Liga-Feldern", () => {
 
 import { HONOURS } from "./gameData.js";
 
-test("HONOURS enthält 12 Honours als type 'honour'", () => {
-  assert.equal(HONOURS.length, 12);
+test("HONOURS enthält 11 Honours als type 'honour'", () => {
+  assert.equal(HONOURS.length, 11);
   assert.deepEqual(
     HONOURS.map((h) => h.key).sort(),
-    ["CDF", "CDR", "CIT", "CL", "DFB", "FAC", "MBL", "ML1", "MLL", "MPL", "MSA", "WM"]
+    ["CDR", "CIT", "CL", "DFB", "FAC", "MBL", "ML1", "MLL", "MPL", "MSA", "WM"]
   );
   for (const h of HONOURS) {
     assert.equal(h.type, "honour");
