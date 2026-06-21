@@ -54,6 +54,7 @@ body { margin: 0; background: #070b18; }
 .emblem { display: grid; place-items: center; line-height: 1; }
 .emblem.badge { width: 50%; } .emblem.flag { width: 62%; }
 .emblem.icon { width: 46%; aspect-ratio: 1; border-radius: 50%; font-size: clamp(11px, 3.6vw, 16px); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 1px 3px rgba(0,0,0,.4); }
+.emblem.league { width: 60%; aspect-ratio: 1.35; border-radius: 22%; color: #fff; font-weight: 800; letter-spacing: .5px; font-size: clamp(10px, 3.2vw, 15px); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 1px 3px rgba(0,0,0,.4); display: grid; place-items: center; }
 .emSvg { width: 100%; height: auto; display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
 .hexLabel { font-family: 'Oswald', sans-serif; font-weight: 600; letter-spacing: .02em; text-align: center; font-size: clamp(8px, 2.8vw, 12px); text-shadow: 0 1px 3px rgba(0,0,0,.55); max-width: 100%; }
 .hexCountry { font-family: 'Inter', sans-serif; font-weight: 500; font-size: clamp(6px, 2vw, 8.5px); opacity: .72; letter-spacing: .03em; margin-top: -1px; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
