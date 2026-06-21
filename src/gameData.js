@@ -95,6 +95,22 @@ export const LEAGUES = [
 // Vereins-Key -> Liga-Code (für das Liga-Matching)
 const CLUB_LG = Object.fromEntries(CLUBS.map((c) => [c.key, c.lg]));
 
+// Honour-Felder: erfüllt, wenn der Spieler den Titel gewonnen hat (player.t).
+export const HONOURS = [
+  { key: "CL",  label: "CL",  name: "Champions-League-Sieger", icon: "🏆", c1: "#1b2a6b", c2: "#0a1030" },
+  { key: "WM",  label: "WM",  name: "Weltmeister",            icon: "🌍", c1: "#C9A227", c2: "#6b4e00" },
+  { key: "MBL", label: "DE",  name: "Deutscher Meister",      icon: "🏅", c1: "#D3010C", c2: "#1a1a1a" },
+  { key: "MPL", label: "EN",  name: "Englischer Meister",     icon: "🏅", c1: "#3D195B", c2: "#1f0e36" },
+  { key: "MLL", label: "ES",  name: "Spanischer Meister",     icon: "🏅", c1: "#E03A3E", c2: "#1f1f3c" },
+  { key: "MSA", label: "IT",  name: "Italienischer Meister",  icon: "🏅", c1: "#0A66B0", c2: "#0a2a4a" },
+  { key: "ML1", label: "FR",  name: "Französischer Meister",  icon: "🏅", c1: "#091C3E", c2: "#1d6f6f" },
+  { key: "DFB", label: "DFB", name: "DFB-Pokal-Sieger",       icon: "🥇", c1: "#D3010C", c2: "#1a1a1a" },
+  { key: "FAC", label: "FA",  name: "FA-Cup-Sieger",          icon: "🥇", c1: "#3D195B", c2: "#1f0e36" },
+  { key: "CDR", label: "CDR", name: "Copa-del-Rey-Sieger",    icon: "🥇", c1: "#E03A3E", c2: "#1f1f3c" },
+  { key: "CIT", label: "CIT", name: "Coppa-Italia-Sieger",    icon: "🥇", c1: "#0A66B0", c2: "#0a2a4a" },
+  { key: "CDF", label: "CDF", name: "Coupe-de-France-Sieger", icon: "🥇", c1: "#091C3E", c2: "#1d6f6f" },
+].map((h) => ({ ...h, type: "honour" }));
+
 /* Spielerdaten sind nach ./players.js ausgelagert, damit der Voll-Datensatz
    (per Kaggle erzeugt, siehe data-pipeline/) durch einen Ein-Datei-Tausch
    eingesetzt werden kann. Re-Export hier hält bestehende Imports stabil. */
@@ -109,6 +125,7 @@ export function playerMatchesHex(player, def) {
   if (def.type === "nat") return (player.nat || []).includes(def.key);
   if (def.type === "spec") return def.test ? def.test(player) : false;
   if (def.type === "league") return (player.clubs || []).some((ck) => CLUB_LG[ck] === def.key);
+  if (def.type === "honour") return (player.t || []).includes(def.key);
   return false;
 }
 
@@ -150,6 +167,7 @@ const DEF_BY_KEY = {
   nat: Object.fromEntries(NATIONS.map((n) => [n.key, n])),
   spec: Object.fromEntries(SPECIALS.map((s) => [s.key, s])),
   league: Object.fromEntries(LEAGUES.map((l) => [l.key, l])),
+  honour: Object.fromEntries(HONOURS.map((h) => [h.key, h])),
 };
 export const lookupDef = (type, key) => DEF_BY_KEY[type]?.[key];
 
