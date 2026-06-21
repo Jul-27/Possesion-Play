@@ -45,6 +45,7 @@ export function Flag({ spec }) {
 export function Emblem({ def }) {
   if (def.type === "nat") return <span className="emblem flag"><Flag spec={def.flag} /></span>;
   if (def.type === "spec") return <span className="emblem icon" style={{ background: `linear-gradient(150deg,${def.c1},${def.c2})` }}>{def.icon}</span>;
+  if (def.type === "league") return <span className="emblem league" style={{ background: `linear-gradient(150deg,${def.c1},${def.c2})` }}>{def.label}</span>;
   return <span className="emblem badge"><ClubBadge c1={def.c1} c2={def.c2} pat={def.pat} /></span>;
 }
 
@@ -74,7 +75,7 @@ export function Cell({ cell, owner, selected, adjHint, justClaimed, clickable, o
     >
       <span className="hexInner">
         <Emblem def={def} />
-        <span className="hexLabel">{def.label}</span>
+        <span className="hexLabel">{def.type === "league" ? def.name : def.label}</span>
         {def.type === "club" && <span className="hexCountry">({def.country})</span>}
       </span>
     </button>
