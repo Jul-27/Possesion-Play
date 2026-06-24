@@ -102,7 +102,7 @@ body::after {
   border: 1px solid var(--brd); border-radius: 18px; backdrop-filter: blur(10px);
   box-shadow: var(--shadow); animation: dropIn .6s .06s both;
 }
-.team { display: flex; flex-direction: column; gap: 4px; transition: opacity .3s; }
+.team { display: flex; flex-direction: column; gap: 9px; transition: opacity .3s; }
 .team.right { align-items: flex-end; }
 .teamName { font-size: 12px; letter-spacing: .03em; font-weight: 700; color: var(--muted); display: flex; align-items: center; gap: 7px; text-transform: uppercase; }
 .activeName { color: #fff; }
@@ -190,7 +190,7 @@ body::after {
 .sugItem:hover, .sugItem.active { background: rgba(45,212,191,.18); color: #c7f7ec; padding-left: 18px; }
 
 /* ── Buttons ────────────────────────────────────────────────────────────── */
-.btn { border: none; border-radius: 12px; padding: 0 20px; font-weight: 800; cursor: pointer; font-family: 'Hanken Grotesk', sans-serif; font-size: 14px; letter-spacing: .01em; transition: transform .12s, filter .15s, box-shadow .15s; white-space: nowrap; }
+.btn { border: none; border-radius: 12px; padding: 0 20px; min-height: 46px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; cursor: pointer; font-family: 'Hanken Grotesk', sans-serif; font-size: 14px; letter-spacing: .01em; transition: transform .12s, filter .15s, box-shadow .15s; white-space: nowrap; }
 .btn.block { display: block; width: 100%; padding: 14px; }
 .btn.primary { background: linear-gradient(135deg, var(--teal), var(--teal-d)); color: #032420; box-shadow: 0 8px 20px -8px rgba(45,212,191,.7), inset 0 1px 0 rgba(255,255,255,.3); }
 .btn.primary:hover { filter: brightness(1.08); transform: translateY(-2px); box-shadow: 0 12px 26px -8px rgba(45,212,191,.8), inset 0 1px 0 rgba(255,255,255,.3); }
