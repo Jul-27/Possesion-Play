@@ -11,7 +11,7 @@ Kaggle (kein lokales Setup, kein Admin-Recht nötig).
 | `kaggle_build.ipynb` | **Empfohlen.** Lauffähiges Kaggle-Notebook, das die Logik beider Skripte nacheinander ausführt und `players_game.js` schreibt. |
 | `build_db.py` | Lokales Skript: wählt Spieler über Top-5-Einsätze seit 2000 aus und erfasst deren **volle** Vereinshistorie aus Einsätzen (auch Portugal/NL/Pokale) **plus** Transfers (`player_transfers.csv`, deckt auch Stationen vor ~2012 ab). Schreibt Zwischen-CSVs nach `./out`. |
 | `make_game_json.py` | Lokales Skript: mappt Spieler (Einsätze + Transfers) auf die 40 Spiel-Vereine, ergänzt Titel/Honours (Feld `t`) und schreibt `./out/players_game.js`. |
-| `honours.py` | Honours-Logik: Meister aus Punkten, Pokal/CL-Sieger aus dem Finale, Kader aus Einsätzen, kuratierte WM-Siegerkader. |
+| `honours.py` | Honours-Logik: Meister aus Punkten, Pokal/CL-Sieger aus dem Finale, Kader aus Einsätzen, kuratierte WM-Siegerkader. Enthält außerdem `CLUB_OVERRIDES` — belegte Vereinsstationen, die im Datensatz fehlen (alte Transfers vor ~2012), z. B. Cristiano Ronaldo → Sporting (SCP). Werden mit den abgeleiteten Vereinen gemerged. |
 | `honours_probe.ipynb` | Einmalige Kaggle-Probe zur Wettbewerbs-/Finals-Struktur. |
 
 Das Notebook ist die browserbasierte Zusammenführung der beiden `.py`-Skripte.

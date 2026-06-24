@@ -31,6 +31,24 @@ def norm(s):
     return s.lower().strip()
 
 
+# ── Kuratierte Vereins-Ergänzungen ──────────────────────────────────────────
+# Bekannte (belegte) Stationen, die im Datensatz fehlen, weil alte Transfers
+# (vor ~2012) nicht enthalten sind. Spielername (wie players.name) -> Spielkeys,
+# die zusätzlich gesetzt werden. Werden in der Pipeline mit den abgeleiteten
+# clubs gemerged (dedupliziert). Keine erfundenen Daten — nur dokumentierte Klubs.
+CLUB_OVERRIDES = {
+    "Cristiano Ronaldo": ["SCP"],
+    "David Beckham": ["MUN", "RMA", "MIL"],
+    "Zlatan Ibrahimović": ["AJA", "JUV", "INT", "BAR"],
+    "Wesley Sneijder": ["AJA", "RMA"],
+    "Arjen Robben": ["PSV", "CHE", "RMA"],
+    "Xabi Alonso": ["LIV"],
+    "Andrea Pirlo": ["MIL", "INT"],
+    "Samuel Eto'o": ["BAR", "INT"],
+    "Fernando Torres": ["LIV"],
+}
+
+
 def detect_competitions(comps):
     """competitions.csv -> {honour_key: competition_id}. Liga via sub_type
     'first_tier', Pokal via type 'domestic_cup', CL fix 'CL'."""
