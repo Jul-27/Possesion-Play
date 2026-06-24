@@ -58,8 +58,8 @@ export function Cell({ cell, owner, selected, adjHint, justClaimed, clickable, o
     bg = `linear-gradient(150deg, ${pc.c1}, ${pc.c2})`; border = `1px solid ${pc.c1}`; txt = "#fff";
     shadow = `0 0 18px ${pc.glow}, inset 0 1px 0 rgba(255,255,255,.25)`;
   } else {
-    bg = "linear-gradient(150deg, rgba(54,71,104,.55), rgba(24,34,58,.7))";
-    border = "1px solid rgba(148,178,224,.28)"; txt = "#e7eefb"; shadow = "inset 0 1px 0 rgba(255,255,255,.10)";
+    bg = "linear-gradient(155deg, rgba(20,40,33,.72), rgba(8,20,15,.85))";
+    border = "1px solid rgba(176,224,200,.22)"; txt = "#dfeee7"; shadow = "inset 0 1px 0 rgba(255,255,255,.10)";
   }
   return (
     <button
@@ -69,6 +69,7 @@ export function Cell({ cell, owner, selected, adjHint, justClaimed, clickable, o
       className={`hex ${justClaimed ? "claimed" : ""}`}
       style={{
         left: `${cell.left}%`, top: `${cell.top}%`, background: bg, border, color: txt, boxShadow: shadow,
+        ...(owner ? { filter: `drop-shadow(0 3px 5px rgba(0,0,0,.5)) drop-shadow(0 0 8px ${P[owner].glow})` } : {}),
         cursor: clickable ? "pointer" : "default",
         outline: selected ? "3px solid #FACC15" : adjHint ? "2px dashed rgba(250,204,21,.6)" : "none",
         outlineOffset: "2px", zIndex: selected ? 5 : 1,
