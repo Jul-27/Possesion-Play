@@ -211,7 +211,7 @@ export default function Game({ code, clientId, onLeave }) {
 
       {!gameOver && (myTurn ? (selected !== null ? (
         <div className="panel">
-          <div className="prompt"><b>Du</b> · nenne einen Spieler für <b style={{ color: P[myPlayer].c1 }}>{cname(board[selected].def)}</b></div>
+          <div className="prompt"><b>Du</b> · Nenne einen Spieler für <b style={{ color: P[myPlayer].c1 }}>{cname(board[selected].def)}</b></div>
           <div className="inrow">
             <div className="inwrap">
               <input ref={inputRef} className="field" placeholder="Nachname eingeben (ab 2 Buchstaben)…"
