@@ -223,7 +223,7 @@ export default function Game({ code, clientId, onLeave }) {
                   {suggestions.map((s, i) => (
                     <div key={s.n} className={`sugItem ${i === sugActive ? "active" : ""}`}
                       onMouseDown={(e) => { e.preventDefault(); chooseSug(s); }}>
-                      <span>{s.n}</span><span className="sugMeta">{(s.clubs || []).slice(0, 3).join(" · ")}</span>
+                      <span>{s.n}</span>
                     </div>
                   ))}
                 </div>

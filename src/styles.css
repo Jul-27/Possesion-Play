@@ -70,7 +70,6 @@ body { margin: 0; background: #070b18; }
 .sugItem { padding: 10px 13px; font-size: 14px; cursor: pointer; border-bottom: 1px solid rgba(148,178,224,.1); display: flex; justify-content: space-between; gap: 10px; align-items: center; }
 .sugItem:last-child { border-bottom: none; }
 .sugItem:hover, .sugItem.active { background: rgba(45,212,191,.18); color: #baf5ea; }
-.sugMeta { font-size: 11px; color: #8595b0; letter-spacing: .02em; white-space: nowrap; }
 .btn { border: none; border-radius: 11px; padding: 0 18px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px; transition: .15s; white-space: nowrap; }
 .btn.block { display: block; width: 100%; padding: 12px; }
 .btn.primary { background: linear-gradient(135deg, #2DD4BF, #0D9488); color: #04201c; }
