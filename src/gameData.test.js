@@ -79,3 +79,17 @@ test("buildBoardSerial: 31 Felder mit 1–3 Liga- und 2–4 Honour-Feldern", () 
     for (const c of board) assert.ok(lookupDef(c.t, c.k), `kein def für ${c.t}/${c.k}`);
   }
 });
+
+import { suggestPlayers } from "./gameData.js";
+
+test("suggestPlayers: Nachname-Präfix, Bekanntheit zuerst, dann alphabetisch", () => {
+  const players = [
+    { n: "Mohamed Salah", ln: "Salah", sl: 90 },
+    { n: "Saúl Ñíguez", ln: "Saúl", sl: 30 },
+    { n: "Unbekannt Sava", ln: "Sava" },
+    { n: "Andrea Pirlo", ln: "Pirlo", sl: 80 },
+  ];
+  assert.deepEqual(suggestPlayers(players, "sa", 8).map((p) => p.ln), ["Salah", "Saúl", "Sava"]);
+  assert.deepEqual(suggestPlayers(players, "s", 8), []);
+  assert.equal(suggestPlayers(players, "sa", 2).length, 2);
+});

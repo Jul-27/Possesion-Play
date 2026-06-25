@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "./supabaseClient.js";
 import { Cell } from "./Emblems.jsx";
 import {
-  P, cname, norm, PLAYERS, ADJP, hydrateBoard, playerMatchesHex,
+  P, cname, norm, PLAYERS, suggestPlayers, ADJP, hydrateBoard, playerMatchesHex,
   buildBoardSerial, BOARDH, HEXH,
 } from "./gameData.js";
 
@@ -54,11 +54,7 @@ export default function Game({ code, clientId, onLeave }) {
     return { a, b, neutral: 31 - a - b };
   }, [owners]);
 
-  const suggestions = useMemo(() => {
-    const q = norm(nameInput.trim());
-    if (q.length < 2) return [];
-    return PLAYERS.filter((p) => norm(p.ln).startsWith(q)).sort((a, b) => a.ln.localeCompare(b.ln, "de")).slice(0, 8);
-  }, [nameInput]);
+  const suggestions = useMemo(() => suggestPlayers(PLAYERS, nameInput, 8), [nameInput]);
 
   // Erobert-Animation, wenn ein neuer Zug ankommt
   useEffect(() => {
