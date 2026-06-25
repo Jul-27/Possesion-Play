@@ -20,7 +20,7 @@ from pathlib import Path
 import json, re, unicodedata
 import pandas as pd
 from honours import (detect_competitions, league_champion_by_season,
-                     cup_winner_by_season, squad_player_ids, WC_SQUADS)
+                     cup_winner_by_season, squad_player_ids, WC_SQUADS, CLUB_OVERRIDES)
 
 OUT  = Path("./out")
 DATA = Path("./data")  # für Honours: games/competitions/appearances
@@ -153,7 +153,7 @@ def main():
 
     out = []
     for _, p in players.iterrows():
-        keys = sorted(pclubs.get(p["tm_player_id"], []))
+        keys = sorted(set(pclubs.get(p["tm_player_id"], [])) | set(CLUB_OVERRIDES.get(p["name"], [])))
         if ONLY_GAME_CLUBS and not keys:
             continue  # für dieses Spiel irrelevant
         nat = NATION_MAP.get(norm(p.get("citizenship", "")))
