@@ -13,6 +13,7 @@ Kaggle (kein lokales Setup, kein Admin-Recht nötig).
 | `make_game_json.py` | Lokales Skript: mappt Spieler (Einsätze + Transfers) auf die 40 Spiel-Vereine, ergänzt Titel/Honours (Feld `t`) und schreibt `./out/players_game.js`. |
 | `honours.py` | Honours-Logik: Meister aus Punkten, Pokal/CL-Sieger aus dem Finale, Kader aus Einsätzen, kuratierte WM-Siegerkader. Enthält außerdem `CLUB_OVERRIDES` — belegte Vereinsstationen, die im Datensatz fehlen (alte Transfers vor ~2012), z. B. Cristiano Ronaldo → Sporting (SCP). Werden mit den abgeleiteten Vereinen gemerged. |
 | `honours_probe.ipynb` | Einmalige Kaggle-Probe zur Wettbewerbs-/Finals-Struktur. |
+| `wikidata_enrich.mjs` | Ergänzt fehlende Vereine in `src/players.js` aus Wikidata (volle Vereinshistorie, deckt auch Stationen vor ~2012 ab). Lauf: `node data-pipeline/wikidata_enrich.mjs` (Internet nötig). Matcht über Name + Geburtsjahr; nur Spiel-Vereine; idempotent. |
 
 Das Notebook ist die browserbasierte Zusammenführung der beiden `.py`-Skripte.
 Die Skripte selbst sind als Referenz / für lokale Läufe enthalten.
