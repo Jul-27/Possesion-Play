@@ -14,6 +14,7 @@ Kaggle (kein lokales Setup, kein Admin-Recht nötig).
 | `honours.py` | Honours-Logik: Meister aus Punkten, Pokal/CL-Sieger aus dem Finale, Kader aus Einsätzen, kuratierte WM-Siegerkader. Enthält außerdem `CLUB_OVERRIDES` — belegte Vereinsstationen, die im Datensatz fehlen (alte Transfers vor ~2012), z. B. Cristiano Ronaldo → Sporting (SCP). Werden mit den abgeleiteten Vereinen gemerged. |
 | `honours_probe.ipynb` | Einmalige Kaggle-Probe zur Wettbewerbs-/Finals-Struktur. |
 | `wikidata_roster.mjs` | Baut `src/players.js` neu aus Wikidata: ergänzt Vereine vorhandener Spieler UND legt fehlende Spieler an (Name, Nachname, Geburtsjahr, Nation via P1532/P27→ISO-3, Vereine, Bekanntheit `sl`). Pool wächst auf ~27k. Lauf: `node data-pipeline/wikidata_roster.mjs` (Internet nötig). Matcht über Name + Geburtsjahr; nur Spiel-Vereine/-Nationen; idempotent. |
+| `wikidata_honours.mjs` | Setzt das Feld `t` (Honours: CL, 5 Meister, 4 Pokale, WM) je Spieler komplett aus Wikidata (Saison-Sieger × Vereinszeitraum, gefenstert). Lauf **nach** dem Roster: `node data-pipeline/wikidata_honours.mjs` (Internet nötig). Idempotent. |
 
 Das Notebook ist die browserbasierte Zusammenführung der beiden `.py`-Skripte.
 Die Skripte selbst sind als Referenz / für lokale Läufe enthalten.
