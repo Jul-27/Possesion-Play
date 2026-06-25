@@ -28,27 +28,43 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function sparql(query) {
   const url = "https://query.wikidata.org/sparql?format=json&query=" + encodeURIComponent(query);
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const res = await fetch(url, { headers: { "User-Agent": UA, "Accept": "application/sparql-results+json" } });
-    if (res.status === 429) { await sleep(8000); continue; }
+  for (let attempt = 0; attempt < 5; attempt++) {
+    let res;
+    try {
+      res = await fetch(url, { headers: { "User-Agent": UA, "Accept": "application/sparql-results+json" } });
+    } catch (e) { await sleep(5000); continue; }       // Netzwerkfehler -> retry
+    if (res.status === 429 || res.status >= 500) { await sleep(8000); continue; }
     if (!res.ok) throw new Error("HTTP " + res.status);
-    return (await res.json()).results.bindings;
+    const text = await res.text();
+    try { return JSON.parse(text).results.bindings; }
+    catch (e) { await sleep(5000); continue; }          // unvollständige/abgeschnittene Antwort -> retry
   }
-  throw new Error("429 wiederholt");
+  throw new Error("SPARQL fehlgeschlagen (Retries erschöpft)");
 }
 
-// Spieler, die im Titel-Saison-Zeitraum beim Sieger des Wettbewerbs waren.
+// Zeitfenster (Saison-Startjahr), um zu große WDQS-Antworten zu vermeiden.
+const WINDOWS = [[1890, 1960], [1960, 1980], [1980, 1995], [1995, 2005], [2005, 2010],
+                 [2010, 2014], [2014, 2018], [2018, 2022], [2022, 2025], [2025, 2031]];
+
+// Spieler, die im Titel-Saison-Zeitraum beim Sieger des Wettbewerbs waren (gefenstert).
 async function fetchHonourPlayers(qid) {
-  const q = `SELECT DISTINCT ?pLabel ?by WHERE {
-    ?season wdt:P3450 wd:${qid} ; wdt:P1346 ?winner ; wdt:P580 ?ss .
-    OPTIONAL { ?season wdt:P582 ?se. }
-    ?p p:P54 ?st . ?st ps:P54 ?winner ; pq:P580 ?cs .
-    OPTIONAL { ?st pq:P582 ?ce. }
-    ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d . BIND(YEAR(?d) AS ?by)
-    FILTER( YEAR(?cs) <= YEAR(COALESCE(?se, ?ss)) && (!BOUND(?ce) || YEAR(?ce) >= YEAR(?ss)) )
-    SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
-  }`;
-  return (await sparql(q)).map((b) => ({ name: b.pLabel?.value, by: b.by?.value ? parseInt(b.by.value) : null }));
+  const out = [];
+  for (const [from, to] of WINDOWS) {
+    const q = `SELECT DISTINCT ?pLabel ?by WHERE {
+      ?season wdt:P3450 wd:${qid} ; wdt:P1346 ?winner ; wdt:P580 ?ss .
+      FILTER( YEAR(?ss) >= ${from} && YEAR(?ss) < ${to} )
+      OPTIONAL { ?season wdt:P582 ?se. }
+      ?p p:P54 ?st . ?st ps:P54 ?winner ; pq:P580 ?cs .
+      OPTIONAL { ?st pq:P582 ?ce. }
+      ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d . BIND(YEAR(?d) AS ?by)
+      FILTER( YEAR(?cs) <= YEAR(COALESCE(?se, ?ss)) && (!BOUND(?ce) || YEAR(?ce) >= YEAR(?ss)) )
+      SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+    }`;
+    const rows = await sparql(q);
+    for (const b of rows) out.push({ name: b.pLabel?.value, by: b.by?.value ? parseInt(b.by.value) : null });
+    await sleep(700);
+  }
+  return out;
 }
 
 function recToString(r) {
