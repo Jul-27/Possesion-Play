@@ -67,16 +67,19 @@ async function sparql(query) {
 }
 
 async function fetchClubRoster(qid) {
-  const q = `SELECT ?pLabel ?by ?sl ?iso WHERE {
+  // siso = sportliche Nation (P1532, bevorzugt), ciso = Staatsbürgerschaft (P27, Fallback)
+  const q = `SELECT ?pLabel ?by ?sl ?siso ?ciso WHERE {
     ?p p:P54 ?st . ?st ps:P54 wd:${qid} .
     ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d ; wikibase:sitelinks ?sl .
     BIND(YEAR(?d) AS ?by)
-    OPTIONAL { ?p wdt:P27 ?c . ?c wdt:P298 ?iso . }
+    OPTIONAL { ?p wdt:P1532 ?sc . ?sc wdt:P298 ?siso . }
+    OPTIONAL { ?p wdt:P27 ?c . ?c wdt:P298 ?ciso . }
     SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
   }`;
   return (await sparql(q)).map((b) => ({
     name: b.pLabel?.value, by: b.by?.value ? parseInt(b.by.value) : null,
-    sl: b.sl?.value ? parseInt(b.sl.value) : 0, iso: b.iso?.value || null,
+    sl: b.sl?.value ? parseInt(b.sl.value) : 0,
+    siso: b.siso?.value || null, ciso: b.ciso?.value || null,
   }));
 }
 
@@ -97,10 +100,11 @@ async function main() {
       if (!r.name || !r.by) continue;
       const k = norm(r.name) + "|" + r.by;
       let e = roster.get(k);
-      if (!e) { e = { name: r.name, by: r.by, clubs: new Set(), sl: 0, iso: null }; roster.set(k, e); }
+      if (!e) { e = { name: r.name, by: r.by, clubs: new Set(), sl: 0, siso: null, ciso: null }; roster.set(k, e); }
       e.clubs.add(key);
       if (r.sl > e.sl) e.sl = r.sl;
-      if (!e.iso && r.iso && NATION_KEYS.has(r.iso)) e.iso = r.iso;
+      if (!e.siso && r.siso && NATION_KEYS.has(r.siso)) e.siso = r.siso; // sportliche Nation bevorzugt
+      if (!e.ciso && r.ciso && NATION_KEYS.has(r.ciso)) e.ciso = r.ciso; // Staatsbürgerschaft Fallback
     }
     console.log(`  ${key} (${qid}): ${rows.length} Zeilen`);
     await sleep(1300);
@@ -121,9 +125,10 @@ async function main() {
       cur.sl = Math.max(cur.sl || 0, e.sl);
       if (cur.clubs.length > before) enriched++;
     } else {
+      const iso = e.siso || e.ciso;
       const rec = {
         n: e.name, ln: deriveLastName(e.name), by: e.by,
-        nat: e.iso ? [e.iso] : [], clubs: [...e.clubs].sort(), sl: e.sl,
+        nat: iso ? [iso] : [], clubs: [...e.clubs].sort(), sl: e.sl,
       };
       existing.push(rec); byKey.set(k, rec); added++;
     }
