@@ -118,6 +118,16 @@ export { PLAYERS } from "./players.js";
 export const cname = (def) => (def.type === "club" ? `${def.name} (${def.country})` : def.name);
 export const norm = (s) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
+// Autocomplete-Vorschl\u00e4ge: Nachname-Pr\u00e4fix, sortiert nach Bekanntheit (sl) desc, dann alphabetisch.
+export function suggestPlayers(players, query, limit = 8) {
+  const q = norm((query || "").trim());
+  if (q.length < 2) return [];
+  return players
+    .filter((p) => norm(p.ln).startsWith(q))
+    .sort((a, b) => (b.sl || 0) - (a.sl || 0) || a.ln.localeCompare(b.ln, "de"))
+    .slice(0, limit);
+}
+
 export function playerMatchesHex(player, def) {
   if (!player || !def) return false;
   if (def.type === "club") return (player.clubs || []).includes(def.key);
