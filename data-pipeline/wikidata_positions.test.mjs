@@ -14,3 +14,15 @@ test("posBucket mappt Positions-Labels auf Gruppen", () => {
   assert.equal(posBucket("striker"), "ST");
   assert.equal(posBucket("referee"), null);
 });
+
+test("players.js: pos-Werte sind gültige Gruppen", async () => {
+  const players = (await import("../src/players.js")).PLAYERS;
+  const ok = new Set(["TW", "ABW", "MF", "ST"]);
+  let withPos = 0;
+  for (const p of players) {
+    if (!p.pos) continue;
+    withPos++;
+    assert.ok(ok.has(p.pos), "ungültige pos " + p.pos);
+  }
+  assert.ok(withPos > 1000, "es sollten viele Spieler eine pos haben, sind: " + withPos);
+});
