@@ -17,8 +17,8 @@ const UA = "PossessionPlay/1.0 (https://github.com/Jul-27; data enrichment)";
 export function posBucket(label) {
   const s = String(label).toLowerCase();
   if (s.includes("goalkeeper")) return "TW";
+  if (s.includes("midfield")) return "MF"; // vor "attack", da "attacking midfield" -> MF
   if (s.includes("forward") || s.includes("striker") || s.includes("wing") || s.includes("attack")) return "ST";
-  if (s.includes("midfield")) return "MF";
   if (s.includes("back") || s.includes("defender") || s.includes("defence") || s.includes("sweeper")) return "ABW";
   return null;
 }
