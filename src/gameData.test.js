@@ -132,7 +132,7 @@ test("gridWinner: Reihe/Spalte/Diagonale/None", () => {
 
 test("buildGridSerial: lösbares Raster", async () => {
   const { PLAYERS } = await import("./players.js");
-  const g = buildGridSerial();
+  const g = buildGridSerial(PLAYERS);
   assert.equal(g.kind, "grid");
   assert.equal(g.rows.length, 3);
   assert.equal(g.cols.length, 3);
