@@ -93,3 +93,22 @@ test("suggestPlayers: Nachname-Präfix, Bekanntheit zuerst, dann alphabetisch", 
   assert.deepEqual(suggestPlayers(players, "s", 8), []);
   assert.equal(suggestPlayers(players, "sa", 2).length, 2);
 });
+
+import { START_SECONDS, fmtClock, liveRemaining } from "./gameData.js";
+
+test("fmtClock formatiert m:ss", () => {
+  assert.equal(START_SECONDS, 240);
+  assert.equal(fmtClock(240), "4:00");
+  assert.equal(fmtClock(65), "1:05");
+  assert.equal(fmtClock(5), "0:05");
+  assert.equal(fmtClock(-3), "0:00");
+});
+
+test("liveRemaining zieht verstrichene Zeit ab, min 0", () => {
+  const T = Date.parse("2026-01-01T00:00:00Z");
+  const iso = new Date(T).toISOString();
+  assert.equal(liveRemaining({ 1: 240, 2: 240, started: null }, 1, T + 99000), 240);
+  assert.equal(liveRemaining({ 1: 240, 2: 240, started: iso }, 1, T + 65000), 175);
+  assert.equal(liveRemaining({ 1: 5, 2: 240, started: iso }, 1, T + 10000), 0);
+  assert.equal(liveRemaining({ 1: 240, 2: 100, started: iso }, 2, T + 10000), 90);
+});

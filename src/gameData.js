@@ -128,6 +128,24 @@ export function suggestPlayers(players, query, limit = 8) {
     .slice(0, limit);
 }
 
+// ── Uhr (Gesamt-Zeitbudget pro Spieler) ──────────────────────────────────────
+export const START_SECONDS = 240; // 4:00 pro Spieler
+
+export function fmtClock(sec) {
+  const s = Math.max(0, Math.floor(sec));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+// Restsekunden des aktiven Spielers (turn): gespeichertes Budget minus verstrichene
+// Zeit seit clocks.started. Ohne started -> volles Budget.
+export function liveRemaining(clocks, turn, nowMs) {
+  const base = clocks?.[turn] ?? START_SECONDS;
+  const st = clocks?.started;
+  if (st == null) return base;
+  const startedMs = typeof st === "number" ? st : Date.parse(st);
+  return Math.max(0, base - Math.floor((nowMs - startedMs) / 1000));
+}
+
 export function playerMatchesHex(player, def) {
   if (!player || !def) return false;
   if (def.type === "club") return (player.clubs || []).includes(def.key);
