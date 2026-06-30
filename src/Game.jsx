@@ -3,7 +3,7 @@ import { supabase } from "./supabaseClient.js";
 import { Cell } from "./Emblems.jsx";
 import {
   P, cname, norm, PLAYERS, suggestPlayers, ADJP, hydrateBoard, playerMatchesHex,
-  buildBoardSerial, BOARDH, HEXH,
+  buildBoardSerial, BOARDH, HEXH, START_SECONDS, fmtClock, liveRemaining,
 } from "./gameData.js";
 
 export default function Game({ code, clientId, onLeave }) {
@@ -16,8 +16,8 @@ export default function Game({ code, clientId, onLeave }) {
   const [sugActive, setSugActive] = useState(-1);
   const [localFeedback, setLocalFeedback] = useState(null);
   const [lastClaimed, setLastClaimed] = useState([]);
-  const [timerMode, setTimerMode] = useState(45);
-  const [timeLeft, setTimeLeft] = useState(45);
+  const [now, setNow] = useState(Date.now());
+  const timeoutFired = useRef(false);
   const [showRules, setShowRules] = useState(false);
   const [copied, setCopied] = useState(false);
   const inputRef = useRef(null);
@@ -48,6 +48,10 @@ export default function Game({ code, clientId, onLeave }) {
   const owners = row?.owners || {};
   const board = useMemo(() => (row?.board ? hydrateBoard(row.board) : []), [row?.board]);
 
+  const clk = row?.clocks || { 1: START_SECONDS, 2: START_SECONDS, started: null, timeout: null };
+  const rem1 = status === "playing" && row?.turn === 1 && clk.started ? liveRemaining(clk, 1, now) : (clk[1] ?? START_SECONDS);
+  const rem2 = status === "playing" && row?.turn === 2 && clk.started ? liveRemaining(clk, 2, now) : (clk[2] ?? START_SECONDS);
+
   const counts = useMemo(() => {
     let a = 0, b = 0;
     Object.values(owners).forEach((v) => { if (v === 1) a++; else if (v === 2) b++; });
@@ -66,14 +70,31 @@ export default function Game({ code, clientId, onLeave }) {
     }
   }, [row?.last_move?.ts]);
 
-  // Timer (nur lokal für den Spieler am Zug)
-  useEffect(() => { setTimeLeft(timerMode || 0); }, [row?.turn, timerMode]);
+  // Sekündlicher Tick fürs Herunterzählen (nur während des Spiels)
   useEffect(() => {
-    if (!myTurn || timerMode === 0 || status !== "playing") return;
-    if (timeLeft <= 0) { skipTurn(); return; }
-    const id = setTimeout(() => setTimeLeft((v) => v - 1), 1000);
-    return () => clearTimeout(id);
-  }, [timeLeft, myTurn, timerMode, status]); // eslint-disable-line
+    if (status !== "playing") return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [status]);
+
+  // Timeout-Erkennung: aktiver Spieler verliert; Gegner schreibt defensiv mit
+  useEffect(() => { timeoutFired.current = false; }, [status, row?.turn]);
+  useEffect(() => {
+    if (status !== "playing" || !clk.started || timeoutFired.current) return;
+    if (liveRemaining(clk, row.turn, now) > 0) return;
+    timeoutFired.current = true;
+    const finish = {
+      status: "finished",
+      clocks: { ...clk, [row.turn]: 0, started: null, timeout: row.turn },
+      last_move: { by: 0, text: `⏱ ${names[row.turn]} — Zeit abgelaufen`, claimed: [], ts: Date.now() },
+      updated_at: new Date().toISOString(),
+    };
+    if (myTurn) {
+      supabase.from("games").update(finish).eq("code", code).eq("turn", myPlayer).eq("status", "playing");
+    } else if (myPlayer !== 0) {
+      supabase.from("games").update(finish).eq("code", code).eq("status", "playing"); // Gegner offline -> defensiv
+    }
+  }, [now, status, row?.turn, myTurn, myPlayer, code]); // eslint-disable-line
   useEffect(() => { if (selected !== null && inputRef.current) inputRef.current.focus(); }, [selected]);
 
   function pickHex(idx) {
@@ -124,18 +145,24 @@ export default function Game({ code, clientId, onLeave }) {
       .map((ai) => `${board[ai].def.label} ${results[ai] === true ? "✓" : "✗"}`);
     const move = { by: myPlayer, who: player.n, text, detail: detail.length ? "Geprüft: " + detail.join("   ·   ") : null, claimed, ts: Date.now() };
     setSelected(null); setNameInput(""); setChosen(null); setSugOpen(false); setLocalFeedback(null);
-    writeMove({ owners: newOwners, turn: myPlayer === 1 ? 2 : 1, status: neutralLeft === 0 ? "finished" : "playing", last_move: move });
+    const rem = liveRemaining(clk, myPlayer, Date.now());
+    const nextClocks = { ...clk, [myPlayer]: rem, started: new Date().toISOString() };
+    writeMove({ owners: newOwners, turn: myPlayer === 1 ? 2 : 1, status: neutralLeft === 0 ? "finished" : "playing", last_move: move, clocks: nextClocks });
   }
 
   function skipTurn() {
     if (!myTurn) return;
     setSelected(null); setNameInput(""); setChosen(null); setSugOpen(false);
-    writeMove({ turn: myPlayer === 1 ? 2 : 1, last_move: { by: myPlayer, text: `${names[myPlayer]} überspringt den Zug.`, claimed: [], ts: Date.now() } });
+    const rem = liveRemaining(clk, myPlayer, Date.now());
+    const nextClocks = { ...clk, [myPlayer]: rem, started: new Date().toISOString() };
+    writeMove({ turn: myPlayer === 1 ? 2 : 1, last_move: { by: myPlayer, text: `${names[myPlayer]} überspringt den Zug.`, claimed: [], ts: Date.now() }, clocks: nextClocks });
   }
 
   async function newGame() {
     await supabase.from("games").update({
-      board: buildBoardSerial(), owners: {}, turn: 1, status: "playing", last_move: null, updated_at: new Date().toISOString(),
+      board: buildBoardSerial(), owners: {}, turn: 1, status: "playing", last_move: null,
+      clocks: { 1: START_SECONDS, 2: START_SECONDS, started: new Date().toISOString(), timeout: null },
+      updated_at: new Date().toISOString(),
     }).eq("code", code);
   }
 
@@ -164,10 +191,8 @@ export default function Game({ code, clientId, onLeave }) {
   const total = counts.a + counts.b;
   const aPct = total ? (counts.a / total) * 100 : 50;
   const adjSet = selected !== null ? new Set(ADJP[selected]) : new Set();
-  const lowTime = myTurn && timerMode > 0 && timeLeft <= 10;
   const fb = localFeedback || (row.last_move?.text ? { type: row.last_move.by ? "ok" : "info", text: row.last_move.text, detail: row.last_move.detail } : null);
   const gameOver = status === "finished";
-  const centerTimer = status !== "playing" ? "—" : myTurn ? (timerMode === 0 ? "∞" : `0:${String(timeLeft).padStart(2, "0")}`) : "·· ··";
 
   return (
     <div className="ppRoot">
@@ -186,11 +211,13 @@ export default function Game({ code, clientId, onLeave }) {
         <div className="team" style={{ opacity: row.turn === 1 ? 1 : 0.6 }}>
           <span className={`teamName ${row.turn === 1 ? "activeName" : ""}`}><span className="dot" style={{ background: P[1].c1 }} />{names[1]}{myPlayer === 1 ? " (du)" : ""}</span>
           <span className="teamScore" style={{ color: P[1].c1 }}>{counts.a}</span>
+          <span className={`clock ${row.turn === 1 && rem1 <= 30 ? "low" : ""}`}>{fmtClock(rem1)}</span>
         </div>
-        <div className={`timer ${lowTime ? "low" : ""}`}>{centerTimer}</div>
+        <div className="scoreMid">:</div>
         <div className="team right" style={{ opacity: row.turn === 2 ? 1 : 0.6 }}>
           <span className={`teamName ${row.turn === 2 ? "activeName" : ""}`}>{names[2]}{myPlayer === 2 ? " (du)" : ""}<span className="dot" style={{ background: P[2].c1 }} /></span>
           <span className="teamScore" style={{ color: P[2].c1 }}>{counts.b}</span>
+          <span className={`clock ${row.turn === 2 && rem2 <= 30 ? "low" : ""}`}>{fmtClock(rem2)}</span>
         </div>
       </div>
 
@@ -267,10 +294,12 @@ export default function Game({ code, clientId, onLeave }) {
         <div className="overlay">
           <div className="modal" style={{ textAlign: "center" }}>
             <h2>Abpfiff</h2>
-            {counts.a === counts.b ? <p className="winName">Unentschieden!</p> : (
+            {clk.timeout ? (
+              <p className="winName" style={{ color: P[clk.timeout === 1 ? 2 : 1].c1 }}>{names[clk.timeout === 1 ? 2 : 1]} gewinnt</p>
+            ) : counts.a === counts.b ? <p className="winName">Unentschieden!</p> : (
               <p className="winName" style={{ color: counts.a > counts.b ? P[1].c1 : P[2].c1 }}>{counts.a > counts.b ? names[1] : names[2]} gewinnt</p>
             )}
-            <p>{names[1]} {counts.a} : {counts.b} {names[2]}</p>
+            <p>{clk.timeout ? `⏱ ${names[clk.timeout]} — Zeit abgelaufen` : `${names[1]} ${counts.a} : ${counts.b} ${names[2]}`}</p>
             <div className="closeline">
               <button className="btn primary" style={{ flex: 1, padding: "12px" }} onClick={newGame}>Neues Spiel</button>
               <button className="btn ghost" style={{ flex: 1, padding: "12px" }} onClick={onLeave}>Lobby</button>
