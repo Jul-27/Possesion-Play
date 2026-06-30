@@ -110,11 +110,10 @@ export const HONOURS = [
   { key: "CIT", label: "CIT", name: "Coppa-Italia-Sieger",    icon: "🥇", c1: "#0A66B0", c2: "#0a2a4a" },
 ].map((h) => ({ ...h, type: "honour" }));
 
-/* Spielerdaten sind nach ./players.js ausgelagert, damit der Voll-Datensatz
-   (per Kaggle erzeugt, siehe data-pipeline/) durch einen Ein-Datei-Tausch
-   eingesetzt werden kann. Re-Export hier hält bestehende Imports stabil. */
-import { PLAYERS } from "./players.js";
-export { PLAYERS };
+/* Spielerdaten liegen in ./players.js (~2,6 MB) und werden NICHT mehr statisch
+   importiert, sondern lazy über ./playersStore.js geladen (loadPlayers()).
+   Funktionen, die die Liste brauchen (z. B. buildGridSerial), bekommen sie als
+   Parameter. */
 
 export const cname = (def) => (def.type === "club" ? `${def.name} (${def.country})` : def.name);
 export const norm = (s) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -242,11 +241,11 @@ export function genCode() {
 
 // Lösbares 3x3-Raster erzeugen: 6 verschiedene Bedingungen, jede der 9 Zellen
 // von mindestens einem Spieler erfüllbar.
-export function buildGridSerial() {
+export function buildGridSerial(players) {
   const POOL = [...CLUBS, ...NATIONS, ...LEAGUES, ...HONOURS, ...SPECIALS];
   const ser = (d) => ({ t: d.type, k: d.key });
   const solvable = (rowDefs, colDefs) =>
-    rowDefs.every((rd) => colDefs.every((cd) => PLAYERS.some((p) => gridCellMatches(p, rd, cd))));
+    rowDefs.every((rd) => colDefs.every((cd) => players.some((p) => gridCellMatches(p, rd, cd))));
   for (let attempt = 0; attempt < 80; attempt++) {
     const six = pick(POOL, 6);
     const rows = six.slice(0, 3), cols = six.slice(3, 6);

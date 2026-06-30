@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase, getClientId, getSavedName, saveName } from "./supabaseClient.js";
 import { buildBoardSerial, buildGridSerial, genCode, START_SECONDS } from "./gameData.js";
+import { loadPlayers } from "./playersStore.js";
 
 export default function Lobby({ onEnter }) {
   const [name, setName] = useState(getSavedName());
@@ -8,6 +9,8 @@ export default function Lobby({ onEnter }) {
   const [joinCode, setJoinCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => { loadPlayers(); }, []); // Hintergrund-Prefetch der Spielerliste
 
   async function createGame() {
     setError(""); setBusy(true);
@@ -18,7 +21,7 @@ export default function Lobby({ onEnter }) {
       saveName(myName);
       const { error } = await supabase.from("games").insert({
         code,
-        board: mode === "grid" ? buildGridSerial() : buildBoardSerial(),
+        board: mode === "grid" ? buildGridSerial(await loadPlayers()) : buildBoardSerial(),
         owners: {},
         turn: 1,
         status: "waiting",
