@@ -113,7 +113,8 @@ export const HONOURS = [
 /* Spielerdaten sind nach ./players.js ausgelagert, damit der Voll-Datensatz
    (per Kaggle erzeugt, siehe data-pipeline/) durch einen Ein-Datei-Tausch
    eingesetzt werden kann. Re-Export hier hält bestehende Imports stabil. */
-export { PLAYERS } from "./players.js";
+import { PLAYERS } from "./players.js";
+export { PLAYERS };
 
 export const cname = (def) => (def.type === "club" ? `${def.name} (${def.country})` : def.name);
 export const norm = (s) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -154,6 +155,20 @@ export function playerMatchesHex(player, def) {
   if (def.type === "league") return (player.clubs || []).some((ck) => CLUB_LG[ck] === def.key);
   if (def.type === "honour") return (player.t || []).includes(def.key);
   return false;
+}
+
+// ── Raster-Duell (3x3) ───────────────────────────────────────────────────────
+export function gridCellMatches(player, rowDef, colDef) {
+  return playerMatchesHex(player, rowDef) && playerMatchesHex(player, colDef);
+}
+
+const GRID_LINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+export function gridWinner(owners) {
+  for (const [a, b, c] of GRID_LINES) {
+    const v = owners[a];
+    if (v && owners[b] === v && owners[c] === v) return v;
+  }
+  return null;
 }
 
 // ── Geometrie (pointy-top, 4-5-4-5-4-5-4) ────────────────────────────────────
@@ -223,4 +238,22 @@ export function genCode() {
   let s = "";
   for (let i = 0; i < 6; i++) s += alphabet[Math.floor(Math.random() * alphabet.length)];
   return s;
+}
+
+// Lösbares 3x3-Raster erzeugen: 6 verschiedene Bedingungen, jede der 9 Zellen
+// von mindestens einem Spieler erfüllbar.
+export function buildGridSerial() {
+  const POOL = [...CLUBS, ...NATIONS, ...LEAGUES, ...HONOURS, ...SPECIALS];
+  const ser = (d) => ({ t: d.type, k: d.key });
+  const solvable = (rowDefs, colDefs) =>
+    rowDefs.every((rd) => colDefs.every((cd) => PLAYERS.some((p) => gridCellMatches(p, rd, cd))));
+  for (let attempt = 0; attempt < 80; attempt++) {
+    const six = pick(POOL, 6);
+    const rows = six.slice(0, 3), cols = six.slice(3, 6);
+    if (solvable(rows, cols)) return { kind: "grid", rows: rows.map(ser), cols: cols.map(ser) };
+  }
+  // Fallback (garantiert lösbar): Ligen × Nationen
+  const rows = [lookupDef("league", "BL"), lookupDef("league", "PL"), lookupDef("league", "LL")];
+  const cols = [lookupDef("nat", "GER"), lookupDef("nat", "ESP"), lookupDef("nat", "BRA")];
+  return { kind: "grid", rows: rows.map(ser), cols: cols.map(ser) };
 }
