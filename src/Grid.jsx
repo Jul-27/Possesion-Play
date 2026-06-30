@@ -2,9 +2,10 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "./supabaseClient.js";
 import { Emblem } from "./Emblems.jsx";
 import {
-  P, cname, norm, PLAYERS, suggestPlayers, lookupDef,
+  P, cname, norm, suggestPlayers, lookupDef,
   buildGridSerial, gridCellMatches, gridWinner, START_SECONDS, fmtClock, liveRemaining,
 } from "./gameData.js";
+import { loadPlayers } from "./playersStore.js";
 
 export default function Grid({ code, clientId, onLeave }) {
   const [row, setRow] = useState(null);
@@ -20,6 +21,8 @@ export default function Grid({ code, clientId, onLeave }) {
   const [now, setNow] = useState(Date.now());
   const timeoutFired = useRef(false);
   const inputRef = useRef(null);
+  const [players, setPlayers] = useState(null);
+  useEffect(() => { loadPlayers().then(setPlayers); }, []);
 
   useEffect(() => {
     let active = true;
@@ -57,7 +60,7 @@ export default function Grid({ code, clientId, onLeave }) {
   const rem1 = status === "playing" && row?.turn === 1 && clk.started ? liveRemaining(clk, 1, now) : (clk[1] ?? START_SECONDS);
   const rem2 = status === "playing" && row?.turn === 2 && clk.started ? liveRemaining(clk, 2, now) : (clk[2] ?? START_SECONDS);
 
-  const suggestions = useMemo(() => suggestPlayers(PLAYERS, nameInput, 8), [nameInput]);
+  const suggestions = useMemo(() => (players ? suggestPlayers(players, nameInput, 8) : []), [players, nameInput]);
 
   useEffect(() => {
     if (status !== "playing") return;
@@ -98,7 +101,7 @@ export default function Grid({ code, clientId, onLeave }) {
     let player = chosen;
     if (!player) {
       const q = norm(nameInput.trim());
-      const hits = PLAYERS.filter((p) => norm(p.n) === q || norm(p.ln) === q);
+      const hits = (players || []).filter((p) => norm(p.n) === q || norm(p.ln) === q);
       if (hits.length === 1) player = hits[0];
     }
     if (!player) {
@@ -226,7 +229,10 @@ export default function Grid({ code, clientId, onLeave }) {
           <div className="prompt"><b>Du</b> · Nenne einen Spieler für <b style={{ color: P[myPlayer].c1 }}>{cname(rowDefs[Math.floor(selected / 3)])}</b> × <b style={{ color: P[myPlayer].c1 }}>{cname(colDefs[selected % 3])}</b></div>
           <div className="inrow">
             <div className="inwrap">
-              <input ref={inputRef} className="field" placeholder="Nachname eingeben (ab 2 Buchstaben)…" value={nameInput} autoComplete="off"
+              <input ref={inputRef} className="field"
+                placeholder={players ? "Nachname eingeben (ab 2 Buchstaben)…" : "Lade Spielerdaten…"}
+                disabled={!players}
+                value={nameInput} autoComplete="off"
                 onChange={(e) => { setNameInput(e.target.value); setChosen(null); setSugOpen(true); setSugActive(-1); }}
                 onKeyDown={onInputKey} onBlur={() => setTimeout(() => setSugOpen(false), 120)} onFocus={() => setSugOpen(true)} />
               {sugOpen && suggestions.length > 0 && (

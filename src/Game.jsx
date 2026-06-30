@@ -2,9 +2,10 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "./supabaseClient.js";
 import { Cell } from "./Emblems.jsx";
 import {
-  P, cname, norm, PLAYERS, suggestPlayers, ADJP, hydrateBoard, playerMatchesHex,
+  P, cname, norm, suggestPlayers, ADJP, hydrateBoard, playerMatchesHex,
   buildBoardSerial, BOARDH, HEXH, START_SECONDS, fmtClock, liveRemaining,
 } from "./gameData.js";
+import { loadPlayers } from "./playersStore.js";
 
 export default function Game({ code, clientId, onLeave }) {
   const [row, setRow] = useState(null);
@@ -21,6 +22,8 @@ export default function Game({ code, clientId, onLeave }) {
   const [showRules, setShowRules] = useState(false);
   const [copied, setCopied] = useState(false);
   const inputRef = useRef(null);
+  const [players, setPlayers] = useState(null);
+  useEffect(() => { loadPlayers().then(setPlayers); }, []);
 
   // ── Laden + Realtime-Abo ──────────────────────────────────────────────────
   useEffect(() => {
@@ -58,7 +61,7 @@ export default function Game({ code, clientId, onLeave }) {
     return { a, b, neutral: 31 - a - b };
   }, [owners]);
 
-  const suggestions = useMemo(() => suggestPlayers(PLAYERS, nameInput, 8), [nameInput]);
+  const suggestions = useMemo(() => (players ? suggestPlayers(players, nameInput, 8) : []), [players, nameInput]);
 
   // Erobert-Animation, wenn ein neuer Zug ankommt
   useEffect(() => {
@@ -113,7 +116,7 @@ export default function Game({ code, clientId, onLeave }) {
     let player = chosen;
     if (!player) {
       const q = norm(nameInput.trim());
-      const hits = PLAYERS.filter((p) => norm(p.n) === q || norm(p.ln) === q);
+      const hits = (players || []).filter((p) => norm(p.n) === q || norm(p.ln) === q);
       if (hits.length === 1) player = hits[0];
     }
     if (!player) {
@@ -237,7 +240,9 @@ export default function Game({ code, clientId, onLeave }) {
           <div className="prompt"><b>Du</b> · Nenne einen Spieler für <b style={{ color: P[myPlayer].c1 }}>{cname(board[selected].def)}</b></div>
           <div className="inrow">
             <div className="inwrap">
-              <input ref={inputRef} className="field" placeholder="Nachname eingeben (ab 2 Buchstaben)…"
+              <input ref={inputRef} className="field"
+                placeholder={players ? "Nachname eingeben (ab 2 Buchstaben)…" : "Lade Spielerdaten…"}
+                disabled={!players}
                 value={nameInput} autoComplete="off"
                 onChange={(e) => { setNameInput(e.target.value); setChosen(null); setSugOpen(true); setSugActive(-1); }}
                 onKeyDown={onInputKey} onBlur={() => setTimeout(() => setSugOpen(false), 120)} onFocus={() => setSugOpen(true)} />
