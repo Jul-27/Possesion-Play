@@ -220,6 +220,7 @@ export default function Game({ code, clientId, onLeave }) {
                     <div key={s.n} className={`sugItem ${i === sugActive ? "active" : ""}`}
                       onMouseDown={(e) => { e.preventDefault(); chooseSug(s); }}>
                       <span>{s.n}</span>
+                      <span className="sugMeta">{[s.pos, new Date().getFullYear() - s.by].filter(Boolean).join(" · ")}</span>
                     </div>
                   ))}
                 </div>

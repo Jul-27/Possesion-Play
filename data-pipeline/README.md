@@ -15,6 +15,7 @@ Kaggle (kein lokales Setup, kein Admin-Recht nötig).
 | `honours_probe.ipynb` | Einmalige Kaggle-Probe zur Wettbewerbs-/Finals-Struktur. |
 | `wikidata_roster.mjs` | Baut `src/players.js` neu aus Wikidata: ergänzt Vereine vorhandener Spieler UND legt fehlende Spieler an (Name, Nachname, Geburtsjahr, Nation via P1532/P27→ISO-3, Vereine, Bekanntheit `sl`). Pool wächst auf ~27k. Lauf: `node data-pipeline/wikidata_roster.mjs` (Internet nötig). Matcht über Name + Geburtsjahr; nur Spiel-Vereine/-Nationen; idempotent. |
 | `wikidata_honours.mjs` | Setzt das Feld `t` (Honours: CL, 5 Meister, 4 Pokale, WM) je Spieler komplett aus Wikidata (Saison-Sieger × Vereinszeitraum, gefenstert). Lauf **nach** dem Roster: `node data-pipeline/wikidata_honours.mjs` (Internet nötig). Idempotent. |
+| `wikidata_positions.mjs` | Ergänzt das Feld `pos` (Gruppen TW/ABW/MF/ST) je Spieler aus Wikidata P413, fürs Autocomplete (Name · Position · Alter). Lauf: `node data-pipeline/wikidata_positions.mjs` (Internet nötig). Idempotent; lässt clubs/nat/t/sl unverändert. |
 
 Das Notebook ist die browserbasierte Zusammenführung der beiden `.py`-Skripte.
 Die Skripte selbst sind als Referenz / für lokale Läufe enthalten.

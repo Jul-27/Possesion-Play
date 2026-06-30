@@ -198,9 +198,10 @@ body::after {
 .field:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(45,212,191,.18), 0 0 18px rgba(45,212,191,.15); }
 .field.mono { font-family: 'DM Mono', monospace; letter-spacing: .3em; text-transform: uppercase; }
 .sug { position: absolute; left: 0; right: 0; top: calc(100% + 6px); background: var(--glass-2); border: 1px solid var(--brd); border-radius: 12px; overflow: hidden; z-index: 20; box-shadow: 0 18px 36px rgba(0,0,0,.6); backdrop-filter: blur(12px); }
-.sugItem { padding: 11px 14px; font-size: 14px; font-weight: 600; cursor: pointer; border-bottom: 1px solid var(--line-soft); display: flex; align-items: center; transition: background .12s, padding .12s; }
+.sugItem { padding: 11px 14px; font-size: 14px; font-weight: 600; cursor: pointer; border-bottom: 1px solid var(--line-soft); display: flex; align-items: center; justify-content: space-between; gap: 10px; transition: background .12s, padding .12s; }
 .sugItem:last-child { border-bottom: none; }
 .sugItem:hover, .sugItem.active { background: rgba(45,212,191,.18); color: #c7f7ec; padding-left: 18px; }
+.sugMeta { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: .02em; white-space: nowrap; }
 
 /* ── Buttons ────────────────────────────────────────────────────────────── */
 .btn { border: none; border-radius: 12px; padding: 0 20px; min-height: 46px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; cursor: pointer; font-family: 'Hanken Grotesk', sans-serif; font-size: 14px; letter-spacing: .01em; transition: transform .12s, filter .15s, box-shadow .15s; white-space: nowrap; }
