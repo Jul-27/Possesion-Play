@@ -13,9 +13,13 @@ create table if not exists public.games (
     guest_id    text,                         -- Client-ID Spieler 2
     names       jsonb not null default '{"1":"Spieler 1","2":"Spieler 2"}',
     last_move   jsonb,                        -- letzter Zug (für Anzeige/Animation)
+    clocks      jsonb,                        -- { "1":sek, "2":sek, started:iso|null, timeout:1|2|null }
     created_at  timestamptz default now(),
     updated_at  timestamptz default now()
 );
+
+-- Für bestehende Tabellen (Migration):
+alter table public.games add column if not exists clocks jsonb;
 
 -- Realtime braucht vollständige Zeilen bei UPDATE
 alter table public.games replica identity full;

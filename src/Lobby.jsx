@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { supabase, getClientId, getSavedName, saveName } from "./supabaseClient.js";
-import { buildBoardSerial, genCode } from "./gameData.js";
+import { buildBoardSerial, genCode, START_SECONDS } from "./gameData.js";
 
 export default function Lobby({ onEnter }) {
   const [name, setName] = useState(getSavedName());
@@ -25,6 +25,7 @@ export default function Lobby({ onEnter }) {
         guest_id: null,
         names: { 1: myName, 2: "Spieler 2" },
         last_move: null,
+        clocks: { 1: START_SECONDS, 2: START_SECONDS, started: null, timeout: null },
         updated_at: new Date().toISOString(),
       });
       if (error) throw error;
@@ -54,7 +55,9 @@ export default function Lobby({ onEnter }) {
       // Gästeplatz beanspruchen (nur wenn noch frei -> verhindert Race)
       const { data: upd, error: updErr } = await supabase
         .from("games")
-        .update({ guest_id: me, status: "playing", names: { ...row.names, 2: myName }, updated_at: new Date().toISOString() })
+        .update({ guest_id: me, status: "playing", names: { ...row.names, 2: myName },
+          clocks: { ...(row.clocks || { 1: START_SECONDS, 2: START_SECONDS, timeout: null }), started: new Date().toISOString() },
+          updated_at: new Date().toISOString() })
         .eq("code", code)
         .is("guest_id", null)
         .select()
