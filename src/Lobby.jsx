@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { supabase, getClientId, getSavedName, saveName } from "./supabaseClient.js";
-import { buildBoardSerial, genCode, START_SECONDS } from "./gameData.js";
+import { buildBoardSerial, buildGridSerial, genCode, START_SECONDS } from "./gameData.js";
 
 export default function Lobby({ onEnter }) {
   const [name, setName] = useState(getSavedName());
+  const [mode, setMode] = useState("hex"); // "hex" | "grid"
   const [joinCode, setJoinCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -17,14 +18,14 @@ export default function Lobby({ onEnter }) {
       saveName(myName);
       const { error } = await supabase.from("games").insert({
         code,
-        board: buildBoardSerial(),
+        board: mode === "grid" ? buildGridSerial() : buildBoardSerial(),
         owners: {},
         turn: 1,
         status: "waiting",
         host_id: me,
         guest_id: null,
         names: { 1: myName, 2: "Spieler 2" },
-        last_move: null,
+        last_move: mode === "grid" ? { picksAll: {} } : null,
         clocks: { 1: START_SECONDS, 2: START_SECONDS, started: null, timeout: null },
         updated_at: new Date().toISOString(),
       });
@@ -79,6 +80,12 @@ export default function Lobby({ onEnter }) {
         <label className="lobLabel">Dein Name</label>
         <input className="field" placeholder="z. B. Julian" value={name} maxLength={20}
           onChange={(e) => setName(e.target.value)} />
+
+        <label className="lobLabel">Spielmodus</label>
+        <div className="inrow">
+          <button type="button" className={`btn ${mode === "hex" ? "primary" : "ghost"}`} style={{ flex: 1 }} onClick={() => setMode("hex")}>Hex-Duell</button>
+          <button type="button" className={`btn ${mode === "grid" ? "primary" : "ghost"}`} style={{ flex: 1 }} onClick={() => setMode("grid")}>Raster-Duell</button>
+        </div>
 
         <button className="btn primary block" style={{ marginTop: 14 }} disabled={busy} onClick={createGame}>
           Neues Spiel erstellen

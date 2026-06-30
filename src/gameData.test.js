@@ -112,3 +112,34 @@ test("liveRemaining zieht verstrichene Zeit ab, min 0", () => {
   assert.equal(liveRemaining({ 1: 5, 2: 240, started: iso }, 1, T + 10000), 0);
   assert.equal(liveRemaining({ 1: 240, 2: 100, started: iso }, 2, T + 10000), 90);
 });
+
+import { gridCellMatches, gridWinner, buildGridSerial, lookupDef as lk } from "./gameData.js";
+
+test("gridCellMatches: beide Bedingungen nötig", () => {
+  const fcb = lk("club", "FCB"), ger = lk("nat", "GER"), esp = lk("nat", "ESP");
+  const p = { clubs: ["FCB"], nat: ["GER"] };
+  assert.equal(gridCellMatches(p, fcb, ger), true);
+  assert.equal(gridCellMatches(p, fcb, esp), false);
+});
+
+test("gridWinner: Reihe/Spalte/Diagonale/None", () => {
+  assert.equal(gridWinner({ 0: 1, 1: 1, 2: 1 }), 1);
+  assert.equal(gridWinner({ 0: 2, 4: 2, 8: 2 }), 2);
+  assert.equal(gridWinner({ 0: 1, 3: 1, 6: 1 }), 1);
+  assert.equal(gridWinner({ 0: 1, 1: 2, 2: 1 }), null);
+  assert.equal(gridWinner({}), null);
+});
+
+test("buildGridSerial: lösbares Raster", async () => {
+  const { PLAYERS } = await import("./players.js");
+  const g = buildGridSerial();
+  assert.equal(g.kind, "grid");
+  assert.equal(g.rows.length, 3);
+  assert.equal(g.cols.length, 3);
+  const keys = [...g.rows, ...g.cols].map((d) => d.t + ":" + d.k);
+  assert.equal(new Set(keys).size, 6);
+  for (const rs of g.rows) for (const cs of g.cols) {
+    const rd = lk(rs.t, rs.k), cd = lk(cs.t, cs.k);
+    assert.ok(PLAYERS.some((p) => gridCellMatches(p, rd, cd)), `unlösbar: ${rs.k}×${cs.k}`);
+  }
+});
