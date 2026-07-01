@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 /*
- * wikidata_honours.mjs — Setzt das Feld `t` (Honours) je Spieler in src/players.js
- * komplett aus Wikidata: Saison-Sieger je Wettbewerb (P1346) × Spieler-Vereins-
- * zeitraum (P54 mit P580/P582). Internet nötig. Idempotent. Läuft NACH dem Roster.
- *   node data-pipeline/wikidata_honours.mjs
+ * wikidata_honours_extra.mjs — ergänzt das Feld `t` in src/players.js ADDITIV um:
+ *   BDO Ballon d'Or (P166 direkt am Spieler)
+ *   EM  Europameister, CA Copa-América-Sieger, EL Europa-League-Sieger
+ *       (Turnier-/Saison-Sieger P1346 × P54-Mitgliedszeitraum, wie WM/CL im
+ *        Basis-Skript wikidata_honours.mjs)
+ * Merge: t = union(bestehend, neu); pos/sl bleiben erhalten. Internet nötig.
+ *   node data-pipeline/wikidata_honours_extra.mjs
  */
 import { readFileSync, writeFileSync } from "fs";
 import { fileURLToPath, pathToFileURL } from "url";
@@ -13,11 +16,12 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const PLAYERS_PATH = join(HERE, "..", "src", "players.js");
 const UA = "PossessionPlay/1.0 (https://github.com/Jul-27; data enrichment)";
 
-// Honour-Key -> Wikidata-Wettbewerb (verifiziert: Label + vorhandene Saison-Sieger)
-const COMP_QID = {
-  CL:"Q18756", WM:"Q19317",
-  MBL:"Q82595", MPL:"Q9448", MLL:"Q324867", MSA:"Q15804", ML1:"Q13394",
-  DFB:"Q150880", FAC:"Q11151", CDR:"Q483794", CIT:"Q169918",
+// Erwartete QIDs + engl. Labels — werden VOR dem Lauf verifiziert (Abbruch bei Abweichung).
+const EXPECT = {
+  EM:  { qid: "Q260858", label: "UEFA European Championship" },
+  CA:  { qid: "Q178750", label: "Copa América" },
+  EL:  { qid: "Q18760",  label: "UEFA Europa League" },
+  BDO: { qid: "Q166177", label: "Ballon d'Or" },
 };
 
 export function norm(s) {
@@ -32,21 +36,32 @@ async function sparql(query) {
     let res;
     try {
       res = await fetch(url, { headers: { "User-Agent": UA, "Accept": "application/sparql-results+json" } });
-    } catch (e) { await sleep(5000); continue; }       // Netzwerkfehler -> retry
+    } catch (e) { await sleep(5000); continue; }
     if (res.status === 429 || res.status >= 500) { await sleep(8000); continue; }
     if (!res.ok) throw new Error("HTTP " + res.status);
     const text = await res.text();
     try { return JSON.parse(text).results.bindings; }
-    catch (e) { await sleep(5000); continue; }          // unvollständige/abgeschnittene Antwort -> retry
+    catch (e) { await sleep(5000); continue; }
   }
   throw new Error("SPARQL fehlgeschlagen (Retries erschöpft)");
 }
 
-// Zeitfenster (Saison-Startjahr), um zu große WDQS-Antworten zu vermeiden.
+async function verifyQids() {
+  console.log("QID-Verifikation:");
+  for (const [key, { qid, label }] of Object.entries(EXPECT)) {
+    const rows = await sparql(`SELECT ?l WHERE { wd:${qid} rdfs:label ?l . FILTER(LANG(?l)="en") }`);
+    const got = rows[0]?.l?.value || "";
+    console.log(`  ${key} ${qid}: "${got}"`);
+    if (norm(got) !== norm(label)) throw new Error(`QID-Check ${key}: erwartet "${label}", bekommen "${got}"`);
+    await sleep(500);
+  }
+}
+
+// Zeitfenster (Saison-/Turnier-Startjahr) gegen zu große WDQS-Antworten.
 const WINDOWS = [[1890, 1960], [1960, 1980], [1980, 1995], [1995, 2005], [2005, 2010],
                  [2010, 2014], [2014, 2018], [2018, 2022], [2022, 2025], [2025, 2031]];
 
-// Spieler, die im Titel-Saison-Zeitraum beim Sieger des Wettbewerbs waren (gefenstert).
+// Spieler, die im Titel-Zeitraum beim Sieger des Wettbewerbs waren (gefenstert).
 async function fetchHonourPlayers(qid) {
   const out = [];
   for (const [from, to] of WINDOWS) {
@@ -67,20 +82,31 @@ async function fetchHonourPlayers(qid) {
   return out;
 }
 
+// Individueller Award (Ballon d'Or): P166 direkt am Spieler, keine Fensterung nötig.
+async function fetchAwardPlayers(qid) {
+  const q = `SELECT DISTINCT ?pLabel ?by WHERE {
+    ?p wdt:P166 wd:${qid} ; wdt:P106 wd:Q937857 ; wdt:P569 ?d .
+    BIND(YEAR(?d) AS ?by)
+    SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+  }`;
+  const rows = await sparql(q);
+  return rows.map((b) => ({ name: b.pLabel?.value, by: b.by?.value ? parseInt(b.by.value) : null }));
+}
+
 function recToString(r) {
   let s = `{"n": ${JSON.stringify(r.n)}, "ln": ${JSON.stringify(r.ln)}, "by": ${r.by}, "nat": ${JSON.stringify(r.nat)}, "clubs": ${JSON.stringify(r.clubs)}`;
   if (r.t && r.t.length) s += `, "t": ${JSON.stringify(r.t)}`;
   if (r.sl) s += `, "sl": ${r.sl}`;
-  if (r.pos) s += `, "pos": ${JSON.stringify(r.pos)}`; // pos erhalten (kam nach diesem Skript dazu)
+  if (r.pos) s += `, "pos": ${JSON.stringify(r.pos)}`;
   return s + "}";
 }
 
 async function main() {
-  // 1) Honours pro Spieler aus Wikidata: key "norm|by" -> Set(honourKeys)
+  await verifyQids();
+
+  // 1) Neue Honours je Spieler sammeln: "norm|by" -> Set(keys)
   const hon = new Map();
-  for (const [key, qid] of Object.entries(COMP_QID)) {
-    let rows;
-    try { rows = await fetchHonourPlayers(qid); } catch (e) { console.log(`  ${key} FEHLER ${e.message}`); continue; }
+  const add = (rows, key) => {
     let c = 0;
     for (const r of rows) {
       if (!r.name || !r.by) continue;
@@ -88,18 +114,31 @@ async function main() {
       if (!hon.has(k)) hon.set(k, new Set());
       hon.get(k).add(key); c++;
     }
-    console.log(`  ${key} (${qid}): ${rows.length} Zeilen, ${c} Zuordnungen`);
+    return c;
+  };
+  for (const key of ["EM", "CA", "EL"]) {
+    const rows = await fetchHonourPlayers(EXPECT[key].qid);
+    console.log(`  ${key}: ${rows.length} Zeilen, ${add(rows, key)} Zuordnungen`);
     await sleep(1300);
   }
+  {
+    const rows = await fetchAwardPlayers(EXPECT.BDO.qid);
+    console.log(`  BDO: ${rows.length} Zeilen, ${add(rows, "BDO")} Zuordnungen`);
+  }
 
-  // 2) players.js laden, t neu setzen
+  // 2) players.js laden, t ADDITIV mergen (pos/sl unangetastet)
   const mod = await import(pathToFileURL(PLAYERS_PATH).href + "?t=" + Date.now());
   const players = mod.PLAYERS.map((p) => ({ ...p, clubs: [...(p.clubs || [])], nat: [...(p.nat || [])] }));
-  let withT = 0;
+  const counts = { BDO: 0, EM: 0, CA: 0, EL: 0 };
+  let touched = 0;
   for (const p of players) {
-    const keys = hon.get(norm(p.n) + "|" + p.by);
-    if (keys && keys.size) { p.t = [...keys].sort(); withT++; }
-    else delete p.t;
+    const extra = hon.get(norm(p.n) + "|" + p.by);
+    if (!extra || !extra.size) continue;
+    const t = new Set(p.t || []);
+    const before = t.size;
+    for (const k of extra) { if (!t.has(k)) counts[k] = (counts[k] || 0) + 1; t.add(k); }
+    if (t.size > before) touched++;
+    p.t = [...t].sort();
   }
 
   // 3) Schreiben (Reihenfolge wie zuvor: nach Name)
@@ -107,7 +146,12 @@ async function main() {
   const header = readFileSync(PLAYERS_PATH, "utf8").split("export const PLAYERS")[0];
   const body = players.map(recToString).join(",\n  ");
   writeFileSync(PLAYERS_PATH, header + "export const PLAYERS = [\n  " + body + "\n];\n");
-  console.log(`\nFertig: ${withT} Spieler mit Honours -> src/players.js`);
+  console.log(`\nFertig: ${touched} Spieler ergänzt`, counts, "-> src/players.js");
+  // Stichproben zur Plausibilität
+  for (const key of ["BDO", "EM", "CA", "EL"]) {
+    const sample = players.filter((p) => (p.t || []).includes(key)).sort((a, b) => (b.sl || 0) - (a.sl || 0)).slice(0, 5).map((p) => p.n);
+    console.log(`  ${key}-Beispiele:`, sample.join(", "));
+  }
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) main();

@@ -108,6 +108,10 @@ export const HONOURS = [
   { key: "FAC", label: "FA",  name: "FA-Cup-Sieger",          icon: "🥇", c1: "#3D195B", c2: "#1f0e36" },
   { key: "CDR", label: "CDR", name: "Copa-del-Rey-Sieger",    icon: "🥇", c1: "#E03A3E", c2: "#1f1f3c" },
   { key: "CIT", label: "CIT", name: "Coppa-Italia-Sieger",    icon: "🥇", c1: "#0A66B0", c2: "#0a2a4a" },
+  { key: "BDO", label: "BdO", name: "Ballon-d'Or-Sieger",     icon: "👑", c1: "#C9A227", c2: "#3d2f00" },
+  { key: "EM",  label: "EM",  name: "Europameister",          icon: "🇪🇺", c1: "#123B8F", c2: "#C9A227" },
+  { key: "CA",  label: "CA",  name: "Copa-América-Sieger",    icon: "🌎", c1: "#2DD4BF", c2: "#0e4d44" },
+  { key: "EL",  label: "EL",  name: "Europa-League-Sieger",   icon: "🏆", c1: "#F26F21", c2: "#5c2500" },
 ].map((h) => ({ ...h, type: "honour" }));
 
 /* Spielerdaten liegen in ./players.js (~2,6 MB) und werden NICHT mehr statisch
