@@ -42,11 +42,11 @@ test("buildBoardSerial: 31 Felder mit 1–3 Liga-Feldern", () => {
 
 import { HONOURS } from "./gameData.js";
 
-test("HONOURS enthält 11 Honours als type 'honour'", () => {
-  assert.equal(HONOURS.length, 11);
+test("HONOURS enthält 15 Honours als type 'honour'", () => {
+  assert.equal(HONOURS.length, 15);
   assert.deepEqual(
     HONOURS.map((h) => h.key).sort(),
-    ["CDR", "CIT", "CL", "DFB", "FAC", "MBL", "ML1", "MLL", "MPL", "MSA", "WM"]
+    ["BDO", "CA", "CDR", "CIT", "CL", "DFB", "EL", "EM", "FAC", "MBL", "ML1", "MLL", "MPL", "MSA", "WM"]
   );
   for (const h of HONOURS) {
     assert.equal(h.type, "honour");
@@ -57,6 +57,8 @@ test("HONOURS enthält 11 Honours als type 'honour'", () => {
 test("lookupDef löst Honour-Keys auf", () => {
   assert.equal(lookupDef("honour", "CL").name, "Champions-League-Sieger");
   assert.equal(lookupDef("honour", "WM").name, "Weltmeister");
+  assert.equal(lookupDef("honour", "BDO").name, "Ballon-d'Or-Sieger");
+  assert.equal(lookupDef("honour", "EM").name, "Europameister");
 });
 
 test("playerMatchesHex: honour matcht über player.t", () => {
