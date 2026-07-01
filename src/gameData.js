@@ -192,14 +192,20 @@ export function encodeTarget(index) { return btoa(String(index)); }
 export function decodeTarget(tgt)   { return Number(atob(tgt)); }
 export function checkGuess(tgt, guessedIndex) { return decodeTarget(tgt) === guessedIndex; }
 
+// Indizes aller Spieler, die als Guess-/Daily-Ziel taugen (vollständige Daten + bekannt).
+export function guessEligibleIndices(players) {
+  const out = [];
+  for (let i = 0; i < players.length; i++) {
+    const p = players[i];
+    if (p.pos && (p.nat || []).length && (p.clubs || []).length && (p.sl || 0) >= GUESS_SL_MIN) out.push(i);
+  }
+  return out;
+}
+
 // Geheimes Ziel ziehen: bekannt (sl >= GUESS_SL_MIN) und mit vollständigen Daten,
 // damit jede Frage-Dimension sinnvoll beantwortbar ist.
 export function buildGuessSerial(players) {
-  const eligible = [];
-  for (let i = 0; i < players.length; i++) {
-    const p = players[i];
-    if (p.pos && (p.nat || []).length && (p.clubs || []).length && (p.sl || 0) >= GUESS_SL_MIN) eligible.push(i);
-  }
+  const eligible = guessEligibleIndices(players);
   const pool = eligible.length ? eligible : players.map((_, i) => i);
   const idx = pool[Math.floor(Math.random() * pool.length)];
   return { kind: "guess", tgt: encodeTarget(idx) };
