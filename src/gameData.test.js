@@ -196,6 +196,20 @@ test("guessQuestionLabel formatiert lesbar", () => {
   assert.equal(guessQuestionLabel({ dim: "born", val: { cmp: "after", year: 2000 } }), "Geboren ab 2000?");
 });
 
+import { guessEligibleIndices } from "./gameData.js";
+
+test("guessEligibleIndices filtert auf pos+nat+clubs+sl>=GUESS_SL_MIN", () => {
+  const list = [
+    { pos: "ST", nat: ["GER"], clubs: ["FCB"], sl: 50 },  // ok
+    { pos: null, nat: ["GER"], clubs: ["FCB"], sl: 50 },  // keine Position
+    { pos: "MF", nat: [], clubs: ["FCB"], sl: 50 },       // keine Nation
+    { pos: "MF", nat: ["GER"], clubs: [], sl: 50 },       // kein Verein
+    { pos: "MF", nat: ["GER"], clubs: ["FCB"], sl: 10 },  // zu unbekannt
+    { pos: "TW", nat: ["ESP"], clubs: ["BAR"], sl: 40 },  // ok (Grenze)
+  ];
+  assert.deepEqual(guessEligibleIndices(list), [0, 5]);
+});
+
 test("buildGuessSerial: gültiger, bekannter Kandidat", async () => {
   const { PLAYERS } = await import("./players.js");
   for (let i = 0; i < 20; i++) {
