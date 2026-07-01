@@ -290,3 +290,23 @@ body::after {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ── Errate den Star ───────────────────────────────────────────── */
+.qlog { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
+.qlogEmpty { color: #7fa093; font-size: 14px; text-align: center; padding: 14px 0; }
+.qlogRow { display: flex; align-items: center; gap: 8px; background: rgba(10,22,19,.55); border: 1px solid rgba(255,255,255,.06); border-radius: 10px; padding: 8px 12px; }
+.qlogWho { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.qlogText { flex: 1; color: #d7ece3; font-size: 14px; }
+.qlogAns { font-weight: 700; font-size: 13px; padding: 2px 10px; border-radius: 999px; }
+.qlogAns.yes { background: rgba(45,212,191,.18); color: #2DD4BF; }
+.qlogAns.no { background: rgba(251,113,133,.18); color: #FB7185; }
+.chiprow { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; }
+.chip { background: rgba(10,22,19,.6); border: 1px solid rgba(255,255,255,.12); color: #d7ece3; border-radius: 999px; padding: 8px 14px; font-size: 14px; cursor: pointer; }
+.chip:hover:not(:disabled) { border-color: #2DD4BF; }
+.chip.on { background: linear-gradient(150deg, #2DD4BF, #0D9488); color: #042; border-color: transparent; font-weight: 700; }
+.chip:disabled { opacity: .4; cursor: not-allowed; }
+.cbList { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; max-height: 240px; overflow-y: auto; }
+.cbItem { display: flex; justify-content: space-between; align-items: center; background: rgba(10,22,19,.6); border: 1px solid rgba(255,255,255,.08); color: #d7ece3; border-radius: 8px; padding: 9px 12px; font-size: 14px; cursor: pointer; text-align: left; }
+.cbItem:hover:not(:disabled) { border-color: #2DD4BF; }
+.cbItem:disabled { opacity: .4; cursor: not-allowed; }
+.cbMeta { color: #7fa093; font-size: 12px; }
