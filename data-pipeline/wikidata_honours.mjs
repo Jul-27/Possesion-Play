@@ -71,6 +71,7 @@ function recToString(r) {
   let s = `{"n": ${JSON.stringify(r.n)}, "ln": ${JSON.stringify(r.ln)}, "by": ${r.by}, "nat": ${JSON.stringify(r.nat)}, "clubs": ${JSON.stringify(r.clubs)}`;
   if (r.t && r.t.length) s += `, "t": ${JSON.stringify(r.t)}`;
   if (r.sl) s += `, "sl": ${r.sl}`;
+  if (r.pos) s += `, "pos": ${JSON.stringify(r.pos)}`; // pos erhalten (kam nach diesem Skript dazu)
   return s + "}";
 }
 
