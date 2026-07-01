@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { supabase, getClientId, getSavedName, saveName } from "./supabaseClient.js";
-import { buildBoardSerial, buildGridSerial, genCode, START_SECONDS } from "./gameData.js";
+import { buildBoardSerial, buildGridSerial, buildGuessSerial, genCode, START_SECONDS } from "./gameData.js";
 import { loadPlayers } from "./playersStore.js";
 
 export default function Lobby({ onEnter }) {
   const [name, setName] = useState(getSavedName());
-  const [mode, setMode] = useState("hex"); // "hex" | "grid"
+  const [mode, setMode] = useState("hex"); // "hex" | "grid" | "guess"
   const [joinCode, setJoinCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -19,16 +19,20 @@ export default function Lobby({ onEnter }) {
       const me = getClientId();
       const myName = name.trim() || "Spieler 1";
       saveName(myName);
+      let board, last_move;
+      if (mode === "grid") { board = buildGridSerial(await loadPlayers()); last_move = { picksAll: {} }; }
+      else if (mode === "guess") { board = buildGuessSerial(await loadPlayers()); last_move = { log: [], winner: null }; }
+      else { board = buildBoardSerial(); last_move = null; }
       const { error } = await supabase.from("games").insert({
         code,
-        board: mode === "grid" ? buildGridSerial(await loadPlayers()) : buildBoardSerial(),
+        board,
         owners: {},
         turn: 1,
         status: "waiting",
         host_id: me,
         guest_id: null,
         names: { 1: myName, 2: "Spieler 2" },
-        last_move: mode === "grid" ? { picksAll: {} } : null,
+        last_move,
         clocks: { 1: START_SECONDS, 2: START_SECONDS, started: null, timeout: null },
         updated_at: new Date().toISOString(),
       });
@@ -85,9 +89,10 @@ export default function Lobby({ onEnter }) {
           onChange={(e) => setName(e.target.value)} />
 
         <label className="lobLabel">Spielmodus</label>
-        <div className="inrow">
+        <div className="inrow" style={{ flexWrap: "wrap" }}>
           <button type="button" className={`btn ${mode === "hex" ? "primary" : "ghost"}`} style={{ flex: 1 }} onClick={() => setMode("hex")}>Hex-Duell</button>
           <button type="button" className={`btn ${mode === "grid" ? "primary" : "ghost"}`} style={{ flex: 1 }} onClick={() => setMode("grid")}>Raster-Duell</button>
+          <button type="button" className={`btn ${mode === "guess" ? "primary" : "ghost"}`} style={{ flex: 1 }} onClick={() => setMode("guess")}>Errate den Star</button>
         </div>
 
         <button className="btn primary block" style={{ marginTop: 14 }} disabled={busy} onClick={createGame}>

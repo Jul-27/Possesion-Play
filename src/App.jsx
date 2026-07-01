@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Lobby from "./Lobby.jsx";
 import Game from "./Game.jsx";
 import Grid from "./Grid.jsx";
+import Guess from "./Guess.jsx";
 import { supabase, getClientId } from "./supabaseClient.js";
 
 function codeFromUrl() {
@@ -19,10 +20,10 @@ function GameRouter({ code, clientId, onLeave }) {
     return () => { active = false; };
   }, [code]);
   if (board === undefined) return <div className="ppRoot"><div className="panel" style={{ marginTop: 40 }}>Lade Spiel…</div></div>;
-  const isGrid = board && !Array.isArray(board);
-  return isGrid
-    ? <Grid code={code} clientId={clientId} onLeave={onLeave} />
-    : <Game code={code} clientId={clientId} onLeave={onLeave} />;
+  const kind = board && !Array.isArray(board) ? board.kind : "hex";
+  if (kind === "grid") return <Grid code={code} clientId={clientId} onLeave={onLeave} />;
+  if (kind === "guess") return <Guess code={code} clientId={clientId} onLeave={onLeave} />;
+  return <Game code={code} clientId={clientId} onLeave={onLeave} />;
 }
 
 export default function App() {
