@@ -3,11 +3,16 @@ import Lobby from "./Lobby.jsx";
 import Game from "./Game.jsx";
 import Grid from "./Grid.jsx";
 import Guess from "./Guess.jsx";
+import Daily from "./Daily.jsx";
 import { supabase, getClientId } from "./supabaseClient.js";
 
 function codeFromUrl() {
   const c = new URLSearchParams(window.location.search).get("game");
   return c ? c.toUpperCase() : null;
+}
+
+function dailyFromUrl() {
+  return new URLSearchParams(window.location.search).get("daily") != null;
 }
 
 function GameRouter({ code, clientId, onLeave }) {
@@ -28,10 +33,11 @@ function GameRouter({ code, clientId, onLeave }) {
 
 export default function App() {
   const [code, setCode] = useState(codeFromUrl());
+  const [daily, setDaily] = useState(dailyFromUrl());
   const clientId = getClientId();
 
   useEffect(() => {
-    const onPop = () => setCode(codeFromUrl());
+    const onPop = () => { setCode(codeFromUrl()); setDaily(dailyFromUrl()); };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
@@ -39,14 +45,19 @@ export default function App() {
   function enter(c) {
     const url = `${window.location.pathname}?game=${c}`;
     window.history.pushState({}, "", url);
-    setCode(c);
+    setDaily(false); setCode(c);
+  }
+  function enterDaily() {
+    window.history.pushState({}, "", `${window.location.pathname}?daily=1`);
+    setCode(null); setDaily(true);
   }
   function leave() {
     window.history.pushState({}, "", window.location.pathname);
-    setCode(null);
+    setCode(null); setDaily(false);
   }
 
+  if (daily) return <Daily onLeave={leave} />;
   return code
     ? <GameRouter code={code} clientId={clientId} onLeave={leave} />
-    : <Lobby onEnter={enter} />;
+    : <Lobby onEnter={enter} onDaily={enterDaily} />;
 }

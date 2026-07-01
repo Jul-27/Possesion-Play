@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { supabase, getClientId, getSavedName, saveName } from "./supabaseClient.js";
 import { buildBoardSerial, buildGridSerial, buildGuessSerial, genCode, START_SECONDS } from "./gameData.js";
 import { loadPlayers } from "./playersStore.js";
+import { dailyDateStr, dailyNumber } from "./dailyLogic.js";
 
-export default function Lobby({ onEnter }) {
+export default function Lobby({ onEnter, onDaily }) {
   const [name, setName] = useState(getSavedName());
   const [mode, setMode] = useState("hex"); // "hex" | "grid" | "guess"
   const [joinCode, setJoinCode] = useState("");
@@ -83,6 +84,8 @@ export default function Lobby({ onEnter }) {
       <h1 className="title">POSSESSION PLAY</h1>
       <div className="subtitle">Hex-Duell · Online gegen einen Freund</div>
 
+      <DailyCard onDaily={onDaily} />
+
       <div className="panel" style={{ marginTop: 22 }}>
         <label className="lobLabel">Dein Name</label>
         <input className="field" placeholder="z. B. Julian" value={name} maxLength={20}
@@ -114,5 +117,22 @@ export default function Lobby({ onEnter }) {
 
       <p className="lobHint">Erstelle ein Spiel, teile den Code mit deinem Freund — ihr spielt in Echtzeit, jeder im eigenen Browser.</p>
     </div>
+  );
+}
+
+function DailyCard({ onDaily }) {
+  const dateStr = dailyDateStr();
+  let state = null;
+  try { state = JSON.parse(localStorage.getItem(`pp:daily:${dateStr}`) || "null"); } catch { /* egal */ }
+  const badge = state?.done ? (state.won ? "✓ gelöst" : "✗ vorbei") : "heute offen";
+  return (
+    <button className="dailyCard" onClick={onDaily}>
+      <span className="dailyCardIcon">🌟</span>
+      <span className="dailyCardText">
+        <b>Daily-Star #{dailyNumber(dateStr)}</b>
+        <small>Das tägliche Rätsel — solo, für alle gleich</small>
+      </span>
+      <span className={`dailyBadge ${state?.done ? (state.won ? "won" : "lost") : ""}`}>{badge}</span>
+    </button>
   );
 }

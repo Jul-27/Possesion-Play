@@ -310,3 +310,20 @@ body::after {
 .cbItem:hover:not(:disabled) { border-color: #2DD4BF; }
 .cbItem:disabled { opacity: .4; cursor: not-allowed; }
 .cbMeta { color: #7fa093; font-size: 12px; }
+
+/* ── Daily-Star ────────────────────────────────────────────────── */
+.dailyCard { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 18px; padding: 14px 16px; background: linear-gradient(150deg, rgba(250,204,21,.14), rgba(10,22,19,.6)); border: 1px solid rgba(250,204,21,.35); border-radius: 14px; color: #f3efdc; cursor: pointer; text-align: left; }
+.dailyCard:hover { border-color: #FACC15; }
+.dailyCardIcon { font-size: 26px; }
+.dailyCardText { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.dailyCardText small { color: #b9c9b9; font-size: 12px; }
+.dailyBadge { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: rgba(250,204,21,.15); color: #FACC15; }
+.dailyBadge.won { background: rgba(45,212,191,.18); color: #2DD4BF; }
+.dailyBadge.lost { background: rgba(251,113,133,.18); color: #FB7185; }
+.dailyMeta { display: flex; gap: 10px; margin-top: 12px; }
+.dailyCount { font-size: 13px; font-weight: 700; padding: 5px 12px; border-radius: 999px; background: rgba(10,22,19,.6); border: 1px solid rgba(255,255,255,.12); color: #d7ece3; }
+.dailyCount.spent { color: #FB7185; border-color: rgba(251,113,133,.4); }
+.dailyEnd { text-align: center; }
+.dailyStats { display: flex; justify-content: center; gap: 18px; margin: 10px 0 14px; color: #b9c9b9; font-size: 13px; }
+.dailyStats b { display: block; font-size: 18px; color: #fff; }
+.dailyNext { color: #7fa093; font-size: 13px; margin-top: 10px; }
