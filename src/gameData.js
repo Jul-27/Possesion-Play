@@ -156,6 +156,55 @@ export function playerMatchesHex(player, def) {
   return false;
 }
 
+// ── Errate den Star (Deduktions-Duell) ───────────────────────────────────────
+export const GUESS_SL_MIN = 40; // Mindest-Bekanntheit der Ziel-Spieler (tunebar)
+export const POS_LABEL = { TW: "Torwart", ABW: "Abwehr", MF: "Mittelfeld", ST: "Sturm" };
+
+// Deterministische Ja/Nein-Antwort auf eine Attributfrage { dim, val }.
+export function answerGuessQuestion(player, q) {
+  if (!player || !q) return false;
+  switch (q.dim) {
+    case "nat":    return (player.nat || []).includes(q.val);
+    case "club":   return (player.clubs || []).includes(q.val);
+    case "league": return (player.clubs || []).some((ck) => CLUB_LG[ck] === q.val);
+    case "pos":    return player.pos === q.val;
+    case "title":  return (player.t || []).includes(q.val);
+    case "born":   return q.val.cmp === "before" ? player.by < q.val.year : player.by >= q.val.year;
+    default:       return false;
+  }
+}
+
+// Klartext einer Frage für die Protokollanzeige.
+export function guessQuestionLabel(q) {
+  switch (q.dim) {
+    case "nat":    return `Aus ${lookupDef("nat", q.val)?.name ?? q.val}?`;
+    case "club":   return `Spielte für ${lookupDef("club", q.val)?.name ?? q.val}?`;
+    case "league": return `Spielte in der ${lookupDef("league", q.val)?.name ?? q.val}?`;
+    case "pos":    return `Position: ${POS_LABEL[q.val] ?? q.val}?`;
+    case "title":  return `${lookupDef("honour", q.val)?.name ?? q.val}?`;
+    case "born":   return `Geboren ${q.val.cmp === "before" ? "vor" : "ab"} ${q.val.year}?`;
+    default:       return "?";
+  }
+}
+
+// Leichte Verschleierung der Index-Referenz (kein echter Schutz; vertrauensbasiert).
+export function encodeTarget(index) { return btoa(String(index)); }
+export function decodeTarget(tgt)   { return Number(atob(tgt)); }
+export function checkGuess(tgt, guessedIndex) { return decodeTarget(tgt) === guessedIndex; }
+
+// Geheimes Ziel ziehen: bekannt (sl >= GUESS_SL_MIN) und mit vollständigen Daten,
+// damit jede Frage-Dimension sinnvoll beantwortbar ist.
+export function buildGuessSerial(players) {
+  const eligible = [];
+  for (let i = 0; i < players.length; i++) {
+    const p = players[i];
+    if (p.pos && (p.nat || []).length && (p.clubs || []).length && (p.sl || 0) >= GUESS_SL_MIN) eligible.push(i);
+  }
+  const pool = eligible.length ? eligible : players.map((_, i) => i);
+  const idx = pool[Math.floor(Math.random() * pool.length)];
+  return { kind: "guess", tgt: encodeTarget(idx) };
+}
+
 // ── Raster-Duell (3x3) ───────────────────────────────────────────────────────
 export function gridCellMatches(player, rowDef, colDef) {
   return playerMatchesHex(player, rowDef) && playerMatchesHex(player, colDef);

@@ -150,7 +150,7 @@ export default function Grid({ code, clientId, onLeave }) {
 
   async function newGame() {
     await supabase.from("games").update({
-      board: buildGridSerial(), owners: {}, turn: 1, status: "playing",
+      board: buildGridSerial(players), owners: {}, turn: 1, status: "playing",
       last_move: { picksAll: {} },
       clocks: { 1: START_SECONDS, 2: START_SECONDS, started: new Date().toISOString(), timeout: null },
       updated_at: new Date().toISOString(),

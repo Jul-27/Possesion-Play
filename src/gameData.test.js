@@ -143,3 +143,69 @@ test("buildGridSerial: lösbares Raster", async () => {
     assert.ok(PLAYERS.some((p) => gridCellMatches(p, rd, cd)), `unlösbar: ${rs.k}×${cs.k}`);
   }
 });
+
+import {
+  answerGuessQuestion, guessQuestionLabel, buildGuessSerial,
+  encodeTarget, decodeTarget, checkGuess, GUESS_SL_MIN,
+} from "./gameData.js";
+
+const STAR = { n: "Lionel Messi", ln: "Messi", by: 1987, nat: ["ARG"], clubs: ["BAR", "PSG"], t: ["CL", "WM"], sl: 219, pos: "ST" };
+
+test("answerGuessQuestion: nat / club / league / pos / title", () => {
+  assert.equal(answerGuessQuestion(STAR, { dim: "nat", val: "ARG" }), true);
+  assert.equal(answerGuessQuestion(STAR, { dim: "nat", val: "ESP" }), false);
+  assert.equal(answerGuessQuestion(STAR, { dim: "club", val: "BAR" }), true);
+  assert.equal(answerGuessQuestion(STAR, { dim: "club", val: "MUN" }), false);
+  assert.equal(answerGuessQuestion(STAR, { dim: "league", val: "LL" }), true); // BAR -> LL
+  assert.equal(answerGuessQuestion(STAR, { dim: "league", val: "BL" }), false);
+  assert.equal(answerGuessQuestion(STAR, { dim: "pos", val: "ST" }), true);
+  assert.equal(answerGuessQuestion(STAR, { dim: "pos", val: "TW" }), false);
+  assert.equal(answerGuessQuestion(STAR, { dim: "title", val: "CL" }), true);
+  assert.equal(answerGuessQuestion(STAR, { dim: "title", val: "FAC" }), false);
+});
+
+test("answerGuessQuestion: born vor/ab inkl. Grenzjahr", () => {
+  assert.equal(answerGuessQuestion(STAR, { dim: "born", val: { cmp: "before", year: 1990 } }), true);
+  assert.equal(answerGuessQuestion(STAR, { dim: "born", val: { cmp: "after", year: 1990 } }), false);
+  assert.equal(answerGuessQuestion(STAR, { dim: "born", val: { cmp: "after", year: 1987 } }), true); // by >= year
+  assert.equal(answerGuessQuestion(STAR, { dim: "born", val: { cmp: "before", year: 1987 } }), false);
+});
+
+test("answerGuessQuestion: fehlende Felder = false", () => {
+  assert.equal(answerGuessQuestion({}, { dim: "title", val: "CL" }), false);
+  assert.equal(answerGuessQuestion({}, { dim: "club", val: "BAR" }), false);
+});
+
+test("encodeTarget/decodeTarget Roundtrip", () => {
+  for (const i of [0, 1, 50, 123, 27450]) assert.equal(decodeTarget(encodeTarget(i)), i);
+});
+
+test("checkGuess vergleicht Index", () => {
+  const t = encodeTarget(50);
+  assert.equal(checkGuess(t, 50), true);
+  assert.equal(checkGuess(t, 51), false);
+});
+
+test("guessQuestionLabel formatiert lesbar", () => {
+  assert.equal(guessQuestionLabel({ dim: "nat", val: "ARG" }), "Aus Argentinien?");
+  assert.equal(guessQuestionLabel({ dim: "club", val: "BAR" }), "Spielte für FC Barcelona?");
+  assert.equal(guessQuestionLabel({ dim: "league", val: "BL" }), "Spielte in der Bundesliga?");
+  assert.equal(guessQuestionLabel({ dim: "pos", val: "ST" }), "Position: Sturm?");
+  assert.equal(guessQuestionLabel({ dim: "title", val: "WM" }), "Weltmeister?");
+  assert.equal(guessQuestionLabel({ dim: "born", val: { cmp: "before", year: 1990 } }), "Geboren vor 1990?");
+  assert.equal(guessQuestionLabel({ dim: "born", val: { cmp: "after", year: 2000 } }), "Geboren ab 2000?");
+});
+
+test("buildGuessSerial: gültiger, bekannter Kandidat", async () => {
+  const { PLAYERS } = await import("./players.js");
+  for (let i = 0; i < 20; i++) {
+    const g = buildGuessSerial(PLAYERS);
+    assert.equal(g.kind, "guess");
+    const p = PLAYERS[decodeTarget(g.tgt)];
+    assert.ok(p, "Ziel-Index ungültig");
+    assert.ok(p.pos, "Ziel ohne Position");
+    assert.ok((p.nat || []).length, "Ziel ohne Nation");
+    assert.ok((p.clubs || []).length, "Ziel ohne Verein");
+    assert.ok((p.sl || 0) >= GUESS_SL_MIN, "Ziel nicht bekannt genug");
+  }
+});
