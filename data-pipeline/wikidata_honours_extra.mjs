@@ -19,7 +19,7 @@ const UA = "PossessionPlay/1.0 (https://github.com/Jul-27; data enrichment)";
 // Erwartete QIDs + engl. Labels — werden VOR dem Lauf verifiziert (Abbruch bei Abweichung).
 const EXPECT = {
   EM:  { qid: "Q260858", label: "UEFA European Championship" },
-  CA:  { qid: "Q243493", label: "Copa América" },
+  CA:  { qid: "Q178750", label: "Copa América" },
   EL:  { qid: "Q18760",  label: "UEFA Europa League" },
   BDO: { qid: "Q166177", label: "Ballon d'Or" },
 };
