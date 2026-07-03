@@ -1,0 +1,47 @@
+name: Wikidata Daten-Refresh
+
+on:
+  schedule:
+    - cron: "0 3 1 * *"   # monatlich am 1., 03:00 UTC (deckt Transferschluss 1.9./1.2. ab)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Wikidata-Refresh (roster → honours → honours_extra → positions → careers)
+        run: npm run data:refresh
+
+      - name: Daten-Sanity (Tests)
+        run: npm test
+
+      - id: datum
+        run: echo "heute=$(date +%F)" >> "$GITHUB_OUTPUT"
+
+      - name: PR erstellen
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: data/refresh-${{ steps.datum.outputs.heute }}
+          commit-message: "data: Wikidata-Refresh ${{ steps.datum.outputs.heute }}"
+          title: "data: Wikidata-Refresh ${{ steps.datum.outputs.heute }}"
+          body: |
+            Automatischer Wikidata-Refresh (roster → honours → honours_extra → positions → careers).
+
+            - Erwarteter Diff: nur `src/players.js` + `src/dataInfo.js`
+            - Tests liefen im Workflow bereits grün
+            - Bitte Diff kurz prüfen und mergen — Vercel deployt danach automatisch
+          delete-branch: true

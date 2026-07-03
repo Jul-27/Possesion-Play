@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test"
+    "test": "node --test",
+    "data:refresh": "node data-pipeline/refresh_all.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

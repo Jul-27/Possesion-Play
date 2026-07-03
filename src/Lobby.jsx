@@ -3,6 +3,7 @@ import { supabase, getClientId, getSavedName, saveName } from "./supabaseClient.
 import { buildBoardSerial, buildGridSerial, buildGuessSerial, genCode, START_SECONDS } from "./gameData.js";
 import { loadPlayers } from "./playersStore.js";
 import { dailyDateStr, dailyNumber } from "./dailyLogic.js";
+import { DATA_ASOF } from "./dataInfo.js";
 
 export default function Lobby({ onEnter, onDaily }) {
   const [name, setName] = useState(getSavedName());
@@ -116,6 +117,7 @@ export default function Lobby({ onEnter, onDaily }) {
       </div>
 
       <p className="lobHint">Erstelle ein Spiel, teile den Code mit deinem Freund — ihr spielt in Echtzeit, jeder im eigenen Browser.</p>
+      <p className="dataStamp">Datenstand: {DATA_ASOF.split("-").reverse().join(".")} · Quelle: Wikidata</p>
     </div>
   );
 }
