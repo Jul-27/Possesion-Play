@@ -9,7 +9,9 @@ import {
 } from "./dailyLogic.js";
 import { loadPlayers } from "./playersStore.js";
 
-const sigOf = (dim, val) => (dim === "born" ? `born:${val.cmp}:${val.year}` : `${dim}:${val}`);
+const sigOf = (dim, val) =>
+  dim === "born" ? `born:${val.cmp}:${val.year}` :
+  dim === "mate" ? `mate:${norm(val.n)}` : `${dim}:${val}`;
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -50,6 +52,7 @@ export default function Daily({ onLeave }) {
   const [act, setAct] = useState("ask");
   const [dim, setDim] = useState(null);
   const [yearInput, setYearInput] = useState("2000");
+  const [mateInput, setMateInput] = useState("");
   const [nameInput, setNameInput] = useState("");
   const [chosen, setChosen] = useState(null);
   const [sugOpen, setSugOpen] = useState(false);
@@ -69,6 +72,7 @@ export default function Daily({ onLeave }) {
   const guessesUsed = log.filter((e) => !e.dim).length;
   const askedSigs = useMemo(() => new Set(log.filter((e) => e.dim).map((e) => sigOf(e.dim, e.val))), [log]);
   const suggestions = useMemo(() => (players ? suggestPlayers(players, nameInput, 8) : []), [players, nameInput]);
+  const mateSuggestions = useMemo(() => (players && dim === "mate" ? suggestPlayers(players, mateInput, 8) : []), [players, dim, mateInput]);
 
   // Countdown bis lokale Mitternacht
   const nextMid = new Date(); nextMid.setHours(24, 0, 0, 0);
@@ -147,6 +151,7 @@ export default function Daily({ onLeave }) {
   const DIMS = [
     { k: "nat", label: "Nation" }, { k: "club", label: "Verein" }, { k: "league", label: "Liga" },
     { k: "pos", label: "Position" }, { k: "title", label: "Titel" }, { k: "born", label: "Geburtsjahr" },
+    { k: "mate", label: "Teamkollege" },
   ];
 
   return (
@@ -217,6 +222,23 @@ export default function Daily({ onLeave }) {
                     <input className="field" type="number" min="1900" max="2025" value={yearInput} onChange={(e) => setYearInput(e.target.value)} />
                     <button className="btn ghost" onClick={() => askBorn("before")}>vor</button>
                     <button className="btn ghost" onClick={() => askBorn("after")}>ab</button>
+                  </div>
+                )}
+                {dim === "mate" && (
+                  <div>
+                    <input className="field" placeholder="Referenzspieler tippen…" value={mateInput}
+                      autoComplete="off" onChange={(e) => setMateInput(e.target.value)} />
+                    <div className="cbList">
+                      {mateSuggestions.map((s) => {
+                        const used = askedSigs.has(sigOf("mate", { n: s.n }));
+                        return (
+                          <button key={s.n} className="cbItem" disabled={used}
+                            onClick={() => { ask("mate", { n: s.n, cp: s.cp || [] }); setMateInput(""); }}>
+                            {s.n} <span className="cbMeta">{used ? "gefragt" : [s.pos, new Date().getFullYear() - s.by].filter(Boolean).join(" · ")}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </>

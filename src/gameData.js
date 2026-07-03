@@ -76,11 +76,35 @@ export const NATIONS = [
   { key: "USA", label: "USA", name: "USA",             flag: { kind: "canton" } },
 ].map((n) => ({ ...n, type: "nat" }));
 
-// Nur DB-prüfbare Spezialfelder (Geburtsjahr).
+// ── Karrierezeiträume (Feld cp: [[clubKey, von, bis], ...]; bis 0 = offen) ──
+const cpEnd = (to) => (to === 0 ? 9999 : to);
+
+// Waren zwei Spieler Teamkollegen? Gemeinsamer Verein + überlappende Jahre
+// (inklusiv). Ohne cp auf einer Seite: false (missing is better than wrong).
+export function wereTeammates(a, b) {
+  const ca = a?.cp, cb = b?.cp;
+  if (!ca || !ca.length || !cb || !cb.length) return false;
+  for (const [k1, f1, t1] of ca) for (const [k2, f2, t2] of cb) {
+    if (k1 === k2 && Math.max(f1, f2) <= Math.min(cpEnd(t1), cpEnd(t2))) return true;
+  }
+  return false;
+}
+
+// Aktiv (bei einem unserer Vereine) im Jahresbereich [from, to]?
+export function activeInRange(p, from, to) {
+  const cp = p?.cp;
+  if (!cp || !cp.length) return false;
+  return cp.some(([, f, t]) => f <= to && cpEnd(t) >= from);
+}
+
+// Nur DB-prüfbare Spezialfelder (Geburtsjahr / Karrierezeitraum).
 export const SPECIALS = [
   { key: "Y2K", label: "AB 2000",   icon: "🎂", name: "Geboren ab 2000",   c1: "#34D399", c2: "#065f46", test: (p) => p.by >= 2000 },
   { key: "N90", label: "90ER JG.",  icon: "📅", name: "Geboren 1990–1999", c1: "#A78BFA", c2: "#5b21b6", test: (p) => p.by >= 1990 && p.by <= 1999 },
   { key: "OLD", label: "VOR 1990",  icon: "⏳", name: "Geboren vor 1990",  c1: "#94a3b8", c2: "#475569", test: (p) => p.by < 1990 },
+  { key: "A90", label: "90ER AKTIV", icon: "📼", name: "Aktiv in den 90ern",   c1: "#F472B6", c2: "#831843", test: (p) => activeInRange(p, 1990, 1999) },
+  { key: "A00", label: "00ER AKTIV", icon: "💿", name: "Aktiv in den 2000ern", c1: "#60A5FA", c2: "#1e3a8a", test: (p) => activeInRange(p, 2000, 2009) },
+  { key: "A10", label: "10ER AKTIV", icon: "📱", name: "Aktiv in den 2010ern", c1: "#FBBF24", c2: "#78350f", test: (p) => activeInRange(p, 2010, 2019) },
 ].map((s) => ({ ...s, type: "spec" }));
 
 // Liga-Felder: erfüllt, wenn der Spieler einen Verein dieser Liga hat.
@@ -174,6 +198,7 @@ export function answerGuessQuestion(player, q) {
     case "pos":    return player.pos === q.val;
     case "title":  return (player.t || []).includes(q.val);
     case "born":   return q.val.cmp === "before" ? player.by < q.val.year : player.by >= q.val.year;
+    case "mate":   return wereTeammates(player, q.val);
     default:       return false;
   }
 }
@@ -187,6 +212,7 @@ export function guessQuestionLabel(q) {
     case "pos":    return `Position: ${POS_LABEL[q.val] ?? q.val}?`;
     case "title":  return `${lookupDef("honour", q.val)?.name ?? q.val}?`;
     case "born":   return `Geboren ${q.val.cmp === "before" ? "vor" : "ab"} ${q.val.year}?`;
+    case "mate":   return `Teamkollege von ${q.val?.n ?? "?"}?`;
     default:       return "?";
   }
 }

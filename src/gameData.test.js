@@ -198,7 +198,51 @@ test("guessQuestionLabel formatiert lesbar", () => {
   assert.equal(guessQuestionLabel({ dim: "born", val: { cmp: "after", year: 2000 } }), "Geboren ab 2000?");
 });
 
-import { guessEligibleIndices } from "./gameData.js";
+import { guessEligibleIndices, wereTeammates, activeInRange, SPECIALS } from "./gameData.js";
+
+const XAVI = { n: "Xavi", cp: [["BAR", 1998, 2015]] };
+const INIESTA = { n: "Andrés Iniesta", cp: [["BAR", 2002, 2018]] };
+const KAHN = { n: "Oliver Kahn", cp: [["FCB", 1994, 2008]] };
+const ACTIVE = { n: "Aktiv", cp: [["RMA", 2021, 0]] };           // offenes Ende
+const RETURNER = { n: "Rückkehrer", cp: [["FCB", 1990, 1992], ["FCB", 2005, 2007]] };
+
+test("wereTeammates: Überlappung, disjunkt, offenes Ende, Mehrfach-Engagement, fehlendes cp", () => {
+  assert.equal(wereTeammates(XAVI, INIESTA), true);              // BAR 2002–2015
+  assert.equal(wereTeammates(XAVI, KAHN), false);                // andere Vereine
+  assert.equal(wereTeammates(ACTIVE, { cp: [["RMA", 2023, 0]] }), true);  // beide offen
+  assert.equal(wereTeammates(RETURNER, { cp: [["FCB", 1991, 1991]] }), true); // 1. Engagement
+  assert.equal(wereTeammates(RETURNER, { cp: [["FCB", 1995, 2004]] }), false); // Lücke
+  assert.equal(wereTeammates(RETURNER, { cp: [["FCB", 2007, 2010]] }), true);  // Grenzjahr inkl.
+  assert.equal(wereTeammates(XAVI, { n: "ohne" }), false);       // fehlendes cp
+  assert.equal(wereTeammates({}, INIESTA), false);
+});
+
+test("activeInRange: innerhalb, außerhalb, übergreifend, offen, ohne cp", () => {
+  assert.equal(activeInRange(XAVI, 1990, 1999), true);           // ab 1998
+  assert.equal(activeInRange(XAVI, 2016, 2019), false);
+  assert.equal(activeInRange(KAHN, 2000, 2009), true);           // übergreifend
+  assert.equal(activeInRange(ACTIVE, 2030, 2039), true);         // offenes Ende
+  assert.equal(activeInRange({}, 1990, 1999), false);
+});
+
+test("answerGuessQuestion: mate über cp-Snapshot", () => {
+  assert.equal(answerGuessQuestion(XAVI, { dim: "mate", val: { n: "Iniesta", cp: INIESTA.cp } }), true);
+  assert.equal(answerGuessQuestion(XAVI, { dim: "mate", val: { n: "Kahn", cp: KAHN.cp } }), false);
+  assert.equal(answerGuessQuestion(XAVI, { dim: "mate", val: { n: "ohne", cp: [] } }), false);
+});
+
+test("guessQuestionLabel: mate", () => {
+  assert.equal(guessQuestionLabel({ dim: "mate", val: { n: "Xavi", cp: [] } }), "Teamkollege von Xavi?");
+});
+
+test("SPECIALS: 6 Felder inkl. Ära, Ära-Tests greifen über cp", () => {
+  assert.equal(SPECIALS.length, 6);
+  assert.deepEqual(SPECIALS.map((s) => s.key).sort(), ["A00", "A10", "A90", "N90", "OLD", "Y2K"]);
+  const a90 = lookupDef("spec", "A90"), a00 = lookupDef("spec", "A00");
+  assert.equal(playerMatchesHex(XAVI, a90), true);
+  assert.equal(playerMatchesHex(XAVI, a00), true);
+  assert.equal(playerMatchesHex({ by: 1995 }, a90), false);      // ohne cp kein Match
+});
 
 test("guessEligibleIndices filtert auf pos+nat+clubs+sl>=GUESS_SL_MIN", () => {
   const list = [
