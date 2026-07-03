@@ -6,6 +6,8 @@ import {
   buildBoardSerial, BOARDH, HEXH, START_SECONDS, fmtClock, liveRemaining,
 } from "./gameData.js";
 import { loadPlayers } from "./playersStore.js";
+import { play, isMuted, toggleMute } from "./sound.js";
+import Confetti from "./Confetti.jsx";
 
 export default function Game({ code, clientId, onLeave }) {
   const [row, setRow] = useState(null);
@@ -24,6 +26,8 @@ export default function Game({ code, clientId, onLeave }) {
   const inputRef = useRef(null);
   const [players, setPlayers] = useState(null);
   useEffect(() => { loadPlayers().then(setPlayers); }, []);
+  const [muted, setMuted] = useState(isMuted());
+  const prevStatus = useRef(null);
 
   // ── Laden + Realtime-Abo ──────────────────────────────────────────────────
   useEffect(() => {
@@ -100,9 +104,26 @@ export default function Game({ code, clientId, onLeave }) {
   }, [now, status, row?.turn, myTurn, myPlayer, code]); // eslint-disable-line
   useEffect(() => { if (selected !== null && inputRef.current) inputRef.current.focus(); }, [selected]);
 
+  // End-Sound nur beim beobachteten Übergang playing -> finished (kein Replay bei Reload)
+  useEffect(() => {
+    if (prevStatus.current === "playing" && status === "finished" && myPlayer !== 0) {
+      const w = clk.timeout ? (clk.timeout === 1 ? 2 : 1) : counts.a === counts.b ? 0 : counts.a > counts.b ? 1 : 2;
+      if (w !== 0) play(w === myPlayer ? "win" : "lose");
+    }
+    prevStatus.current = status;
+  }, [status]); // eslint-disable-line
+
+  // Tick-Warnung in den letzten 10 Sekunden der eigenen Uhr
+  useEffect(() => {
+    if (status !== "playing" || !myTurn) return;
+    const rem = liveRemaining(clk, myPlayer, now);
+    if (rem > 0 && rem <= 10) play("tick");
+  }, [now]); // eslint-disable-line
+
   function pickHex(idx) {
     if (!myTurn || owners[String(idx)]) return;
     setSelected(idx); setNameInput(""); setChosen(null); setLocalFeedback(null); setSugOpen(false); setSugActive(-1);
+    play("click");
   }
 
   async function writeMove(patch) {
@@ -131,6 +152,7 @@ export default function Game({ code, clientId, onLeave }) {
     if (results[selected] !== true) {
       setLocalFeedback({ type: "err", text: `${player.n} passt nicht zu „${cname(board[selected].def)}".`,
         detail: "Wähle ein Feld, das zur Karriere des Spielers passt (Verein, Nation oder Geburtsjahr)." });
+      play("err");
       return;
     }
     const newOwners = { ...owners };
@@ -150,6 +172,7 @@ export default function Game({ code, clientId, onLeave }) {
     setSelected(null); setNameInput(""); setChosen(null); setSugOpen(false); setLocalFeedback(null);
     const rem = liveRemaining(clk, myPlayer, Date.now());
     const nextClocks = { ...clk, [myPlayer]: rem, started: new Date().toISOString() };
+    play("ok");
     writeMove({ owners: newOwners, turn: myPlayer === 1 ? 2 : 1, status: neutralLeft === 0 ? "finished" : "playing", last_move: move, clocks: nextClocks });
   }
 
@@ -196,6 +219,7 @@ export default function Game({ code, clientId, onLeave }) {
   const adjSet = selected !== null ? new Set(ADJP[selected]) : new Set();
   const fb = localFeedback || (row.last_move?.text ? { type: row.last_move.by ? "ok" : "info", text: row.last_move.text, detail: row.last_move.detail } : null);
   const gameOver = status === "finished";
+  const winnerNo = !gameOver ? 0 : clk.timeout ? (clk.timeout === 1 ? 2 : 1) : counts.a === counts.b ? 0 : counts.a > counts.b ? 1 : 2;
 
   return (
     <div className="ppRoot">
@@ -205,6 +229,7 @@ export default function Game({ code, clientId, onLeave }) {
           <div className="subtitle">Online · Code {code}</div>
         </div>
         <div className="iconrow">
+          <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
           <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
           <button className="iconbtn" title="Verlassen" onClick={onLeave}>⏏</button>
         </div>
@@ -297,6 +322,7 @@ export default function Game({ code, clientId, onLeave }) {
       {/* Abpfiff */}
       {gameOver && (
         <div className="overlay">
+          {winnerNo !== 0 && winnerNo === myPlayer && <Confetti />}
           <div className="modal" style={{ textAlign: "center" }}>
             <h2>Abpfiff</h2>
             {clk.timeout ? (

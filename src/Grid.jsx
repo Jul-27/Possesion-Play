@@ -6,6 +6,8 @@ import {
   buildGridSerial, gridCellMatches, gridWinner, START_SECONDS, fmtClock, liveRemaining,
 } from "./gameData.js";
 import { loadPlayers } from "./playersStore.js";
+import { play, isMuted, toggleMute } from "./sound.js";
+import Confetti from "./Confetti.jsx";
 
 export default function Grid({ code, clientId, onLeave }) {
   const [row, setRow] = useState(null);
@@ -23,6 +25,8 @@ export default function Grid({ code, clientId, onLeave }) {
   const inputRef = useRef(null);
   const [players, setPlayers] = useState(null);
   useEffect(() => { loadPlayers().then(setPlayers); }, []);
+  const [muted, setMuted] = useState(isMuted());
+  const prevStatus = useRef(null);
 
   useEffect(() => {
     let active = true;
@@ -83,11 +87,29 @@ export default function Grid({ code, clientId, onLeave }) {
     else if (myPlayer !== 0) supabase.from("games").update(finish).eq("code", code).eq("status", "playing");
   }, [now, status, row?.turn, myTurn, myPlayer, code]); // eslint-disable-line
 
+  // End-Sound nur beim beobachteten Übergang playing -> finished (kein Replay bei Reload)
+  useEffect(() => {
+    if (prevStatus.current === "playing" && status === "finished" && myPlayer !== 0) {
+      const w = clk.timeout ? (clk.timeout === 1 ? 2 : 1)
+        : (gridWinner(owners) || (Object.keys(owners).length === 9 ? (counts.a === counts.b ? 0 : counts.a > counts.b ? 1 : 2) : 0));
+      if (w !== 0) play(w === myPlayer ? "win" : "lose");
+    }
+    prevStatus.current = status;
+  }, [status]); // eslint-disable-line
+
+  // Tick-Warnung in den letzten 10 Sekunden der eigenen Uhr
+  useEffect(() => {
+    if (status !== "playing" || !myTurn) return;
+    const rem = liveRemaining(clk, myPlayer, now);
+    if (rem > 0 && rem <= 10) play("tick");
+  }, [now]); // eslint-disable-line
+
   useEffect(() => { if (selected !== null && inputRef.current) inputRef.current.focus(); }, [selected]);
 
   function pickCell(idx) {
     if (!myTurn || owners[idx]) return;
     setSelected(idx); setNameInput(""); setChosen(null); setLocalFeedback(null); setSugOpen(false); setSugActive(-1);
+    play("click");
   }
 
   async function writeMove(patch) {
@@ -119,6 +141,7 @@ export default function Grid({ code, clientId, onLeave }) {
     if (!gridCellMatches(player, rowDefs[r], colDefs[c])) {
       setLocalFeedback({ type: "err", text: `${player.n} passt nicht zu „${cname(rowDefs[r])}" × „${cname(colDefs[c])}".`,
         detail: "Zug verfällt — der Gegner ist dran." });
+      play("err");
       setSelected(null); setNameInput(""); setChosen(null); setSugOpen(false);
       writeMove({ turn: myPlayer === 1 ? 2 : 1, clocks: nextClocks,
         last_move: { ...(row.last_move || {}), picksAll, by: 0, text: `${names[myPlayer]}: ${player.n} passt nicht — Zug verfällt.`, ts: Date.now() } });
@@ -129,6 +152,7 @@ export default function Grid({ code, clientId, onLeave }) {
     const win = gridWinner(newOwners);
     const full = Object.keys(newOwners).length === 9;
     setSelected(null); setNameInput(""); setChosen(null); setSugOpen(false); setLocalFeedback(null);
+    play("ok");
     writeMove({
       owners: newOwners,
       turn: myPlayer === 1 ? 2 : 1,
@@ -144,6 +168,7 @@ export default function Grid({ code, clientId, onLeave }) {
     const rem = liveRemaining(clk, myPlayer, Date.now());
     const nextClocks = { ...clk, [myPlayer]: rem, started: new Date().toISOString() };
     setSelected(null); setNameInput(""); setChosen(null); setSugOpen(false);
+    play("click");
     writeMove({ turn: myPlayer === 1 ? 2 : 1, clocks: nextClocks,
       last_move: { ...(row.last_move || {}), picksAll, by: 0, text: `${names[myPlayer]} überspringt den Zug.`, ts: Date.now() } });
   }
@@ -185,6 +210,7 @@ export default function Grid({ code, clientId, onLeave }) {
       <div className="topbar">
         <div><h1 className="title">POSSESSION PLAY</h1><div className="subtitle">Raster · Code {code}</div></div>
         <div className="iconrow">
+          <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
           <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
           <button className="iconbtn" title="Verlassen" onClick={onLeave}>⏏</button>
         </div>
@@ -215,7 +241,7 @@ export default function Grid({ code, clientId, onLeave }) {
             const idx = r * 3 + c; const o = owners[idx];
             const bg = o ? `linear-gradient(150deg, ${P[o].c1}, ${P[o].c2})` : "rgba(10,22,19,.55)";
             return (
-              <button key={idx} className="gcell" disabled={!myTurn || !!o} onClick={() => pickCell(idx)}
+              <button key={idx} className={`gcell ${o ? "owned" : ""}`} disabled={!myTurn || !!o} onClick={() => pickCell(idx)}
                 style={{ background: bg, color: o ? "#fff" : "#cfe6dc", outline: selected === idx ? "3px solid #FACC15" : "none" }}>
                 {o ? <span className="gpick">{picksAll[idx] || ""}</span> : <span className="gplus">＋</span>}
               </button>
@@ -270,7 +296,9 @@ export default function Grid({ code, clientId, onLeave }) {
       )}
 
       {gameOver && (
-        <div className="overlay"><div className="modal" style={{ textAlign: "center" }}>
+        <div className="overlay">
+          {winner !== 0 && winner === myPlayer && <Confetti />}
+          <div className="modal" style={{ textAlign: "center" }}>
           <h2>Abpfiff</h2>
           {winner === 0 ? <p className="winName">Unentschieden!</p> : (
             <p className="winName" style={{ color: P[winner].c1 }}>{names[winner]} gewinnt</p>

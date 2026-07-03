@@ -6,6 +6,8 @@ import {
   START_SECONDS, fmtClock, liveRemaining,
 } from "./gameData.js";
 import { loadPlayers } from "./playersStore.js";
+import { play, isMuted, toggleMute } from "./sound.js";
+import Confetti from "./Confetti.jsx";
 
 const sigOf = (dim, val) =>
   dim === "born" ? `born:${val.cmp}:${val.year}` :
@@ -56,6 +58,8 @@ export default function Guess({ code, clientId, onLeave }) {
   const inputRef = useRef(null);
 
   useEffect(() => { loadPlayers().then(setPlayers); }, []);
+  const [muted, setMuted] = useState(isMuted());
+  const prevStatus = useRef(null);
 
   useEffect(() => {
     let active = true;
@@ -116,6 +120,22 @@ export default function Guess({ code, clientId, onLeave }) {
     else if (myPlayer !== 0) supabase.from("games").update(finish).eq("code", code).eq("status", "playing");
   }, [now, status, row?.turn, myTurn, myPlayer, code]); // eslint-disable-line
 
+  // End-Sound nur beim beobachteten Übergang playing -> finished (kein Replay bei Reload)
+  useEffect(() => {
+    if (prevStatus.current === "playing" && status === "finished" && myPlayer !== 0) {
+      const w = clk.timeout ? (clk.timeout === 1 ? 2 : 1) : (row?.last_move?.winner || 0);
+      if (w !== 0) play(w === myPlayer ? "win" : "lose");
+    }
+    prevStatus.current = status;
+  }, [status]); // eslint-disable-line
+
+  // Tick-Warnung in den letzten 10 Sekunden der eigenen Uhr
+  useEffect(() => {
+    if (status !== "playing" || !myTurn) return;
+    const rem = liveRemaining(clk, myPlayer, now);
+    if (rem > 0 && rem <= 10) play("tick");
+  }, [now]); // eslint-disable-line
+
   async function writeMove(patch) {
     const { error } = await supabase.from("games").update({ ...patch, updated_at: new Date().toISOString() })
       .eq("code", code).eq("turn", myPlayer);
@@ -135,6 +155,7 @@ export default function Guess({ code, clientId, onLeave }) {
       return;
     }
     const a = answerGuessQuestion(target, q);
+    play(a ? "ok" : "click");
     const newLog = [...log, { p: myPlayer, dim: dimKey, val, a }];
     setDim(null); setLocalFeedback(null);
     writeMove({ turn: myPlayer === 1 ? 2 : 1, clocks: chargedClocks(),
@@ -170,6 +191,7 @@ export default function Guess({ code, clientId, onLeave }) {
     } else {
       const rem = Math.max(0, liveRemaining(clk, myPlayer, Date.now()) - 30);
       setLocalFeedback({ type: "err", text: `${player.n} ist falsch — −30 s, Gegner ist dran.` });
+      play("err");
       writeMove({ turn: myPlayer === 1 ? 2 : 1,
         clocks: { ...clk, [myPlayer]: rem, started: new Date().toISOString() },
         last_move: { ...(row.last_move || {}), log: [...log, { p: myPlayer, guess: player.n, wrong: true }] } });
@@ -217,6 +239,7 @@ export default function Guess({ code, clientId, onLeave }) {
       <div className="topbar">
         <div><h1 className="title">POSSESSION PLAY</h1><div className="subtitle">Errate den Star · Code {code}</div></div>
         <div className="iconrow">
+          <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
           <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
           <button className="iconbtn" title="Verlassen" onClick={onLeave}>⏏</button>
         </div>
@@ -347,7 +370,9 @@ export default function Guess({ code, clientId, onLeave }) {
       )}
 
       {gameOver && (
-        <div className="overlay"><div className="modal" style={{ textAlign: "center" }}>
+        <div className="overlay">
+          {winner !== 0 && winner === myPlayer && <Confetti />}
+          <div className="modal" style={{ textAlign: "center" }}>
           <h2>Aufgelöst</h2>
           {winner === 0 ? <p className="winName">Spiel beendet</p> : <p className="winName" style={{ color: P[winner].c1 }}>{names[winner]} gewinnt</p>}
           <p>Gesuchter Star: <b>{target ? target.n : "—"}</b></p>
