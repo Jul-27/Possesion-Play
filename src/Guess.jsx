@@ -8,6 +8,7 @@ import {
 import { loadPlayers } from "./playersStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
+import { DATA_ASOF } from "./dataInfo.js";
 
 const sigOf = (dim, val) =>
   dim === "born" ? `born:${val.cmp}:${val.year}` :
@@ -392,6 +393,7 @@ export default function Guess({ code, clientId, onLeave }) {
             <p className="ruleP">Abwechselnd stellt ihr eine <b>Attributfrage</b> (Nation, Verein, Liga, Position, Titel, Geburtsjahr) — die App antwortet mit <b>Ja/Nein</b>. Alle Antworten sieht jeder.</p>
             <p className="ruleP">Statt einer Frage darfst du jederzeit <b>tippen</b>. Richtig = du gewinnst. Falsch = <b>−30 s</b> und der Gegner ist dran.</p>
             <p className="ruleP">Läuft deine Zeit ab, verlierst du.</p>
+            <p className="dataStamp">Datenstand: {DATA_ASOF.split("-").reverse().join(".")} · Quelle: Wikidata</p>
             <div className="closeline"><button className="btn primary" style={{ flex: 1, padding: "11px" }} onClick={() => setShowRules(false)}>Los geht's</button></div>
           </div>
         </div>

@@ -8,6 +8,7 @@ import {
 import { loadPlayers } from "./playersStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
+import { DATA_ASOF } from "./dataInfo.js";
 
 export default function Game({ code, clientId, onLeave }) {
   const [row, setRow] = useState(null);
@@ -347,6 +348,7 @@ export default function Game({ code, clientId, onLeave }) {
             <p className="ruleP">Passt euer Spieler <b>auch zu angrenzenden Feldern</b>, erobert ihr diese mit — und nehmt sie dem Gegner ab, wenn sie ihm gehören.</p>
             <p className="ruleP">Ab <b>2 Buchstaben des Nachnamens</b> erscheinen Treffer aus der Datenbank. Wähle einen Spieler aus der Liste.</p>
             <p className="ruleP">Sind alle 31 Felder vergeben, gewinnt, wer mehr besitzt.</p>
+            <p className="dataStamp">Datenstand: {DATA_ASOF.split("-").reverse().join(".")} · Quelle: Wikidata — ganz frische Transfers können noch fehlen.</p>
             <div className="closeline"><button className="btn primary" style={{ flex: 1, padding: "11px" }} onClick={() => setShowRules(false)}>Los geht's</button></div>
           </div>
         </div>
