@@ -8,6 +8,8 @@ import {
   updateStreak, buildShareText,
 } from "./dailyLogic.js";
 import { loadPlayers } from "./playersStore.js";
+import { play, isMuted, toggleMute } from "./sound.js";
+import Confetti from "./Confetti.jsx";
 
 const sigOf = (dim, val) =>
   dim === "born" ? `born:${val.cmp}:${val.year}` :
@@ -65,6 +67,7 @@ export default function Daily({ onLeave }) {
 
   useEffect(() => { loadPlayers().then(setPlayers); }, []);
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(id); }, []);
+  const [muted, setMuted] = useState(isMuted());
 
   const target = useMemo(() => (players ? players[dailyStarIndex(dateStr, players)] : null), [players, dateStr]);
   const log = game.log;
@@ -89,6 +92,7 @@ export default function Daily({ onLeave }) {
     if (game.done || !target || questionsUsed >= DAILY_MAX_Q) return;
     if (askedSigs.has(sigOf(dimKey, val))) { setFeedback({ type: "info", text: "Diese Frage wurde schon gestellt." }); return; }
     const a = answerGuessQuestion(target, { dim: dimKey, val });
+    play(a ? "ok" : "click");
     setDim(null); setFeedback(null);
     save({ ...game, log: [...log, { dim: dimKey, val, a }] });
   }
@@ -114,17 +118,20 @@ export default function Daily({ onLeave }) {
     setNameInput(""); setChosen(null); setSugOpen(false);
     if (player === target) {
       setFeedback(null);
+      play("win");
       save({ ...game, log: [...log, { guess: player.n, correct: true }], done: true, won: true });
     } else {
       const newLog = [...log, { guess: player.n, wrong: true }];
       const out = guessesUsed + 1 >= DAILY_MAX_G;
       setFeedback(out ? null : { type: "err", text: `${player.n} ist falsch — letzter Tipp!` });
+      play(out ? "lose" : "err");
       save({ ...game, log: newLog, done: out, won: false });
     }
   }
 
   function giveUp() {
     if (game.done) return;
+    play("lose");
     save({ ...game, done: true, won: false });
   }
 
@@ -159,6 +166,7 @@ export default function Daily({ onLeave }) {
       <div className="topbar">
         <div><h1 className="title">POSSESSION PLAY</h1><div className="subtitle">🌟 Daily-Star #{num}</div></div>
         <div className="iconrow">
+          <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
           <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
           <button className="iconbtn" title="Zur Lobby" onClick={onLeave}>⏏</button>
         </div>
@@ -273,6 +281,7 @@ export default function Daily({ onLeave }) {
 
       {game.done && (
         <div className="panel dailyEnd">
+          {game.won && <Confetti />}
           <h2 style={{ marginTop: 0 }}>{game.won ? "⭐ Gefunden!" : "💀 Nicht erwischt"}</h2>
           <p>Der Star des Tages: <b>{target ? target.n : "…"}</b></p>
           {stats && (
