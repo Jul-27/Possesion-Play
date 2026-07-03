@@ -8,6 +8,7 @@
 import { readFileSync, writeFileSync } from "fs";
 import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
+import { stampDataInfo } from "./stamp.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLAYERS_PATH = join(HERE, "..", "src", "players.js");
@@ -147,6 +148,7 @@ async function main() {
   const header = readFileSync(PLAYERS_PATH, "utf8").split("export const PLAYERS")[0];
   const body = existing.map(recToString).join(",\n  ");
   writeFileSync(PLAYERS_PATH, header + "export const PLAYERS = [\n  " + body + "\n];\n");
+  stampDataInfo();
   console.log(`\nFertig: ${existing.length} Spieler (${added} neu, ${enriched} ergänzt) -> src/players.js`);
 }
 
