@@ -45,6 +45,19 @@ export default function Grid({ code, clientId, onLeave }) {
     return () => { active = false; supabase.removeChannel(ch); };
   }, [code]);
 
+  // Reconnect-Heilung: nach Tab-Rückkehr/Fokus Spielstand einmalig nachladen
+  // (Websocket kann auf Mobile einschlafen; Realtime-Abo bleibt bestehen).
+  useEffect(() => {
+    const refetch = () => {
+      if (document.visibilityState !== "visible") return;
+      supabase.from("games").select("*").eq("code", code).maybeSingle()
+        .then(({ data }) => { if (data) setRow(data); });
+    };
+    document.addEventListener("visibilitychange", refetch);
+    window.addEventListener("focus", refetch);
+    return () => { document.removeEventListener("visibilitychange", refetch); window.removeEventListener("focus", refetch); };
+  }, [code]);
+
   const myPlayer = !row ? 0 : (row.host_id === clientId ? 1 : row.guest_id === clientId ? 2 : 0);
   const status = row?.status || "loading";
   const myTurn = myPlayer !== 0 && status === "playing" && row?.turn === myPlayer;
@@ -175,6 +188,7 @@ export default function Grid({ code, clientId, onLeave }) {
   }
 
   async function newGame() {
+    if (!players) return;
     await supabase.from("games").update({
       board: buildGridSerial(players), owners: {}, turn: 1, status: "playing",
       last_move: { picksAll: {} },
@@ -306,7 +320,7 @@ export default function Grid({ code, clientId, onLeave }) {
           )}
           <p>{clk.timeout ? `⏱ ${names[clk.timeout]} — Zeit abgelaufen` : `${names[1]} ${counts.a} : ${counts.b} ${names[2]}`}</p>
           <div className="closeline">
-            <button className="btn primary" style={{ flex: 1, padding: "12px" }} onClick={newGame}>Neues Spiel</button>
+            <button className="btn primary" style={{ flex: 1, padding: "12px" }} disabled={!players} onClick={newGame}>Neues Spiel</button>
             <button className="btn ghost" style={{ flex: 1, padding: "12px" }} onClick={onLeave}>Lobby</button>
           </div>
         </div></div>

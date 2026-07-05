@@ -78,6 +78,19 @@ export default function Guess({ code, clientId, onLeave }) {
     return () => { active = false; supabase.removeChannel(ch); };
   }, [code]);
 
+  // Reconnect-Heilung: nach Tab-Rückkehr/Fokus Spielstand einmalig nachladen
+  // (Websocket kann auf Mobile einschlafen; Realtime-Abo bleibt bestehen).
+  useEffect(() => {
+    const refetch = () => {
+      if (document.visibilityState !== "visible") return;
+      supabase.from("games").select("*").eq("code", code).maybeSingle()
+        .then(({ data }) => { if (data) setRow(data); });
+    };
+    document.addEventListener("visibilitychange", refetch);
+    window.addEventListener("focus", refetch);
+    return () => { document.removeEventListener("visibilitychange", refetch); window.removeEventListener("focus", refetch); };
+  }, [code]);
+
   const myPlayer = !row ? 0 : (row.host_id === clientId ? 1 : row.guest_id === clientId ? 2 : 0);
   const status = row?.status || "loading";
   const myTurn = myPlayer !== 0 && status === "playing" && row?.turn === myPlayer;
@@ -200,6 +213,7 @@ export default function Guess({ code, clientId, onLeave }) {
   }
 
   async function newGame() {
+    if (!players) return;
     await supabase.from("games").update({
       board: buildGuessSerial(players), turn: 1, status: "playing",
       last_move: { log: [], winner: null },
@@ -309,7 +323,7 @@ export default function Guess({ code, clientId, onLeave }) {
                 )}
                 {dim === "born" && (
                   <div className="inrow">
-                    <input className="field" type="number" min="1900" max="2025" value={yearInput} onChange={(e) => setYearInput(e.target.value)} />
+                    <input className="field" type="number" min="1900" max={new Date().getFullYear()} value={yearInput} onChange={(e) => setYearInput(e.target.value)} />
                     <button className="btn ghost" onClick={() => askBorn("before")}>vor</button>
                     <button className="btn ghost" onClick={() => askBorn("after")}>ab</button>
                   </div>
@@ -379,7 +393,7 @@ export default function Guess({ code, clientId, onLeave }) {
           <p>Gesuchter Star: <b>{target ? target.n : "—"}</b></p>
           {clk.timeout ? <p>⏱ {names[clk.timeout]} — Zeit abgelaufen</p> : null}
           <div className="closeline">
-            <button className="btn primary" style={{ flex: 1, padding: "12px" }} onClick={newGame}>Neues Spiel</button>
+            <button className="btn primary" style={{ flex: 1, padding: "12px" }} disabled={!players} onClick={newGame}>Neues Spiel</button>
             <button className="btn ghost" style={{ flex: 1, padding: "12px" }} onClick={onLeave}>Lobby</button>
           </div>
         </div></div>

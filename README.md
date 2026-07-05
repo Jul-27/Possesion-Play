@@ -1,8 +1,11 @@
 # Possession Play — Online (Vite + React + Supabase)
 
-Hex-Duell mit Fußball-Trivia, online gegen einen Freund. Vercel hostet die App,
-Supabase hält den Spielstand in Echtzeit synchron. **Du brauchst keine Admin-Rechte
-und nichts lokal zu installieren** – alles geht im Browser über GitHub + Vercel.
+Fußball-Trivia online: **vier Spielmodi** — Hex-Duell (31 Felder erobern),
+Raster-Duell (3×3-Tic-Tac-Toe), „Errate den Star" (Deduktions-Duell mit
+Ja/Nein-Fragen) und der tägliche **Daily-Star** (solo, mit Emoji-Share &
+Streaks). Vercel hostet die App, Supabase hält Duelle in Echtzeit synchron,
+alle Duelle laufen mit 4:00-Schachuhr. ~27.000 Spieler aus Wikidata mit
+Vereinen, Nationen, 15 Titeln, Positionen und Karrierezeiträumen.
 
 ---
 
@@ -37,16 +40,18 @@ und nichts lokal zu installieren** – alles geht im Browser über GitHub + Verc
 
 ## Spielerdatenbank aktualisieren
 
-Die Spielerdaten liegen in `src/players.js` (von der Logik getrennt) und stammen
-aus dem Transfermarkt-Dataset, erzeugt über die Pipeline in `data-pipeline/`.
-Zum Neu-Erzeugen / Aktualisieren:
+Die Spielerdaten (`src/players.js`) kommen aus **Wikidata** über die Pipeline
+in `data-pipeline/` (Basis-Roster einmalig via Kaggle-Notebook, siehe
+`data-pipeline/README.md`). Aktualisieren:
 
-1. Das **Kaggle-Notebook** `data-pipeline/kaggle_build.ipynb` laufen lassen
-   (Browser, kein Install) – komplette Anleitung in `data-pipeline/README.md`.
-2. Die erzeugte `players_game.js` herunterladen.
-3. `src/players.js` durch den Inhalt ersetzen (das Notebook schreibt bereits den
-   `export const`-Wrapper, daher 1:1-Tausch).
-4. Änderung zu GitHub committen → Vercel deployt automatisch neu.
+- **Automatisch:** Die GitHub Action „Wikidata Daten-Refresh" läuft monatlich
+  am 1. und öffnet einen PR mit frischen Daten — nur noch mergen.
+  Manuell anstoßbar über den Actions-Tab (`workflow_dispatch`).
+- **Lokal:** `npm run data:refresh` führt alle fünf Skripte in der korrekten
+  Reihenfolge aus (roster → honours → honours_extra → positions → careers).
+
+Das Datum des letzten Laufs steht in `src/dataInfo.js` (`DATA_ASOF`) und wird
+in der Lobby sowie den Regel-Modals angezeigt.
 
 ---
 
