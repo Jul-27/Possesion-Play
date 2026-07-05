@@ -2,9 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { LEAGUES, playerMatchesHex, lookupDef, buildBoardSerial, hydrateBoard } from "./gameData.js";
 
-test("LEAGUES enthält die 5 Top-Ligen als type 'league'", () => {
-  assert.equal(LEAGUES.length, 5);
-  assert.deepEqual(LEAGUES.map((l) => l.key).sort(), ["BL", "L1", "LL", "PL", "SA"]);
+test("LEAGUES enthält 7 Ligen als type 'league'", () => {
+  assert.equal(LEAGUES.length, 7);
+  assert.deepEqual(LEAGUES.map((l) => l.key).sort(), ["BL", "L1", "LL", "NL", "PL", "PT", "SA"]);
   for (const l of LEAGUES) {
     assert.equal(l.type, "league");
     assert.ok(l.name && l.label && l.c1 && l.c2);
@@ -25,6 +25,11 @@ test("playerMatchesHex: league matcht über die Liga der Vereine", () => {
   assert.equal(playerMatchesHex({ clubs: ["BAR"] }, ll), true);
   assert.equal(playerMatchesHex({ clubs: [] }, bl), false);
   assert.equal(playerMatchesHex({ clubs: ["UNBEKANNT"] }, bl), false);
+  const pt = lookupDef("league", "PT");
+  const nl = lookupDef("league", "NL");
+  assert.equal(playerMatchesHex({ clubs: ["POR"] }, pt), true);
+  assert.equal(playerMatchesHex({ clubs: ["AJA"] }, nl), true);
+  assert.equal(playerMatchesHex({ clubs: ["FCB"] }, pt), false);
 });
 
 test("buildBoardSerial: 31 Felder mit 1–3 Liga-Feldern", () => {

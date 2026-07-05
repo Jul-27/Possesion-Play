@@ -114,6 +114,8 @@ export const LEAGUES = [
   { key: "LL", label: "LL", name: "La Liga",        c1: "#E03A3E", c2: "#1f1f3c" },
   { key: "SA", label: "SA", name: "Serie A",        c1: "#0A66B0", c2: "#0a2a4a" },
   { key: "L1", label: "L1", name: "Ligue 1",        c1: "#091C3E", c2: "#1d6f6f" },
+  { key: "PT", label: "PT", name: "Liga Portugal",  c1: "#046A38", c2: "#DA291C" },
+  { key: "NL", label: "NL", name: "Eredivisie",     c1: "#FF7900", c2: "#21468B" },
 ].map((l) => ({ ...l, type: "league" }));
 
 // Vereins-Key -> Liga-Code (für das Liga-Matching)
