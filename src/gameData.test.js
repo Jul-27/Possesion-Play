@@ -2,9 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { LEAGUES, playerMatchesHex, lookupDef, buildBoardSerial, hydrateBoard } from "./gameData.js";
 
-test("LEAGUES enthält die 5 Top-Ligen als type 'league'", () => {
-  assert.equal(LEAGUES.length, 5);
-  assert.deepEqual(LEAGUES.map((l) => l.key).sort(), ["BL", "L1", "LL", "PL", "SA"]);
+test("LEAGUES enthält 7 Ligen als type 'league'", () => {
+  assert.equal(LEAGUES.length, 7);
+  assert.deepEqual(LEAGUES.map((l) => l.key).sort(), ["BL", "L1", "LL", "NL", "PL", "PT", "SA"]);
   for (const l of LEAGUES) {
     assert.equal(l.type, "league");
     assert.ok(l.name && l.label && l.c1 && l.c2);
@@ -25,6 +25,11 @@ test("playerMatchesHex: league matcht über die Liga der Vereine", () => {
   assert.equal(playerMatchesHex({ clubs: ["BAR"] }, ll), true);
   assert.equal(playerMatchesHex({ clubs: [] }, bl), false);
   assert.equal(playerMatchesHex({ clubs: ["UNBEKANNT"] }, bl), false);
+  const pt = lookupDef("league", "PT");
+  const nl = lookupDef("league", "NL");
+  assert.equal(playerMatchesHex({ clubs: ["POR"] }, pt), true);
+  assert.equal(playerMatchesHex({ clubs: ["AJA"] }, nl), true);
+  assert.equal(playerMatchesHex({ clubs: ["FCB"] }, pt), false);
 });
 
 test("buildBoardSerial: 31 Felder mit 1–3 Liga-Feldern", () => {
@@ -235,13 +240,36 @@ test("guessQuestionLabel: mate", () => {
   assert.equal(guessQuestionLabel({ dim: "mate", val: { n: "Xavi", cp: [] } }), "Teamkollege von Xavi?");
 });
 
-test("SPECIALS: 6 Felder inkl. Ära, Ära-Tests greifen über cp", () => {
-  assert.equal(SPECIALS.length, 6);
-  assert.deepEqual(SPECIALS.map((s) => s.key).sort(), ["A00", "A10", "A90", "N90", "OLD", "Y2K"]);
+test("SPECIALS: 10 Felder inkl. Ära/Dekaden/T5L", () => {
+  assert.equal(SPECIALS.length, 10);
+  assert.deepEqual(SPECIALS.map((s) => s.key).sort(),
+    ["A00", "A10", "A90", "B00", "B70", "B80", "N90", "OLD", "T5L", "Y2K"]);
   const a90 = lookupDef("spec", "A90"), a00 = lookupDef("spec", "A00");
   assert.equal(playerMatchesHex(XAVI, a90), true);
   assert.equal(playerMatchesHex(XAVI, a00), true);
   assert.equal(playerMatchesHex({ by: 1995 }, a90), false);      // ohne cp kein Match
+});
+
+test("T5L: 3+ verschiedene Top-5-Ligen über clubs", () => {
+  const t5l = lookupDef("spec", "T5L");
+  assert.equal(playerMatchesHex({ clubs: ["FCB", "MCI", "BAR"] }, t5l), true);   // BL+PL+LL
+  assert.equal(playerMatchesHex({ clubs: ["FCB", "BVB", "MCI"] }, t5l), false);  // BL doppelt + PL = 2
+  assert.equal(playerMatchesHex({ clubs: ["FCB", "MCI", "POR"] }, t5l), false);  // PT zählt nicht
+  assert.equal(playerMatchesHex({ clubs: ["JUV", "PSG", "RMA", "MUN"] }, t5l), true); // SA+L1+LL+PL
+  assert.equal(playerMatchesHex({}, t5l), false);
+});
+
+test("Geburts-Dekaden: Grenzjahre inklusiv", () => {
+  const b70 = lookupDef("spec", "B70"), b80 = lookupDef("spec", "B80"), b00 = lookupDef("spec", "B00");
+  assert.equal(playerMatchesHex({ by: 1970 }, b70), true);
+  assert.equal(playerMatchesHex({ by: 1979 }, b70), true);
+  assert.equal(playerMatchesHex({ by: 1980 }, b70), false);
+  assert.equal(playerMatchesHex({ by: 1980 }, b80), true);
+  assert.equal(playerMatchesHex({ by: 1989 }, b80), true);
+  assert.equal(playerMatchesHex({ by: 1999 }, b00), false);
+  assert.equal(playerMatchesHex({ by: 2000 }, b00), true);
+  assert.equal(playerMatchesHex({ by: 2009 }, b00), true);
+  assert.equal(playerMatchesHex({ by: 2010 }, b00), false);
 });
 
 test("guessEligibleIndices filtert auf pos+nat+clubs+sl>=GUESS_SL_MIN", () => {

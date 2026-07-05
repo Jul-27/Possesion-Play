@@ -97,7 +97,9 @@ export function activeInRange(p, from, to) {
   return cp.some(([, f, t]) => f <= to && cpEnd(t) >= from);
 }
 
-// Nur DB-prüfbare Spezialfelder (Geburtsjahr / Karrierezeitraum).
+const TOP5 = new Set(["BL", "PL", "LL", "SA", "L1"]);
+
+// Nur DB-prüfbare Spezialfelder (Geburtsjahr / Karrierezeitraum / Liga-Vielfalt).
 export const SPECIALS = [
   { key: "Y2K", label: "AB 2000",   icon: "🎂", name: "Geboren ab 2000",   c1: "#34D399", c2: "#065f46", test: (p) => p.by >= 2000 },
   { key: "N90", label: "90ER JG.",  icon: "📅", name: "Geboren 1990–1999", c1: "#A78BFA", c2: "#5b21b6", test: (p) => p.by >= 1990 && p.by <= 1999 },
@@ -105,6 +107,11 @@ export const SPECIALS = [
   { key: "A90", label: "90ER AKTIV", icon: "📼", name: "Aktiv in den 90ern",   c1: "#F472B6", c2: "#831843", test: (p) => activeInRange(p, 1990, 1999) },
   { key: "A00", label: "00ER AKTIV", icon: "💿", name: "Aktiv in den 2000ern", c1: "#60A5FA", c2: "#1e3a8a", test: (p) => activeInRange(p, 2000, 2009) },
   { key: "A10", label: "10ER AKTIV", icon: "📱", name: "Aktiv in den 2010ern", c1: "#FBBF24", c2: "#78350f", test: (p) => activeInRange(p, 2010, 2019) },
+  { key: "B70", label: "70ER JG.",   icon: "📻", name: "Geboren 1970–1979", c1: "#D4A373", c2: "#6b4423", test: (p) => p.by >= 1970 && p.by <= 1979 },
+  { key: "B80", label: "80ER JG.",   icon: "🎧", name: "Geboren 1980–1989", c1: "#C084FC", c2: "#581c87", test: (p) => p.by >= 1980 && p.by <= 1989 },
+  { key: "B00", label: "2000ER JG.", icon: "🎮", name: "Geboren 2000–2009", c1: "#4ADE80", c2: "#14532d", test: (p) => p.by >= 2000 && p.by <= 2009 },
+  { key: "T5L", label: "3+ TOP-LIGEN", icon: "🌐", name: "In 3+ Top-5-Ligen gespielt", c1: "#38BDF8", c2: "#0c4a6e",
+    test: (p) => new Set((p.clubs || []).map((k) => CLUB_LG[k]).filter((lg) => TOP5.has(lg))).size >= 3 },
 ].map((s) => ({ ...s, type: "spec" }));
 
 // Liga-Felder: erfüllt, wenn der Spieler einen Verein dieser Liga hat.
@@ -114,6 +121,8 @@ export const LEAGUES = [
   { key: "LL", label: "LL", name: "La Liga",        c1: "#E03A3E", c2: "#1f1f3c" },
   { key: "SA", label: "SA", name: "Serie A",        c1: "#0A66B0", c2: "#0a2a4a" },
   { key: "L1", label: "L1", name: "Ligue 1",        c1: "#091C3E", c2: "#1d6f6f" },
+  { key: "PT", label: "PT", name: "Liga Portugal",  c1: "#046A38", c2: "#DA291C" },
+  { key: "NL", label: "NL", name: "Eredivisie",     c1: "#FF7900", c2: "#21468B" },
 ].map((l) => ({ ...l, type: "league" }));
 
 // Vereins-Key -> Liga-Code (für das Liga-Matching)
