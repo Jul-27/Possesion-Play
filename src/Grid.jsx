@@ -45,6 +45,19 @@ export default function Grid({ code, clientId, onLeave }) {
     return () => { active = false; supabase.removeChannel(ch); };
   }, [code]);
 
+  // Reconnect-Heilung: nach Tab-Rückkehr/Fokus Spielstand einmalig nachladen
+  // (Websocket kann auf Mobile einschlafen; Realtime-Abo bleibt bestehen).
+  useEffect(() => {
+    const refetch = () => {
+      if (document.visibilityState !== "visible") return;
+      supabase.from("games").select("*").eq("code", code).maybeSingle()
+        .then(({ data }) => { if (data) setRow(data); });
+    };
+    document.addEventListener("visibilitychange", refetch);
+    window.addEventListener("focus", refetch);
+    return () => { document.removeEventListener("visibilitychange", refetch); window.removeEventListener("focus", refetch); };
+  }, [code]);
+
   const myPlayer = !row ? 0 : (row.host_id === clientId ? 1 : row.guest_id === clientId ? 2 : 0);
   const status = row?.status || "loading";
   const myTurn = myPlayer !== 0 && status === "playing" && row?.turn === myPlayer;
