@@ -44,6 +44,25 @@ test("updateStreak: Folgetag-Sieg, Lücke, Niederlage", () => {
   assert.deepEqual([s.streak, s.played, s.wins], [0, 4, 3]);
 });
 
+test("dailyStarIndex: stabil gegenüber Pool-Verschiebung (Rendezvous)", () => {
+  const mk = (n) => ({ n, ln: n, by: 1990, nat: ["GER"], clubs: ["FCB"], sl: 50, pos: "ST" });
+  const base = ["Anna Adler", "Ben Berg", "Carl Cords", "Dora Dill", "Emil Eck",
+    "Finn Faber", "Gero Gans", "Hans Huber", "Ivo Iber", "Jan Joost"].map(mk);
+  const days = Array.from({ length: 10 }, (_, i) => `2026-08-${String(i + 1).padStart(2, "0")}`);
+  for (const day of days) {
+    const winner = base[dailyStarIndex(day, base)].n;
+    // Kandidat am ANFANG einfügen -> alle Indizes verschieben sich um 1.
+    // Gewinner muss identisch bleiben, außer der Neue gewinnt selbst.
+    const extended = [mk("Zora Zusatz"), ...base];
+    const b = extended[dailyStarIndex(day, extended)].n;
+    assert.ok(b === winner || b === "Zora Zusatz", `${day}: ${b} statt ${winner}`);
+    // Entfernen eines Nicht-Gewinners ändert den Gewinner nie.
+    const loser = base.find((p) => p.n !== winner).n;
+    const reduced = base.filter((p) => p.n !== loser);
+    assert.equal(reduced[dailyStarIndex(day, reduced)].n, winner, `${day} (reduced)`);
+  }
+});
+
 test("buildShareText: gewonnen und verloren", () => {
   const wonLog = [{ dim: "nat" }, { dim: "club" }, { guess: "X", wrong: true }, { dim: "pos" }, { guess: "Y", correct: true }];
   assert.equal(
