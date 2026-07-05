@@ -228,7 +228,7 @@ export default function Daily({ onLeave }) {
                 )}
                 {dim === "born" && (
                   <div className="inrow">
-                    <input className="field" type="number" min="1900" max="2025" value={yearInput} onChange={(e) => setYearInput(e.target.value)} />
+                    <input className="field" type="number" min="1900" max={new Date().getFullYear()} value={yearInput} onChange={(e) => setYearInput(e.target.value)} />
                     <button className="btn ghost" onClick={() => askBorn("before")}>vor</button>
                     <button className="btn ghost" onClick={() => askBorn("after")}>ab</button>
                   </div>

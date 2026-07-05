@@ -175,6 +175,7 @@ export default function Grid({ code, clientId, onLeave }) {
   }
 
   async function newGame() {
+    if (!players) return;
     await supabase.from("games").update({
       board: buildGridSerial(players), owners: {}, turn: 1, status: "playing",
       last_move: { picksAll: {} },
@@ -306,7 +307,7 @@ export default function Grid({ code, clientId, onLeave }) {
           )}
           <p>{clk.timeout ? `⏱ ${names[clk.timeout]} — Zeit abgelaufen` : `${names[1]} ${counts.a} : ${counts.b} ${names[2]}`}</p>
           <div className="closeline">
-            <button className="btn primary" style={{ flex: 1, padding: "12px" }} onClick={newGame}>Neues Spiel</button>
+            <button className="btn primary" style={{ flex: 1, padding: "12px" }} disabled={!players} onClick={newGame}>Neues Spiel</button>
             <button className="btn ghost" style={{ flex: 1, padding: "12px" }} onClick={onLeave}>Lobby</button>
           </div>
         </div></div>

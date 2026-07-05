@@ -152,7 +152,7 @@ export default function Game({ code, clientId, onLeave }) {
     ids.forEach((i) => { results[i] = playerMatchesHex(player, board[i].def); });
     if (results[selected] !== true) {
       setLocalFeedback({ type: "err", text: `${player.n} passt nicht zu „${cname(board[selected].def)}".`,
-        detail: "Wähle ein Feld, das zur Karriere des Spielers passt (Verein, Nation oder Geburtsjahr)." });
+        detail: "Wähle ein Feld, das zur Karriere des Spielers passt (Verein, Nation, Liga, Titel oder Spezialfeld)." });
       play("err");
       return;
     }
@@ -180,6 +180,7 @@ export default function Game({ code, clientId, onLeave }) {
   function skipTurn() {
     if (!myTurn) return;
     setSelected(null); setNameInput(""); setChosen(null); setSugOpen(false);
+    play("click");
     const rem = liveRemaining(clk, myPlayer, Date.now());
     const nextClocks = { ...clk, [myPlayer]: rem, started: new Date().toISOString() };
     writeMove({ turn: myPlayer === 1 ? 2 : 1, last_move: { by: myPlayer, text: `${names[myPlayer]} überspringt den Zug.`, claimed: [], ts: Date.now() }, clocks: nextClocks });
@@ -344,7 +345,7 @@ export default function Game({ code, clientId, onLeave }) {
         <div className="overlay" onClick={() => setShowRules(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h2>So wird gespielt</h2>
-            <p className="ruleP">Abwechselnd wählt ihr ein <b>freies Feld</b> und nennt einen Spieler, der zur Kategorie passt (Verein, Nation oder Geburtsjahr).</p>
+            <p className="ruleP">Abwechselnd wählt ihr ein <b>freies Feld</b> und nennt einen Spieler, der zur Kategorie passt (Verein, Nation, Liga, Titel oder Spezialfeld wie Jahrgang/Ära).</p>
             <p className="ruleP">Passt euer Spieler <b>auch zu angrenzenden Feldern</b>, erobert ihr diese mit — und nehmt sie dem Gegner ab, wenn sie ihm gehören.</p>
             <p className="ruleP">Ab <b>2 Buchstaben des Nachnamens</b> erscheinen Treffer aus der Datenbank. Wähle einen Spieler aus der Liste.</p>
             <p className="ruleP">Sind alle 31 Felder vergeben, gewinnt, wer mehr besitzt.</p>
