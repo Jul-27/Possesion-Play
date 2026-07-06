@@ -110,10 +110,11 @@ export default function Game({ code, clientId, onLeave }) {
       last_move: { by: 0, text: `⏱ ${names[row.turn]} — Zeit abgelaufen`, claimed: [], ts: Date.now() },
       updated_at: new Date().toISOString(),
     };
+    // .then() ist Pflicht: Supabase-Builder sind lazy und feuern sonst nie.
     if (myTurn) {
-      supabase.from("games").update(finish).eq("code", code).eq("turn", myPlayer).eq("status", "playing");
+      supabase.from("games").update(finish).eq("code", code).eq("turn", myPlayer).eq("status", "playing").then(() => {});
     } else if (myPlayer !== 0) {
-      supabase.from("games").update(finish).eq("code", code).eq("status", "playing"); // Gegner offline -> defensiv
+      supabase.from("games").update(finish).eq("code", code).eq("status", "playing").then(() => {}); // Gegner offline -> defensiv
     }
   }, [now, status, row?.turn, myTurn, myPlayer, code]); // eslint-disable-line
   useEffect(() => { if (selected !== null && inputRef.current) inputRef.current.focus(); }, [selected]);

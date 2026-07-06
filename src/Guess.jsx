@@ -130,8 +130,9 @@ export default function Guess({ code, clientId, onLeave }) {
       last_move: { ...(row.last_move || {}), log },
       updated_at: new Date().toISOString(),
     };
-    if (myTurn) supabase.from("games").update(finish).eq("code", code).eq("turn", myPlayer).eq("status", "playing");
-    else if (myPlayer !== 0) supabase.from("games").update(finish).eq("code", code).eq("status", "playing");
+    // .then() ist Pflicht: Supabase-Builder sind lazy und feuern sonst nie.
+    if (myTurn) supabase.from("games").update(finish).eq("code", code).eq("turn", myPlayer).eq("status", "playing").then(() => {});
+    else if (myPlayer !== 0) supabase.from("games").update(finish).eq("code", code).eq("status", "playing").then(() => {});
   }, [now, status, row?.turn, myTurn, myPlayer, code]); // eslint-disable-line
 
   // End-Sound nur beim beobachteten Übergang playing -> finished (kein Replay bei Reload)
