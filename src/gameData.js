@@ -153,14 +153,21 @@ export const HONOURS = [
    Parameter. */
 
 export const cname = (def) => (def.type === "club" ? `${def.name} (${def.country})` : def.name);
-export const norm = (s) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+export const norm = (s) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  .replace(/\u00f8/g, "o").replace(/\u0142/g, "l").replace(/\u0111/g, "d").replace(/\u00e6/g, "ae")
+  .replace(/\u00df/g, "ss").replace(/\u00f0/g, "d").replace(/\u00fe/g, "th").replace(/\u0153/g, "oe");
 
-// Autocomplete-Vorschl\u00e4ge: Nachname-Pr\u00e4fix, sortiert nach Bekanntheit (sl) desc, dann alphabetisch.
+// Autocomplete: Nachname-Pr\u00e4fix, Vollnamen-Pr\u00e4fix oder Wortanfang im Namen;
+// sortiert nach Bekanntheit (sl) desc, dann alphabetisch.
 export function suggestPlayers(players, query, limit = 8) {
   const q = norm((query || "").trim());
   if (q.length < 2) return [];
-  return players
-    .filter((p) => norm(p.ln).startsWith(q))
+  const out = [];
+  for (const p of players) {
+    const full = norm(p.n);
+    if (norm(p.ln).startsWith(q) || full.startsWith(q) || full.includes(" " + q)) out.push(p);
+  }
+  return out
     .sort((a, b) => (b.sl || 0) - (a.sl || 0) || a.ln.localeCompare(b.ln, "de"))
     .slice(0, limit);
 }

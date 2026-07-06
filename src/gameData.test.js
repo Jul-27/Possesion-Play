@@ -101,6 +101,19 @@ test("suggestPlayers: Nachname-Präfix, Bekanntheit zuerst, dann alphabetisch", 
   assert.equal(suggestPlayers(players, "sa", 2).length, 2);
 });
 
+test("suggestPlayers: Vorname, Wortanfang, Sonderzeichen, Vollnamen-Präfix", () => {
+  const players = [
+    { n: "Lionel Messi", ln: "Messi", sl: 99 },
+    { n: "Alexander Sørloth", ln: "Sørloth", sl: 40 },
+    { n: "Łukasz Piszczek", ln: "Piszczek", sl: 30 },
+    { n: "Mohamed Salah", ln: "Salah", sl: 90 },
+  ];
+  assert.deepEqual(suggestPlayers(players, "lionel", 8).map((p) => p.ln), ["Messi"]);     // Vorname
+  assert.deepEqual(suggestPlayers(players, "sorloth", 8).map((p) => p.ln), ["Sørloth"]);  // ø -> o
+  assert.deepEqual(suggestPlayers(players, "lukasz", 8).map((p) => p.ln), ["Piszczek"]);  // Ł -> l
+  assert.deepEqual(suggestPlayers(players, "mohamed sa", 8).map((p) => p.ln), ["Salah"]); // Vollnamen-Präfix
+});
+
 import { START_SECONDS, fmtClock, liveRemaining } from "./gameData.js";
 
 test("fmtClock formatiert m:ss", () => {
