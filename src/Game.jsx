@@ -233,7 +233,7 @@ export default function Game({ code, clientId, onLeave }) {
   const total = counts.a + counts.b;
   const aPct = total ? (counts.a / total) * 100 : 50;
   const adjSet = selected !== null ? new Set(ADJP[selected]) : new Set();
-  const fb = localFeedback || (row.last_move?.text ? { type: row.last_move.by ? "ok" : "info", text: row.last_move.text, detail: row.last_move.detail } : null);
+  const fb = localFeedback || (selected === null && row.last_move?.text ? { type: row.last_move.by ? "ok" : "info", text: row.last_move.text, detail: row.last_move.detail } : null);
   const gameOver = status === "finished";
   const winnerNo = !gameOver ? 0 : clk.timeout ? (clk.timeout === 1 ? 2 : 1) : counts.a === counts.b ? 0 : counts.a > counts.b ? 1 : 2;
 
