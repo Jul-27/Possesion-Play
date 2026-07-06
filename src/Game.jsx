@@ -242,7 +242,7 @@ export default function Game({ code, clientId, onLeave }) {
       <div className="topbar">
         <div>
           <h1 className="title">POSSESSION PLAY</h1>
-          <div className="subtitle">Online · Code {code}</div>
+          <div className="subtitle">Hex-Duell · Code {code}</div>
         </div>
         <div className="iconrow">
           <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
