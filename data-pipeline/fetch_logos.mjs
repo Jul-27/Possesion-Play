@@ -35,6 +35,10 @@ const CLUB_SEARCH = {
   FEY: ["Feyenoord", ["Netherlands", "The Netherlands"]],
 };
 
+// Direkte Team-IDs für Fälle, in denen die Namenssuche fehlgreift
+// (PSG-Suche liefert „Torcy"). Verifikation: strTeam muss Namensbestandteil enthalten.
+const TEAM_ID = { PSG: [133714, "Paris"] };
+
 // Liga-Key -> [TheSportsDB-Liga-ID, erwarteter Namensbestandteil]
 const LEAGUE_IDS = {
   PL: [4328, "Premier League"], BL: [4331, "Bundesliga"], SA: [4332, "Serie A"],
@@ -64,6 +68,16 @@ async function main() {
   for (const [key, [name, country]] of Object.entries(CLUB_SEARCH)) {
     if (existsSync(join(OUT, "club", key + ".png"))) { console.log(`  club ${key}: vorhanden, übersprungen`); continue; }
     try {
+      if (TEAM_ID[key]) {
+        const [id, mustContain] = TEAM_ID[key];
+        const j = await getJson(`${API}/lookupteam.php?id=${id}`);
+        const t = j.teams?.[0];
+        if (!t || !(t.strTeam || "").includes(mustContain) || !t.strBadge) { miss.push(`club ${key} (id ${id}): Verifikation fehlgeschlagen`); continue; }
+        await download(t.strBadge, join(OUT, "club", key + ".png"));
+        console.log(`  club ${key}: ${t.strTeam} (per ID) ✓`);
+        await sleep(2500);
+        continue;
+      }
       const j = await getJson(`${API}/searchteams.php?t=${encodeURIComponent(name)}`);
       const ok = [].concat(country);
       const team = (j.teams || []).find((t) => t.strSport === "Soccer" && ok.includes(t.strCountry) && t.strBadge);
