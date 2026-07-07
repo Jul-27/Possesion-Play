@@ -25,6 +25,13 @@ export function norm(s) {
   return String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 }
 
+// Kuratierte, vom Owner bestätigte Fakten, die Wikidata (noch) nicht liefert.
+// Key: norm(name)|Geburtsjahr -> zusätzliche Honour-Keys (additiv).
+export const HONOUR_OVERRIDES = {
+  "florian wirtz|2003": ["DFB"],  // DFB-Pokal 2024 mit Leverkusen
+  "harry kane|1993": ["DFB"],
+};
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function sparql(query) {
@@ -52,8 +59,11 @@ async function fetchHonourPlayers(qid) {
   const out = [];
   for (const [from, to] of WINDOWS) {
     const q = `SELECT DISTINCT ?pLabel ?by WHERE {
-      ?season wdt:P3450 wd:${qid} ; wdt:P1346 ?winner ; wdt:P580 ?ss .
-      FILTER( YEAR(?ss) >= ${from} && YEAR(?ss) < ${to} )
+      ?season wdt:P3450 wd:${qid} ; wdt:P1346 ?winner .
+      OPTIONAL { ?season wdt:P580 ?st580. }
+      OPTIONAL { ?season wdt:P585 ?st585. }
+      BIND(COALESCE(?st580, ?st585) AS ?ss)
+      FILTER( BOUND(?ss) && YEAR(?ss) >= ${from} && YEAR(?ss) < ${to} )
       OPTIONAL { ?season wdt:P582 ?se. }
       ?p p:P54 ?st . ?st ps:P54 ?winner ; pq:P580 ?cs .
       OPTIONAL { ?st pq:P582 ?ce. }
@@ -102,6 +112,12 @@ async function main() {
     const keys = hon.get(norm(p.n) + "|" + p.by);
     if (keys && keys.size) { p.t = [...keys].sort(); withT++; }
     else delete p.t;
+  }
+
+  // Kuratierte Overrides additiv anwenden
+  for (const p of players) {
+    const extra = HONOUR_OVERRIDES[norm(p.n) + "|" + p.by];
+    if (extra) p.t = [...new Set([...(p.t || []), ...extra])].sort();
   }
 
   // 3) Schreiben (Reihenfolge wie zuvor: nach Name)
