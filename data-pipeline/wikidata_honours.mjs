@@ -32,6 +32,29 @@ export const HONOUR_OVERRIDES = {
   "harry kane|1993": ["DFB"],
 };
 
+// Saison-Sieger, die Wikidata (noch) nicht als P1346 führt (Owner-bestätigt).
+// Honour-Key -> [[Saisonstartjahr, Club-Key], ...]; angewandt über cp-Überlappung
+// (gleiche Semantik wie die Wikidata-Query: from <= saison+1 && ende >= saison).
+export const GAP_WINNERS = {
+  DFB: [[2009, "FCB"], [2011, "BVB"], [2012, "FCB"], [2013, "FCB"],
+        [2023, "B04"], [2024, "VFB"], [2025, "FCB"]],
+};
+
+const gapEnd = (to) => (to === 0 ? 9999 : to);
+export function applyGapWinners(players) {
+  let added = 0;
+  for (const [key, seasons] of Object.entries(GAP_WINNERS)) {
+    for (const [year, club] of seasons) {
+      for (const p of players) {
+        if (!(p.cp || []).some(([k, f, t]) => k === club && f <= year + 1 && gapEnd(t) >= year)) continue;
+        const set = new Set(p.t || []);
+        if (!set.has(key)) { set.add(key); p.t = [...set].sort(); added++; }
+      }
+    }
+  }
+  return added;
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function sparql(query) {
@@ -113,6 +136,9 @@ async function main() {
     if (keys && keys.size) { p.t = [...keys].sort(); withT++; }
     else delete p.t;
   }
+
+  // Wikidata-Sieger-Lücken über cp schließen
+  console.log(`  GAP_WINNERS: ${applyGapWinners(players)} Zuordnungen`);
 
   // Kuratierte Overrides additiv anwenden
   for (const p of players) {
