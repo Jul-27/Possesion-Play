@@ -166,8 +166,13 @@ export default function Game({ code, clientId, onLeave }) {
     ids.forEach((i) => { results[i] = playerMatchesHex(player, board[i].def); });
     if (results[selected] !== true) {
       setLocalFeedback({ type: "err", text: `${player.n} passt nicht zu „${cname(board[selected].def)}".`,
-        detail: "Wähle ein Feld, das zur Karriere des Spielers passt (Verein, Nation, Liga, Titel oder Spezialfeld)." });
+        detail: "Zug verfällt — der Gegner ist dran." });
       play("err");
+      setSelected(null); setNameInput(""); setChosen(null); setSugOpen(false);
+      const rem = liveRemaining(clk, myPlayer, Date.now());
+      writeMove({ turn: myPlayer === 1 ? 2 : 1,
+        clocks: { ...clk, [myPlayer]: rem, started: new Date().toISOString() },
+        last_move: { by: 0, text: `${names[myPlayer]}: ${player.n} passt nicht — Zug verfällt.`, claimed: [], ts: Date.now() } });
       return;
     }
     const newOwners = { ...owners };
@@ -361,6 +366,7 @@ export default function Game({ code, clientId, onLeave }) {
             <h2>So wird gespielt</h2>
             <p className="ruleP">Abwechselnd wählt ihr ein <b>freies Feld</b> und nennt einen Spieler, der zur Kategorie passt (Verein, Nation, Liga, Titel oder Spezialfeld wie Jahrgang/Ära).</p>
             <p className="ruleP">Passt euer Spieler <b>auch zu angrenzenden Feldern</b>, erobert ihr diese mit — und nehmt sie dem Gegner ab, wenn sie ihm gehören.</p>
+            <p className="ruleP">Passt der genannte Spieler nicht, <b>verfällt der Zug</b> — der Gegner ist dran.</p>
             <p className="ruleP">Ab <b>2 Buchstaben des Nachnamens</b> erscheinen Treffer aus der Datenbank. Wähle einen Spieler aus der Liste.</p>
             <p className="ruleP">Sind alle 31 Felder vergeben, gewinnt, wer mehr besitzt.</p>
             <p className="dataStamp">Datenstand: {DATA_ASOF.split("-").reverse().join(".")} · Quelle: Wikidata — ganz frische Transfers können noch fehlen.</p>
