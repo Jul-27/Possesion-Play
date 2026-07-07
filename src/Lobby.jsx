@@ -83,7 +83,7 @@ export default function Lobby({ onEnter, onDaily }) {
   return (
     <div className="lobby">
       <h1 className="title">POSSESSION PLAY</h1>
-      <div className="subtitle">Hex-Duell · Online gegen einen Freund</div>
+      <div className="subtitle">{{ hex: "Hex-Duell", grid: "Raster-Duell", guess: "Errate den Star" }[mode]} · Online gegen einen Freund</div>
 
       <DailyCard onDaily={onDaily} />
 

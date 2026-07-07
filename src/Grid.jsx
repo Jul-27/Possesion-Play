@@ -97,8 +97,9 @@ export default function Grid({ code, clientId, onLeave }) {
       last_move: { ...(row.last_move || {}), by: 0, text: `⏱ ${names[row.turn]} — Zeit abgelaufen`, ts: Date.now() },
       updated_at: new Date().toISOString(),
     };
-    if (myTurn) supabase.from("games").update(finish).eq("code", code).eq("turn", myPlayer).eq("status", "playing");
-    else if (myPlayer !== 0) supabase.from("games").update(finish).eq("code", code).eq("status", "playing");
+    // .then() ist Pflicht: Supabase-Builder sind lazy und feuern sonst nie.
+    if (myTurn) supabase.from("games").update(finish).eq("code", code).eq("turn", myPlayer).eq("status", "playing").then(() => {});
+    else if (myPlayer !== 0) supabase.from("games").update(finish).eq("code", code).eq("status", "playing").then(() => {});
   }, [now, status, row?.turn, myTurn, myPlayer, code]); // eslint-disable-line
 
   // End-Sound nur beim beobachteten Übergang playing -> finished (kein Replay bei Reload)
@@ -218,7 +219,7 @@ export default function Grid({ code, clientId, onLeave }) {
   const gameOver = status === "finished";
   const winner = clk.timeout ? (clk.timeout === 1 ? 2 : 1)
     : (gridWinner(owners) || (Object.keys(owners).length === 9 ? (counts.a === counts.b ? 0 : counts.a > counts.b ? 1 : 2) : 0));
-  const fb = localFeedback || (row.last_move?.text ? { type: row.last_move.by ? "ok" : "info", text: row.last_move.text, detail: row.last_move.detail } : null);
+  const fb = localFeedback || (selected === null && row.last_move?.text ? { type: row.last_move.by ? "ok" : "info", text: row.last_move.text, detail: row.last_move.detail } : null);
 
   return (
     <div className="ppRoot">

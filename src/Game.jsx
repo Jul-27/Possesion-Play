@@ -110,10 +110,11 @@ export default function Game({ code, clientId, onLeave }) {
       last_move: { by: 0, text: `⏱ ${names[row.turn]} — Zeit abgelaufen`, claimed: [], ts: Date.now() },
       updated_at: new Date().toISOString(),
     };
+    // .then() ist Pflicht: Supabase-Builder sind lazy und feuern sonst nie.
     if (myTurn) {
-      supabase.from("games").update(finish).eq("code", code).eq("turn", myPlayer).eq("status", "playing");
+      supabase.from("games").update(finish).eq("code", code).eq("turn", myPlayer).eq("status", "playing").then(() => {});
     } else if (myPlayer !== 0) {
-      supabase.from("games").update(finish).eq("code", code).eq("status", "playing"); // Gegner offline -> defensiv
+      supabase.from("games").update(finish).eq("code", code).eq("status", "playing").then(() => {}); // Gegner offline -> defensiv
     }
   }, [now, status, row?.turn, myTurn, myPlayer, code]); // eslint-disable-line
   useEffect(() => { if (selected !== null && inputRef.current) inputRef.current.focus(); }, [selected]);
@@ -232,7 +233,7 @@ export default function Game({ code, clientId, onLeave }) {
   const total = counts.a + counts.b;
   const aPct = total ? (counts.a / total) * 100 : 50;
   const adjSet = selected !== null ? new Set(ADJP[selected]) : new Set();
-  const fb = localFeedback || (row.last_move?.text ? { type: row.last_move.by ? "ok" : "info", text: row.last_move.text, detail: row.last_move.detail } : null);
+  const fb = localFeedback || (selected === null && row.last_move?.text ? { type: row.last_move.by ? "ok" : "info", text: row.last_move.text, detail: row.last_move.detail } : null);
   const gameOver = status === "finished";
   const winnerNo = !gameOver ? 0 : clk.timeout ? (clk.timeout === 1 ? 2 : 1) : counts.a === counts.b ? 0 : counts.a > counts.b ? 1 : 2;
 
@@ -241,7 +242,7 @@ export default function Game({ code, clientId, onLeave }) {
       <div className="topbar">
         <div>
           <h1 className="title">POSSESSION PLAY</h1>
-          <div className="subtitle">Online · Code {code}</div>
+          <div className="subtitle">Hex-Duell · Code {code}</div>
         </div>
         <div className="iconrow">
           <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
