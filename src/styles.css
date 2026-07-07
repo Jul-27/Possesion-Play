@@ -340,3 +340,4 @@ body::after {
 .gcell.owned { animation: cellPop .25s ease; }
 .btn:active:not(:disabled), .chip:active:not(:disabled), .cbItem:active:not(:disabled), .iconbtn:active { transform: scale(.96); }
 .dataStamp { color: #7fa093; font-size: 12px; text-align: center; margin-top: 10px; }
+.emImg { width: 100%; height: 100%; object-fit: contain; display: block; }
