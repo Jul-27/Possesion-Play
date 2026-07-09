@@ -4,6 +4,7 @@ import Game from "./Game.jsx";
 import Grid from "./Grid.jsx";
 import Guess from "./Guess.jsx";
 import Daily from "./Daily.jsx";
+import Solo from "./Solo.jsx";
 import { supabase, getClientId } from "./supabaseClient.js";
 
 function codeFromUrl() {
@@ -13,6 +14,10 @@ function codeFromUrl() {
 
 function dailyFromUrl() {
   return new URLSearchParams(window.location.search).get("daily") != null;
+}
+
+function soloFromUrl() {
+  return new URLSearchParams(window.location.search).get("solo") != null;
 }
 
 function GameRouter({ code, clientId, onLeave }) {
@@ -34,10 +39,11 @@ function GameRouter({ code, clientId, onLeave }) {
 export default function App() {
   const [code, setCode] = useState(codeFromUrl());
   const [daily, setDaily] = useState(dailyFromUrl());
+  const [solo, setSolo] = useState(soloFromUrl());
   const clientId = getClientId();
 
   useEffect(() => {
-    const onPop = () => { setCode(codeFromUrl()); setDaily(dailyFromUrl()); };
+    const onPop = () => { setCode(codeFromUrl()); setDaily(dailyFromUrl()); setSolo(soloFromUrl()); };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
@@ -45,19 +51,24 @@ export default function App() {
   function enter(c) {
     const url = `${window.location.pathname}?game=${c}`;
     window.history.pushState({}, "", url);
-    setDaily(false); setCode(c);
+    setDaily(false); setSolo(false); setCode(c);
   }
   function enterDaily() {
     window.history.pushState({}, "", `${window.location.pathname}?daily=1`);
-    setCode(null); setDaily(true);
+    setCode(null); setSolo(false); setDaily(true);
+  }
+  function enterSolo() {
+    window.history.pushState({}, "", `${window.location.pathname}?solo=1`);
+    setCode(null); setDaily(false); setSolo(true);
   }
   function leave() {
     window.history.pushState({}, "", window.location.pathname);
-    setCode(null); setDaily(false);
+    setCode(null); setDaily(false); setSolo(false);
   }
 
   if (daily) return <Daily onLeave={leave} />;
+  if (solo) return <Solo onLeave={leave} />;
   return code
     ? <GameRouter code={code} clientId={clientId} onLeave={leave} />
-    : <Lobby onEnter={enter} onDaily={enterDaily} />;
+    : <Lobby onEnter={enter} onDaily={enterDaily} onSolo={enterSolo} />;
 }
