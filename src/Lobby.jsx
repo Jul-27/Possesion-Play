@@ -5,7 +5,7 @@ import { loadPlayers } from "./playersStore.js";
 import { dailyDateStr, dailyNumber } from "./dailyLogic.js";
 import { DATA_ASOF } from "./dataInfo.js";
 
-export default function Lobby({ onEnter, onDaily }) {
+export default function Lobby({ onEnter, onDaily, onSolo }) {
   const [name, setName] = useState(getSavedName());
   const [mode, setMode] = useState("hex"); // "hex" | "grid" | "guess"
   const [joinCode, setJoinCode] = useState("");
@@ -98,6 +98,8 @@ export default function Lobby({ onEnter, onDaily }) {
           <button type="button" className={`btn ${mode === "grid" ? "primary" : "ghost"}`} style={{ flex: 1 }} onClick={() => setMode("grid")}>Raster-Duell</button>
           <button type="button" className={`btn ${mode === "guess" ? "primary" : "ghost"}`} style={{ flex: 1 }} onClick={() => setMode("guess")}>Errate den Star</button>
         </div>
+
+        <button type="button" className="btn ghost block" style={{ marginTop: 8 }} onClick={onSolo}>🎯 Hex-Training — solo üben (ohne Mitspieler)</button>
 
         <button className="btn primary block" style={{ marginTop: 14 }} disabled={busy} onClick={createGame}>
           Neues Spiel erstellen
