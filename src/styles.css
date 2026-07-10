@@ -139,9 +139,9 @@ body::after {
   position: relative; width: min(440px, 100%); margin: 20px auto 14px;
   animation: boardIn .7s .18s both;
 }
-.board::before { /* Flutlicht-Pool hinter dem Brett — deckt auch die unterste Reihe */
+.board::before { /* Flutlicht-Pool hinter dem Brett — gleichmäßig über alle Reihen */
   content: ""; position: absolute; inset: -12% -8% -14%; z-index: 0; pointer-events: none;
-  background: radial-gradient(65% 58% at 50% 46%, rgba(244,201,93,.12), transparent 78%);
+  background: radial-gradient(85% 72% at 50% 50%, rgba(244,201,93,.10), transparent 95%);
 }
 .hex {
   position: absolute; width: 19%; aspect-ratio: 1 / 1.155; transform: translate(-50%, -50%);
