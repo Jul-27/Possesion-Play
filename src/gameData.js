@@ -321,8 +321,9 @@ export function buildBoardSerial() {
   const honours = pick(HONOURS, nHonour);
   const specials = pick(SPECIALS, 3);
   const blClubs = pick(CLUBS.filter((c) => c.lg === "BL"), 4);
-  const nations = pick(NATIONS, 6);
-  const rest = pick(CLUBS.filter((c) => !blClubs.includes(c)), 31 - 3 - 4 - 6 - nLeague - nHonour);
+  const nNat = 3 + Math.floor(Math.random() * 2); // 3–4 Nationen
+  const nations = pick(NATIONS, nNat);
+  const rest = pick(CLUBS.filter((c) => !blClubs.includes(c)), 31 - 3 - 4 - nNat - nLeague - nHonour);
   const chosen = shuffle([...specials, ...blClubs, ...nations, ...rest, ...leagues, ...honours]);
   return chosen.map((d) => ({ t: d.type, k: d.key }));
 }
