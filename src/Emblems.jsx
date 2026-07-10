@@ -72,7 +72,7 @@ export function Cell({ cell, owner, selected, adjHint, justClaimed, clickable, o
     bg = `linear-gradient(150deg, ${pc.c1}, ${pc.c2})`; border = `1px solid ${pc.c1}`; txt = "#fff";
     shadow = `0 0 18px ${pc.glow}, inset 0 1px 0 rgba(255,255,255,.25)`;
   } else {
-    bg = "linear-gradient(155deg, rgba(20,40,33,.72), rgba(8,20,15,.85))";
+    bg = "linear-gradient(155deg, rgba(34,60,50,.92), rgba(22,42,34,.96))";
     border = "1px solid rgba(176,224,200,.22)"; txt = "#dfeee7"; shadow = "inset 0 1px 0 rgba(255,255,255,.10)";
   }
   return (

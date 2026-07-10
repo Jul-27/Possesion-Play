@@ -9,6 +9,7 @@ import { loadPlayers } from "./playersStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
 import { DATA_ASOF } from "./dataInfo.js";
+import { useLeaveEndsGame } from "./usePresence.js";
 
 export default function Grid({ code, clientId, onLeave }) {
   const [row, setRow] = useState(null);
@@ -67,6 +68,16 @@ export default function Grid({ code, clientId, onLeave }) {
   const rowDefs = useMemo(() => (grid.rows || []).map((s) => lookupDef(s.t, s.k)), [row?.board]);
   const colDefs = useMemo(() => (grid.cols || []).map((s) => lookupDef(s.t, s.k)), [row?.board]);
   const picksAll = row?.last_move?.picksAll || {};
+
+  const forfeit = row?.last_move?.forfeit || 0;
+  const opponentLeaving = useLeaveEndsGame({
+    code, myPlayer, status, lastMove: row?.last_move,
+    finalize: (leaver) => supabase.from("games").update({
+      status: "finished",
+      last_move: { ...(row?.last_move || {}), forfeit: leaver, by: 0, text: `🚪 ${names[leaver]} hat das Spiel verlassen`, ts: Date.now() },
+      updated_at: new Date().toISOString(),
+    }).eq("code", code).then(() => {}),
+  });
 
   const counts = useMemo(() => {
     let a = 0, b = 0;
@@ -217,7 +228,7 @@ export default function Grid({ code, clientId, onLeave }) {
   if (!row) return <div className="ppRoot"><div className="panel" style={{ marginTop: 40 }}>Lade…</div></div>;
 
   const gameOver = status === "finished";
-  const winner = clk.timeout ? (clk.timeout === 1 ? 2 : 1)
+  const winner = forfeit ? (forfeit === 1 ? 2 : 1) : clk.timeout ? (clk.timeout === 1 ? 2 : 1)
     : (gridWinner(owners) || (Object.keys(owners).length === 9 ? (counts.a === counts.b ? 0 : counts.a > counts.b ? 1 : 2) : 0));
   const fb = localFeedback || (selected === null && row.last_move?.text ? { type: row.last_move.by ? "ok" : "info", text: row.last_move.text, detail: row.last_move.detail } : null);
 
@@ -302,6 +313,7 @@ export default function Grid({ code, clientId, onLeave }) {
       ))}
 
       {fb && (<div className={`fb ${fb.type}`}>{fb.text}{fb.detail && <div className="fbDetail">{fb.detail}</div>}</div>)}
+      {opponentLeaving && !gameOver && (<div className="fb info">Gegner offline — das Spiel endet gleich, falls er nicht zurückkommt…</div>)}
 
       {status === "waiting" && (
         <div className="overlay"><div className="modal" style={{ textAlign: "center" }}>
@@ -319,7 +331,7 @@ export default function Grid({ code, clientId, onLeave }) {
           {winner === 0 ? <p className="winName">Unentschieden!</p> : (
             <p className="winName" style={{ color: P[winner].c1 }}>{names[winner]} gewinnt</p>
           )}
-          <p>{clk.timeout ? `⏱ ${names[clk.timeout]} — Zeit abgelaufen` : `${names[1]} ${counts.a} : ${counts.b} ${names[2]}`}</p>
+          <p>{forfeit ? `🚪 ${names[forfeit]} hat das Spiel verlassen` : clk.timeout ? `⏱ ${names[clk.timeout]} — Zeit abgelaufen` : `${names[1]} ${counts.a} : ${counts.b} ${names[2]}`}</p>
           <div className="closeline">
             <button className="btn primary" style={{ flex: 1, padding: "12px" }} disabled={!players} onClick={newGame}>Neues Spiel</button>
             <button className="btn ghost" style={{ flex: 1, padding: "12px" }} onClick={onLeave}>Lobby</button>
