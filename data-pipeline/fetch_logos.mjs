@@ -33,11 +33,12 @@ const CLUB_SEARCH = {
   POR: ["Porto", "Portugal"], SLB: ["Benfica", "Portugal"], SCP: ["Sporting CP", "Portugal"],
   AJA: ["Ajax", ["Netherlands", "The Netherlands"]], PSV: ["PSV Eindhoven", ["Netherlands", "The Netherlands"]],
   FEY: ["Feyenoord", ["Netherlands", "The Netherlands"]],
+  RBS: ["Red Bull Salzburg", "Austria"],
 };
 
 // Direkte Team-IDs für Fälle, in denen die Namenssuche fehlgreift
 // (PSG-Suche liefert „Torcy"). Verifikation: strTeam muss Namensbestandteil enthalten.
-const TEAM_ID = { PSG: [133714, "Paris"], SCP: [135708, "Sporting"] };
+const TEAM_ID = { PSG: [133714, "Paris"], SCP: [135708, "Sporting"], RBS: [133970, "Salzburg"] };
 
 // Liga-Key -> [TheSportsDB-Liga-ID, erwarteter Namensbestandteil]
 const LEAGUE_IDS = {

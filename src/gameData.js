@@ -9,7 +9,7 @@ export const P = {
   2: { name: "Spieler 2", c1: "#FB7185", c2: "#BE123C", glow: "rgba(251,113,133,.55)" },
 };
 
-const LG_COUNTRY = { BL: "GER", PL: "ENG", LL: "ESP", SA: "ITA", L1: "FRA", PT: "POR", NL: "NED" };
+const LG_COUNTRY = { BL: "GER", PL: "ENG", LL: "ESP", SA: "ITA", L1: "FRA", PT: "POR", NL: "NED", AT: "AUT" };
 
 export const CLUBS = [
   { key: "FCB", lg: "BL", label: "FCB", name: "FC Bayern München",        c1: "#DC052D", c2: "#fff",     pat: "solid"   },
@@ -53,6 +53,7 @@ export const CLUBS = [
   { key: "AJA", lg: "NL", label: "AJA", name: "Ajax Amsterdam",           c1: "#fff",    c2: "#D2122E",  pat: "halvesV" },
   { key: "PSV", lg: "NL", label: "PSV", name: "PSV Eindhoven",            c1: "#EC1C24", c2: "#fff",     pat: "solid"   },
   { key: "FEY", lg: "NL", label: "FEY", name: "Feyenoord Rotterdam",      c1: "#fff",    c2: "#E30613",  pat: "halvesV" },
+  { key: "RBS", lg: "AT", label: "RBS", name: "FC Red Bull Salzburg",     c1: "#C8102E", c2: "#001E5A",  pat: "solid"   },
 ].map((c) => ({ ...c, type: "club", country: LG_COUNTRY[c.lg] }));
 
 export const NATIONS = [
