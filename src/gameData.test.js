@@ -81,8 +81,10 @@ test("buildBoardSerial: 31 Felder mit 1–3 Liga- und 2–4 Honour-Feldern", () 
     assert.equal(board.length, 31);
     const leagues = board.filter((c) => c.t === "league").length;
     const honours = board.filter((c) => c.t === "honour").length;
+    const nats = board.filter((c) => c.t === "nat").length;
     assert.ok(leagues >= 1 && leagues <= 3, `Liga-Anzahl: ${leagues}`);
     assert.ok(honours >= 2 && honours <= 4, `Honour-Anzahl: ${honours}`);
+    assert.ok(nats >= 3 && nats <= 4, `Nationen-Anzahl: ${nats}`);
     for (const c of board) assert.ok(lookupDef(c.t, c.k), `kein def für ${c.t}/${c.k}`);
   }
 });

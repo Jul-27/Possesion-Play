@@ -38,6 +38,7 @@ export const HONOUR_OVERRIDES = {
 export const GAP_WINNERS = {
   DFB: [[2009, "FCB"], [2011, "BVB"], [2012, "FCB"], [2013, "FCB"],
         [2023, "B04"], [2024, "VFB"], [2025, "FCB"]],
+  FAC: [[2003, "MUN"]], // FA Cup 2003/04 — Manchester United (Wikidata-Lücke)
 };
 
 const gapEnd = (to) => (to === 0 ? 9999 : to);
