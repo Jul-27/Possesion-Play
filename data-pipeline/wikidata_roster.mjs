@@ -40,6 +40,15 @@ export const CLUB_OVERRIDES = {
 // ISO-3-Codes unserer Spiel-Nationen (NATIONS in gameData.js)
 export const NATION_KEYS = new Set(["FRA","GER","ESP","ITA","NED","BEL","CRO","ENG","PRT","JPN","BRA","ARG","MEX","NGA","CIV","SEN","COL","USA"]);
 
+// Spiel-Code -> Wikidata-Länder-QID (ISO-3 taugt nicht: DEU≠GER, NLD≠NED, England ohne ISO).
+export const NATION_QID = {
+  FRA: "Q142", GER: "Q183", ESP: "Q29", ITA: "Q38", NED: "Q55", BEL: "Q31",
+  CRO: "Q224", ENG: "Q21", PRT: "Q45", JPN: "Q17", BRA: "Q155", ARG: "Q414",
+  MEX: "Q96", NGA: "Q1033", CIV: "Q1008", SEN: "Q1041", COL: "Q739", USA: "Q30",
+};
+const GAME_BY_QID = Object.fromEntries(Object.entries(NATION_QID).map(([g, q]) => [q, g]));
+const qidOf = (uri) => (uri ? uri.split("/").pop() : null);
+
 const PARTICLES = new Set(["van","von","de","del","della","di","da","dos","der","den","ten","ter","la","le"]);
 
 export function norm(s) {
@@ -69,18 +78,18 @@ async function sparql(query) {
 
 async function fetchClubRoster(qid) {
   // siso = sportliche Nation (P1532, bevorzugt), ciso = Staatsbürgerschaft (P27, Fallback)
-  const q = `SELECT ?pLabel ?by ?sl ?siso ?ciso WHERE {
+  const q = `SELECT ?pLabel ?by ?sl ?snat ?cnat WHERE {
     ?p p:P54 ?st . ?st ps:P54 wd:${qid} .
     ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d ; wikibase:sitelinks ?sl .
     BIND(YEAR(?d) AS ?by)
-    OPTIONAL { ?p wdt:P1532 ?sc . ?sc wdt:P298 ?siso . }
-    OPTIONAL { ?p wdt:P27 ?c . ?c wdt:P298 ?ciso . }
+    OPTIONAL { ?p wdt:P1532 ?snat. }
+    OPTIONAL { ?p wdt:P27 ?cnat. }
     SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
   }`;
   return (await sparql(q)).map((b) => ({
     name: b.pLabel?.value, by: b.by?.value ? parseInt(b.by.value) : null,
     sl: b.sl?.value ? parseInt(b.sl.value) : 0,
-    siso: b.siso?.value || null, ciso: b.ciso?.value || null,
+    siso: GAME_BY_QID[qidOf(b.snat?.value)] || null, ciso: GAME_BY_QID[qidOf(b.cnat?.value)] || null,
   }));
 }
 
@@ -106,8 +115,8 @@ async function main() {
       if (!e) { e = { name: r.name, by: r.by, clubs: new Set(), sl: 0, siso: null, ciso: null }; roster.set(k, e); }
       e.clubs.add(key);
       if (r.sl > e.sl) e.sl = r.sl;
-      if (!e.siso && r.siso && NATION_KEYS.has(r.siso)) e.siso = r.siso; // sportliche Nation bevorzugt
-      if (!e.ciso && r.ciso && NATION_KEYS.has(r.ciso)) e.ciso = r.ciso; // Staatsbürgerschaft Fallback
+      if (!e.siso && r.siso) e.siso = r.siso; // sportliche Nation bevorzugt (bereits gemappter Spiel-Code)
+      if (!e.ciso && r.ciso) e.ciso = r.ciso; // Staatsbürgerschaft Fallback
     }
     console.log(`  ${key} (${qid}): ${rows.length} Zeilen`);
     await sleep(1300);
@@ -126,6 +135,7 @@ async function main() {
       const before = cur.clubs.length;
       cur.clubs = [...new Set([...cur.clubs, ...e.clubs])].sort();
       cur.sl = Math.max(cur.sl || 0, e.sl);
+      if (!cur.nat.length) { const code = e.siso || e.ciso; if (code) cur.nat = [code]; } // leere Nationalität nachtragen
       if (cur.clubs.length > before) enriched++;
     } else {
       const iso = e.siso || e.ciso;
