@@ -9,6 +9,7 @@ import { loadPlayers } from "./playersStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
 import { DATA_ASOF } from "./dataInfo.js";
+import { useLeaveEndsGame } from "./usePresence.js";
 
 export default function Game({ code, clientId, onLeave }) {
   const [row, setRow] = useState(null);
@@ -68,6 +69,16 @@ export default function Game({ code, clientId, onLeave }) {
   const names = row?.names || { 1: "Spieler 1", 2: "Spieler 2" };
   const owners = row?.owners || {};
   const board = useMemo(() => (row?.board ? hydrateBoard(row.board) : []), [row?.board]);
+
+  const forfeit = row?.last_move?.forfeit || 0;
+  const opponentLeaving = useLeaveEndsGame({
+    code, myPlayer, status, lastMove: row?.last_move,
+    finalize: (leaver) => supabase.from("games").update({
+      status: "finished",
+      last_move: { forfeit: leaver, by: 0, text: `🚪 ${names[leaver]} hat das Spiel verlassen`, claimed: [], ts: Date.now() },
+      updated_at: new Date().toISOString(),
+    }).eq("code", code).then(() => {}),
+  });
 
   const clk = row?.clocks || { 1: START_SECONDS, 2: START_SECONDS, started: null, timeout: null };
   const rem1 = status === "playing" && row?.turn === 1 && clk.started ? liveRemaining(clk, 1, now) : (clk[1] ?? START_SECONDS);
@@ -240,7 +251,7 @@ export default function Game({ code, clientId, onLeave }) {
   const adjSet = selected !== null ? new Set(ADJP[selected]) : new Set();
   const fb = localFeedback || (selected === null && row.last_move?.text ? { type: row.last_move.by ? "ok" : "info", text: row.last_move.text, detail: row.last_move.detail } : null);
   const gameOver = status === "finished";
-  const winnerNo = !gameOver ? 0 : clk.timeout ? (clk.timeout === 1 ? 2 : 1) : counts.a === counts.b ? 0 : counts.a > counts.b ? 1 : 2;
+  const winnerNo = !gameOver ? 0 : forfeit ? (forfeit === 1 ? 2 : 1) : clk.timeout ? (clk.timeout === 1 ? 2 : 1) : counts.a === counts.b ? 0 : counts.a > counts.b ? 1 : 2;
 
   return (
     <div className="ppRoot">
@@ -324,6 +335,7 @@ export default function Game({ code, clientId, onLeave }) {
       ))}
 
       {fb && (<div className={`fb ${fb.type}`}>{fb.text}{fb.detail && <div className="fbDetail">{fb.detail}</div>}</div>)}
+      {opponentLeaving && !gameOver && (<div className="fb info">Gegner offline — das Spiel endet gleich, falls er nicht zurückkommt…</div>)}
 
       {/* Warten auf Mitspieler */}
       {status === "waiting" && (
@@ -346,12 +358,14 @@ export default function Game({ code, clientId, onLeave }) {
           {winnerNo !== 0 && winnerNo === myPlayer && <Confetti />}
           <div className="modal" style={{ textAlign: "center" }}>
             <h2>Abpfiff</h2>
-            {clk.timeout ? (
+            {forfeit ? (
+              <p className="winName" style={{ color: P[forfeit === 1 ? 2 : 1].c1 }}>{names[forfeit === 1 ? 2 : 1]} gewinnt</p>
+            ) : clk.timeout ? (
               <p className="winName" style={{ color: P[clk.timeout === 1 ? 2 : 1].c1 }}>{names[clk.timeout === 1 ? 2 : 1]} gewinnt</p>
             ) : counts.a === counts.b ? <p className="winName">Unentschieden!</p> : (
               <p className="winName" style={{ color: counts.a > counts.b ? P[1].c1 : P[2].c1 }}>{counts.a > counts.b ? names[1] : names[2]} gewinnt</p>
             )}
-            <p>{clk.timeout ? `⏱ ${names[clk.timeout]} — Zeit abgelaufen` : `${names[1]} ${counts.a} : ${counts.b} ${names[2]}`}</p>
+            <p>{forfeit ? `🚪 ${names[forfeit]} hat das Spiel verlassen` : clk.timeout ? `⏱ ${names[clk.timeout]} — Zeit abgelaufen` : `${names[1]} ${counts.a} : ${counts.b} ${names[2]}`}</p>
             <div className="closeline">
               <button className="btn primary" style={{ flex: 1, padding: "12px" }} onClick={newGame}>Neues Spiel</button>
               <button className="btn ghost" style={{ flex: 1, padding: "12px" }} onClick={onLeave}>Lobby</button>
