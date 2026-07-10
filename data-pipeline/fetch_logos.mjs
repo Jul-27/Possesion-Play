@@ -37,7 +37,7 @@ const CLUB_SEARCH = {
 
 // Direkte Team-IDs für Fälle, in denen die Namenssuche fehlgreift
 // (PSG-Suche liefert „Torcy"). Verifikation: strTeam muss Namensbestandteil enthalten.
-const TEAM_ID = { PSG: [133714, "Paris"] };
+const TEAM_ID = { PSG: [133714, "Paris"], SCP: [135708, "Sporting"] };
 
 // Liga-Key -> [TheSportsDB-Liga-ID, erwarteter Namensbestandteil]
 const LEAGUE_IDS = {
