@@ -82,11 +82,8 @@ async function fetchHonourPlayers(qid) {
   const out = [];
   for (const [from, to] of WINDOWS) {
     const q = `SELECT DISTINCT ?pLabel ?by WHERE {
-      ?season wdt:P3450 wd:${qid} ; wdt:P1346 ?winner .
-      OPTIONAL { ?season wdt:P580 ?st580. }
-      OPTIONAL { ?season wdt:P585 ?st585. }
-      BIND(COALESCE(?st580, ?st585) AS ?ss)
-      FILTER( BOUND(?ss) && YEAR(?ss) >= ${from} && YEAR(?ss) < ${to} )
+      ?season wdt:P3450 wd:${qid} ; wdt:P1346 ?winner ; (wdt:P580|wdt:P585) ?ss .
+      FILTER( YEAR(?ss) >= ${from} && YEAR(?ss) < ${to} )
       OPTIONAL { ?season wdt:P582 ?se. }
       ?p p:P54 ?st . ?st ps:P54 ?winner ; pq:P580 ?cs .
       OPTIONAL { ?st pq:P582 ?ce. }
