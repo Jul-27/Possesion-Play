@@ -9,6 +9,18 @@ if (!url || !anon) {
 
 export const supabase = createClient(url || "http://localhost", anon || "anon");
 
+// Update, das das Entladen der Seite überlebt (normaler supabase-js-Client wird
+// beim Schließen abgebrochen). Direkt gegen die REST-API mit keepalive.
+export function beaconUpdate(code, patch) {
+  try {
+    fetch(`${url}/rest/v1/games?code=eq.${encodeURIComponent(code)}`, {
+      method: "PATCH", keepalive: true,
+      headers: { apikey: anon, Authorization: `Bearer ${anon}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify(patch),
+    });
+  } catch { /* nie kritisch */ }
+}
+
 // Stabile, anonyme Spieler-ID pro Browser (kein Login nötig)
 export function getClientId() {
   let id = localStorage.getItem("pp_client_id");
