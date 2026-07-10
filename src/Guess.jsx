@@ -9,6 +9,7 @@ import { loadPlayers } from "./playersStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
 import { DATA_ASOF } from "./dataInfo.js";
+import { useLeaveEndsGame } from "./usePresence.js";
 
 const sigOf = (dim, val) =>
   dim === "born" ? `born:${val.cmp}:${val.year}` :
@@ -97,6 +98,15 @@ export default function Guess({ code, clientId, onLeave }) {
   const names = row?.names || { 1: "Spieler 1", 2: "Spieler 2" };
   const board = row?.board || { kind: "guess", tgt: "" };
   const log = row?.last_move?.log || [];
+  const forfeit = row?.last_move?.forfeit || 0;
+  const opponentLeaving = useLeaveEndsGame({
+    code, myPlayer, status, lastMove: row?.last_move,
+    finalize: (leaver) => supabase.from("games").update({
+      status: "finished",
+      last_move: { ...(row?.last_move || {}), forfeit: leaver, winner: leaver === 1 ? 2 : 1 },
+      updated_at: new Date().toISOString(),
+    }).eq("code", code).then(() => {}),
+  });
   const askedSigs = useMemo(
     () => new Set(log.filter((e) => e.dim).map((e) => sigOf(e.dim, e.val))),
     [log]
@@ -242,7 +252,7 @@ export default function Guess({ code, clientId, onLeave }) {
   if (!row) return <div className="ppRoot"><div className="panel" style={{ marginTop: 40 }}>Lade…</div></div>;
 
   const gameOver = status === "finished";
-  const winner = clk.timeout ? (clk.timeout === 1 ? 2 : 1) : (row.last_move?.winner || 0);
+  const winner = forfeit ? (forfeit === 1 ? 2 : 1) : clk.timeout ? (clk.timeout === 1 ? 2 : 1) : (row.last_move?.winner || 0);
   const fb = localFeedback;
   const DIMS = [
     { k: "nat", label: "Nation" }, { k: "club", label: "Verein" }, { k: "league", label: "Liga" },
@@ -376,6 +386,7 @@ export default function Guess({ code, clientId, onLeave }) {
       ))}
 
       {fb && (<div className={`fb ${fb.type}`}>{fb.text}{fb.detail && <div className="fbDetail">{fb.detail}</div>}</div>)}
+      {opponentLeaving && !gameOver && (<div className="fb info">Gegner offline — das Spiel endet gleich, falls er nicht zurückkommt…</div>)}
 
       {status === "waiting" && (
         <div className="overlay"><div className="modal" style={{ textAlign: "center" }}>
@@ -391,6 +402,7 @@ export default function Guess({ code, clientId, onLeave }) {
           <div className="modal" style={{ textAlign: "center" }}>
           <h2>Aufgelöst</h2>
           {winner === 0 ? <p className="winName">Spiel beendet</p> : <p className="winName" style={{ color: P[winner].c1 }}>{names[winner]} gewinnt</p>}
+          {forfeit ? <p>🚪 {names[forfeit]} hat das Spiel verlassen</p> : null}
           <p>Gesuchter Star: <b>{target ? target.n : "—"}</b></p>
           {clk.timeout ? <p>⏱ {names[clk.timeout]} — Zeit abgelaufen</p> : null}
           <div className="closeline">
