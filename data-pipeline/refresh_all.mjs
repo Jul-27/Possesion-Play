@@ -12,6 +12,7 @@ import { dirname, join } from "path";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CHAIN = [
   "wikidata_roster.mjs",        // 1) Spieler/Vereine/sl
+  "wikidata_national.mjs",      // 1b) Nationalteam-Kader (nat auch für Vereinlose)
   "wikidata_honours.mjs",       // 2) t: 11 Basis-Wettbewerbe (setzt neu)
   "wikidata_honours_extra.mjs", // 3) t += BDO/EM/CA/EL (additiv, NACH 2!)
   "wikidata_positions.mjs",     // 4) pos

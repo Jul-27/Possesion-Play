@@ -312,3 +312,9 @@ test("buildGuessSerial: gültiger, bekannter Kandidat", async () => {
     assert.ok((p.sl || 0) >= GUESS_SL_MIN, "Ziel nicht bekannt genug");
   }
 });
+
+import { NATIONS } from "./gameData.js";
+test("NATIONS enthält Österreich (19 Nationen)", () => {
+  assert.equal(NATIONS.length, 19);
+  assert.equal(lookupDef("nat", "AUT").name, "Österreich");
+});
