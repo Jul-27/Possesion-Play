@@ -75,6 +75,7 @@ export const NATIONS = [
   { key: "SEN", label: "SEN", name: "Senegal",         flag: { kind: "v",  colors: ["#00853F", "#FDEF42", "#E31B23"] } },
   { key: "COL", label: "COL", name: "Kolumbien",       flag: { kind: "hw", colors: ["#FCD116", "#003893", "#CE1126"], weights: [2, 1, 1] } },
   { key: "USA", label: "USA", name: "USA",             flag: { kind: "canton" } },
+  { key: "AUT", label: "AUT", name: "Österreich",      flag: { kind: "h",  colors: ["#ED2939", "#ffffff", "#ED2939"] } },
 ].map((n) => ({ ...n, type: "nat" }));
 
 // ── Karrierezeiträume (Feld cp: [[clubKey, von, bis], ...]; bis 0 = offen) ──

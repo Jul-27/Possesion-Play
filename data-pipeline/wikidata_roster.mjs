@@ -45,6 +45,7 @@ export const NATION_QID = {
   FRA: "Q142", GER: "Q183", ESP: "Q29", ITA: "Q38", NED: "Q55", BEL: "Q31",
   CRO: "Q224", ENG: "Q21", PRT: "Q45", JPN: "Q17", BRA: "Q155", ARG: "Q414",
   MEX: "Q96", NGA: "Q1033", CIV: "Q1008", SEN: "Q1041", COL: "Q739", USA: "Q30",
+  AUT: "Q40",
 };
 const GAME_BY_QID = Object.fromEntries(Object.entries(NATION_QID).map(([g, q]) => [q, g]));
 const qidOf = (uri) => (uri ? uri.split("/").pop() : null);
