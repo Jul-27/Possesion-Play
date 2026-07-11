@@ -9858,6 +9858,7 @@ export const PLAYERS = [
   {"n": "Gernot Messner", "ln": "Messner", "by": 1980, "nat": [], "clubs": ["RBS"], "sl": 6, "cp": [["RBS",2002,2005]]},
   {"n": "Gernot Plassnegger", "ln": "Plassnegger", "by": 1978, "nat": [], "clubs": ["WOB"], "sl": 10, "pos": "ABW", "cp": [["WOB",2001,2002]]},
   {"n": "Gernot Rohr", "ln": "Rohr", "by": 1953, "nat": ["FRA"], "clubs": ["FCB"], "t": ["CL","ML1"], "sl": 26, "pos": "ABW", "cp": [["FCB",1972,1974]]},
+  {"n": "Gernot Trauner", "ln": "Trauner", "by": 1992, "nat": ["AUT"], "clubs": ["FEY"], "sl": 35, "pos": "ABW", "cp": [["FEY",2021,0]]},
   {"n": "Gerolamo Radice", "ln": "Radice", "by": 1883, "nat": ["ITA"], "clubs": ["MIL"], "sl": 7, "pos": "TW", "cp": [["MIL",1906,1909]]},
   {"n": "Gerónimo del Campo", "ln": "del Campo", "by": 1902, "nat": ["ESP"], "clubs": ["RMA"], "sl": 8, "pos": "ST"},
   {"n": "Gerónimo Rulli", "ln": "Rulli", "by": 1992, "nat": ["ARG"], "clubs": ["AJA","OM","VIL"], "t": ["CA","CDR","EL","WM"], "sl": 46, "pos": "TW", "cp": [["VIL",2020,2023],["AJA",2023,2024],["OM",2024,0]]},
