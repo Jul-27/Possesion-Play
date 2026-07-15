@@ -39,6 +39,8 @@ export const GAP_WINNERS = {
   DFB: [[2009, "FCB"], [2011, "BVB"], [2012, "FCB"], [2013, "FCB"],
         [2023, "B04"], [2024, "VFB"], [2025, "FCB"]],
   FAC: [[2003, "MUN"]], // FA Cup 2003/04 — Manchester United (Wikidata-Lücke)
+  CDR: [[2024, "BAR"], [2022, "RMA"]], // Copa del Rey 2024/25 (Barça), 2022/23 (Real)
+  MBL: [[2022, "FCB"]],                // Bundesliga 2022/23 (Bayern)
 };
 
 const gapEnd = (to) => (to === 0 ? 9999 : to);

@@ -14,6 +14,11 @@ const PLAYERS_PATH = join(HERE, "..", "src", "players.js");
 // Bestätigte Fakten (vom Owner gemeldet), die Wikidata nicht sauber liefert.
 export const EXTRA_PLAYERS = [
   { n: "Gernot Trauner", by: 1992, nat: ["AUT"], clubs: ["FEY"], sl: 35, pos: "ABW", cp: [["FEY", 2021, 0]] },
+  { n: "Oscar Gloukh",   by: 2004, clubs: ["AJA"], cp: [["AJA", 2025, 0]] },     // Ajax seit 2025
+  { n: "Diego",          by: 1985, clubs: ["SVW"], cp: [["SVW", 2006, 2009]] },  // Werder Bremen
+  { n: "Arturo Vidal",   by: 1987, clubs: ["B04"], cp: [["B04", 2007, 2011]] },  // Bayer Leverkusen
+  { n: "Adam Daghim",    by: 2005, clubs: ["RBS"], cp: [["RBS", 2023, 2024]] },  // RB Salzburg
+  { n: "Sergio Agüero",  by: 1988, clubs: ["ATM"], cp: [["ATM", 2006, 2011]] },  // Atlético Madrid
 ];
 
 function recToString(r) {
