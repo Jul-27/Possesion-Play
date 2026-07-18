@@ -351,3 +351,23 @@ body::after {
 .bestName { font-weight: 700; color: #fff; font-size: 14px; }
 .bestCount { font-weight: 800; color: #2DD4BF; font-size: 13px; white-space: nowrap; }
 .bestFields { grid-column: 2 / -1; font-family: 'DM Mono', monospace; font-size: 11px; color: #7fa093; line-height: 1.35; }
+
+/* ── Solo-Bereich (Lobby) ──────────────────────────────────────── */
+.soloSection { margin-top: 18px; }
+.soloTitle { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: #7fa093; margin-bottom: 10px; }
+.soloGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.soloTile { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 14px; background: rgba(10,22,19,.6); border: 1px solid rgba(176,224,200,.16); border-radius: 14px; color: #eaf3ee; cursor: pointer; text-align: left; transition: transform .15s, border-color .15s; }
+.soloTile:hover { border-color: #2DD4BF; transform: translateY(-2px); }
+.soloTile b { font-size: 15px; }
+.soloTile small { color: #8ba79c; font-size: 11.5px; line-height: 1.3; }
+.soloIcon { font-size: 22px; margin-bottom: 2px; }
+
+/* ── Karriere-Pfad ─────────────────────────────────────────────── */
+.careerList { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.careerRow { display: grid; grid-template-columns: 24px 34px 1fr auto; gap: 10px; align-items: center; background: rgba(10,22,19,.55); border: 1px solid rgba(255,255,255,.07); border-radius: 12px; padding: 10px 14px; animation: qlogIn .3s ease; }
+.careerStep { font-family: 'DM Mono', monospace; font-weight: 700; color: #FACC15; }
+.careerEmblem { display: grid; place-items: center; }
+.careerEmblem .emblem { width: 30px; }
+.careerClub { font-weight: 700; font-size: 14px; color: #fff; }
+.careerYears { font-family: 'DM Mono', monospace; font-size: 12px; color: #8ba79c; white-space: nowrap; }
+.careerMore { text-align: center; color: #7fa093; font-size: 12px; font-style: italic; padding: 4px 0; }
