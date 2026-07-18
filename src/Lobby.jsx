@@ -99,7 +99,6 @@ export default function Lobby({ onEnter, onDaily, onSolo }) {
           <button type="button" className={`btn ${mode === "guess" ? "primary" : "ghost"}`} style={{ flex: 1 }} onClick={() => setMode("guess")}>Errate den Star</button>
         </div>
 
-        <button type="button" className="btn ghost block" style={{ marginTop: 8 }} onClick={onSolo}>🎯 Hex-Training — solo üben (ohne Mitspieler)</button>
 
         <button className="btn primary block" style={{ marginTop: 14 }} disabled={busy} onClick={createGame}>
           Neues Spiel erstellen
@@ -116,6 +115,22 @@ export default function Lobby({ onEnter, onDaily, onSolo }) {
         </div>
 
         {error && <div className="fb err" style={{ marginTop: 12 }}>{error}</div>}
+      </div>
+
+      <div className="soloSection">
+        <div className="soloTitle">Solo spielen</div>
+        <div className="soloGrid">
+          <button type="button" className="soloTile" onClick={() => onSolo("hex")}>
+            <span className="soloIcon">🎯</span>
+            <b>Hex-Training</b>
+            <small>Board allein lösen, ohne Zeitdruck</small>
+          </button>
+          <button type="button" className="soloTile" onClick={() => onSolo("career")}>
+            <span className="soloIcon">🧭</span>
+            <b>Karriere-Pfad</b>
+            <small>Spieler an seinen Stationen erraten</small>
+          </button>
+        </div>
       </div>
 
       <p className="lobHint">Erstelle ein Spiel, teile den Code mit deinem Freund — ihr spielt in Echtzeit, jeder im eigenen Browser.</p>
