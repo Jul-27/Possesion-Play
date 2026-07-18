@@ -318,3 +318,38 @@ test("NATIONS enthält Österreich (19 Nationen)", () => {
   assert.equal(NATIONS.length, 19);
   assert.equal(lookupDef("nat", "AUT").name, "Österreich");
 });
+
+import { bestOpeningMoves, POSITIONS, ADJP as ADJ } from "./gameData.js";
+
+test("bestOpeningMoves: Feld + passende Nachbarn, Sortierung, Limit", () => {
+  const fcb = lookupDef("club", "FCB"), ger = lookupDef("nat", "GER");
+  const cl = lookupDef("honour", "CL"), jpn = lookupDef("nat", "JPN");
+  const nb = ADJ[0];
+  const board = POSITIONS.map((p, i) => ({
+    idx: i,
+    def: i === 0 ? fcb : i === nb[0] ? ger : i === nb[1] ? cl : jpn,
+  }));
+
+  const combo = { n: "Kombi Spieler", ln: "Spieler", by: 1990, nat: ["GER"], clubs: ["FCB"], t: ["CL"], sl: 10 };
+  const soloOnly = { n: "Nur Verein", ln: "Verein", by: 1990, nat: [], clubs: ["FCB"], t: [], sl: 99 };
+  const nothing = { n: "Ohne Treffer", ln: "Treffer", by: 1990, nat: ["ESP"], clubs: ["BAR"], t: [], sl: 50 };
+
+  const res = bestOpeningMoves([nothing, soloOnly, combo], board, 5);
+  assert.equal(res.length, 2, "Spieler ohne Treffer fehlt");
+  assert.equal(res[0].player.n, "Kombi Spieler");
+  assert.equal(res[0].count, 3);
+  assert.equal(res[0].idx, 0);
+  assert.equal(res[1].player.n, "Nur Verein");
+  assert.equal(res[1].count, 1);
+  assert.equal(bestOpeningMoves([nothing, soloOnly, combo], board, 1).length, 1);
+});
+
+test("bestOpeningMoves: Gleichstand -> bekanntere Spieler (sl) zuerst", () => {
+  const jpn = lookupDef("nat", "JPN");
+  const board = POSITIONS.map((p, i) => ({ idx: i, def: jpn }));
+  const leise = { n: "Leise", ln: "Leise", by: 1990, nat: ["JPN"], clubs: [], t: [], sl: 5 };
+  const laut = { n: "Laut", ln: "Laut", by: 1990, nat: ["JPN"], clubs: [], t: [], sl: 90 };
+  const res = bestOpeningMoves([leise, laut], board, 5);
+  assert.equal(res[0].player.n, "Laut");
+  assert.equal(res[0].count, res[1].count);
+});

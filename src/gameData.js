@@ -335,6 +335,28 @@ export function hydrateBoard(serial) {
   return POSITIONS.map((p, i) => ({ ...p, def: lookupDef(serial[i].t, serial[i].k) }));
 }
 
+// Stärkste Einzelzüge auf einem leeren Board: gewähltes Feld + passende Nachbarn
+// (exakt die Eroberungsmechanik). Liefert Top-Spieler nach eroberten Feldern,
+// bei Gleichstand die bekannteren (sl) zuerst. board = hydratisierte Zellen.
+export function bestOpeningMoves(players, board, limit = 5) {
+  const out = [];
+  for (const p of players) {
+    const hit = [];
+    for (let i = 0; i < board.length; i++) if (playerMatchesHex(p, board[i].def)) hit.push(i);
+    if (!hit.length) continue;
+    const set = new Set(hit);
+    let best = 0, bestIdx = -1, bestFields = null;
+    for (const i of hit) {
+      const fields = [i];
+      for (const n of ADJP[i]) if (set.has(n)) fields.push(n);
+      if (fields.length > best) { best = fields.length; bestIdx = i; bestFields = fields; }
+    }
+    out.push({ player: p, count: best, idx: bestIdx, fields: bestFields });
+  }
+  out.sort((a, b) => b.count - a.count || (b.player.sl || 0) - (a.player.sl || 0) || a.player.n.localeCompare(b.player.n, "de"));
+  return out.slice(0, limit);
+}
+
 // 6-stelliger, gut lesbarer Spielcode (ohne verwechselbare Zeichen)
 export function genCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
