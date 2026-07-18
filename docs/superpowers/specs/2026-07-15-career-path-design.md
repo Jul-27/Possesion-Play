@@ -20,8 +20,7 @@ Die App wählt einen Spieler mit mehreren Karrierestationen. Diese werden
 
 ## Datenlage (geprüft)
 
-`cp` (Karriereperioden) liefert **578 Spieler mit ≥3 verschiedenen Vereinen und
-`sl ≥ 40`** (bekannt genug). Beispiel Ronaldo: SCP 2002–03 → MUN 2003–09 →
+`cp` (Karriereperioden) liefert **Spieler mit ≥3 Stationen und `sl ≥ 40`** (bekannt genug). Beispiel Ronaldo: SCP 2002–03 → MUN 2003–09 →
 RMA 2009–18 → JUV 2018–21 → MUN 2021–22.
 
 ## Architektur
@@ -30,8 +29,8 @@ RMA 2009–18 → JUV 2018–21 → MUN 2021–22.
 
 ```js
 export const CAREER_SL_MIN = 40;
-export const CAREER_MIN_CLUBS = 3;
-// Indizes aller Spieler mit genug Stationen und Bekanntheit
+export const CAREER_MIN_STATIONS = 3;
+// Indizes aller Spieler mit genug Stationen und Bekanntheit (Rückkehr zählt eigenständig)
 export function careerCandidates(players)
 // cp -> [{ club, from, to }] chronologisch (mehrfache Engagements bleiben eigene Stationen)
 export function careerStations(player)
@@ -69,14 +68,14 @@ bleibt als hervorgehobene Tageskachel darüber. Neue CSS-Klassen `.soloSection`,
 ## Fehlerfälle / Edge Cases
 
 - Spielerliste lädt noch → Eingabe deaktiviert („Lade Spielerdaten…").
-- Kandidat ohne verwertbare Stationen kann nicht auftreten (Filter ≥3 Vereine).
+- Kandidat ohne verwertbare Stationen kann nicht auftreten (Filter ≥3 Stationen).
 - Reload verwirft die Runde (freies Spiel, kein Spielstand) — Statistik bleibt.
 - localStorage nicht verfügbar → try/catch, Spiel läuft ohne Statistik.
 
 ## Tests (node:test, `src/careerPath.test.js`)
 
-- `careerCandidates`: filtert nach ≥3 verschiedenen Vereinen und `sl ≥ 40`
-  (synthetische Liste; Spieler mit 2 Vereinen oder zu geringem `sl` fallen raus).
+- `careerCandidates`: filtert nach ≥3 **Stationen** und `sl ≥ 40` (Rückkehr zum
+  selben Verein zählt als eigene Station — sie ist ein besonders guter Hinweis).
 - `careerStations`: chronologisch sortiert, Mehrfach-Engagements bleiben
   getrennt, `to = 0` bedeutet „bis heute".
 - `pickCareerIndex`: liefert mit injiziertem `rnd` deterministisch einen
