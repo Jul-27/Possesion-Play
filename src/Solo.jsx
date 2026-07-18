@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { Cell } from "./Emblems.jsx";
 import {
   P, cname, norm, suggestPlayers, ADJP, hydrateBoard, playerMatchesHex,
-  buildBoardSerial, BOARDH,
+  buildBoardSerial, BOARDH, bestOpeningMoves,
 } from "./gameData.js";
 import { loadPlayers } from "./playersStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
@@ -30,8 +30,16 @@ export default function Solo({ onLeave }) {
   useEffect(() => { loadPlayers().then(setPlayers); }, []);
   useEffect(() => { if (selected !== null && inputRef.current) inputRef.current.focus(); }, [selected]);
 
+  // Stärkste Züge erst nach dem Lösen berechnen (~0,3 s über den ganzen Kader)
+  const [bestMoves, setBestMoves] = useState(null);
+
   const captured = Object.keys(owners).length;
   const done = captured === 31;
+  useEffect(() => {
+    if (!done || !players || bestMoves) return;
+    const id = setTimeout(() => setBestMoves(bestOpeningMoves(players, board, 5)), 50);
+    return () => clearTimeout(id);
+  }, [done, players]); // eslint-disable-line
   const suggestions = useMemo(() => (players ? suggestPlayers(players, nameInput, 8) : []), [players, nameInput]);
   const adjSet = selected !== null ? new Set(ADJP[selected]) : new Set();
 
@@ -75,7 +83,7 @@ export default function Solo({ onLeave }) {
   }
 
   function newBoard() {
-    setSerial(buildBoardSerial()); setOwners({}); setMoves(0); setMisses(0);
+    setSerial(buildBoardSerial()); setOwners({}); setMoves(0); setMisses(0); setBestMoves(null);
     setSelected(null); setNameInput(""); setChosen(null); setSugOpen(false); setFeedback(null);
   }
 
@@ -157,6 +165,21 @@ export default function Solo({ onLeave }) {
             <span><b>{moves}</b> Züge</span>
             <span><b>{misses}</b> Fehlversuche</span>
             <span><b>{(31 / Math.max(1, moves)).toFixed(1)}</b> Felder/Zug</span>
+          </div>
+          <div className="bestBlock">
+            <div className="bestTitle">Die 5 stärksten Züge auf diesem Board</div>
+            {!bestMoves ? <div className="qlogEmpty">Berechne beste Züge…</div> : (
+              <div className="bestList">
+                {bestMoves.map((m, i) => (
+                  <div key={m.player.n + m.player.by} className="bestRow">
+                    <span className="bestRank">{i + 1}</span>
+                    <span className="bestName">{m.player.n}</span>
+                    <span className="bestCount">{m.count} {m.count === 1 ? "Feld" : "Felder"}</span>
+                    <span className="bestFields">{m.fields.map((f) => board[f].def.label).join(" · ")}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <div className="closeline">
             <button className="btn primary" style={{ flex: 1, padding: "12px" }} onClick={newBoard}>Neues Board</button>
