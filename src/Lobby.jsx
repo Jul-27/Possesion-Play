@@ -135,6 +135,11 @@ export default function Lobby({ onEnter, onDaily, onSolo }) {
             <b>Wer passt nicht?</b>
             <small>Drei gehören zusammen, einer nicht</small>
           </button>
+          <button type="button" className="soloTile" onClick={() => onSolo("chain")}>
+            <span className="soloIcon">⛓</span>
+            <b>Fußball-Kette</b>
+            <small>Spieler verketten, gegen die Uhr</small>
+          </button>
         </div>
       </div>
 

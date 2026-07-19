@@ -382,3 +382,13 @@ body::after {
 .oddCard.dim { opacity: .45; }
 .oddName { font-weight: 700; font-size: 15px; color: #fff; line-height: 1.2; }
 .oddMeta { font-family: 'DM Mono', monospace; font-size: 11px; color: #8ba79c; }
+
+/* ── Fußball-Kette ─────────────────────────────────────────────── */
+.chainList { display: flex; flex-direction: column; gap: 6px; margin: 14px 0; max-height: 46vh; overflow-y: auto; }
+.chainRow { display: flex; align-items: baseline; gap: 10px; padding: 9px 12px; background: rgba(10,22,19,.5); border: 1px solid var(--line-soft); border-radius: 11px; }
+.chainRow.cur { border-color: var(--teal); background: rgba(45,212,191,.1); }
+.chainStep { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); min-width: 20px; }
+.chainName { font-weight: 700; color: #fff; flex: 1; }
+.chainVia { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); text-align: right; }
+.chainChips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chainChip { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: .04em; padding: 4px 9px; border-radius: 999px; background: rgba(244,201,93,.12); border: 1px solid rgba(244,201,93,.3); color: var(--gold); }
