@@ -6,6 +6,7 @@ import Guess from "./Guess.jsx";
 import Daily from "./Daily.jsx";
 import Solo from "./Solo.jsx";
 import Career from "./Career.jsx";
+import OddOne from "./OddOne.jsx";
 import { supabase, getClientId } from "./supabaseClient.js";
 
 function codeFromUrl() {
@@ -73,6 +74,7 @@ export default function App() {
   if (daily) return <Daily onLeave={leave} />;
   if (solo === "hex") return <Solo onLeave={leave} />;
   if (solo === "career") return <Career onLeave={leave} />;
+  if (solo === "odd") return <OddOne onLeave={leave} />;
   return code
     ? <GameRouter code={code} clientId={clientId} onLeave={leave} />
     : <Lobby onEnter={enter} onDaily={enterDaily} onSolo={enterSolo} />;

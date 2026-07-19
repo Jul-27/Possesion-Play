@@ -1,0 +1,227 @@
+{
+  ".claude/launch.json": {
+    "mtime": 1783719850.003507,
+    "ast_hash": "663e7d882570d6d95be3972bfc14dc17",
+    "semantic_hash": "663e7d882570d6d95be3972bfc14dc17"
+  },
+  "data-pipeline/add_salzburg.mjs": {
+    "mtime": 1783724436.132139,
+    "ast_hash": "104f3337a2aa37b1eb7725932ab7064d",
+    "semantic_hash": "104f3337a2aa37b1eb7725932ab7064d"
+  },
+  "data-pipeline/apply_extra_players.mjs": {
+    "mtime": 1783809434.638582,
+    "ast_hash": "40a2af49fec013829b3c5a7823e5fa0e",
+    "semantic_hash": "40a2af49fec013829b3c5a7823e5fa0e"
+  },
+  "data-pipeline/apply_gap_winners.mjs": {
+    "mtime": 1783424314.7149525,
+    "ast_hash": "3a68cbfd95f5b4f18b86c3892f8e45f3",
+    "semantic_hash": "3a68cbfd95f5b4f18b86c3892f8e45f3"
+  },
+  "data-pipeline/apply_honour_overrides.mjs": {
+    "mtime": 1783416940.8990462,
+    "ast_hash": "7ca5c42d51050b9a638b2c7c08a3e96c",
+    "semantic_hash": "7ca5c42d51050b9a638b2c7c08a3e96c"
+  },
+  "data-pipeline/apply_msa.mjs": {
+    "mtime": 1783723847.5181363,
+    "ast_hash": "56fcabaeaa323754dc81fa6e5955413d",
+    "semantic_hash": "56fcabaeaa323754dc81fa6e5955413d"
+  },
+  "data-pipeline/build_db.py": {
+    "mtime": 1782072642.2597125,
+    "ast_hash": "267d61ccdb91cc27e6108c1485fedd6a",
+    "semantic_hash": "267d61ccdb91cc27e6108c1485fedd6a"
+  },
+  "data-pipeline/fetch_logos.mjs": {
+    "mtime": 1783724436.1322973,
+    "ast_hash": "cdbe08b21b1b3093ef47b666313c1a61",
+    "semantic_hash": "cdbe08b21b1b3093ef47b666313c1a61"
+  },
+  "data-pipeline/honours.py": {
+    "mtime": 1782422543.4992259,
+    "ast_hash": "657b5dc84e7faa7808beded5dbee179d",
+    "semantic_hash": "657b5dc84e7faa7808beded5dbee179d"
+  },
+  "data-pipeline/make_game_json.py": {
+    "mtime": 1782422543.4997118,
+    "ast_hash": "735e12225f6ea1f7298fb5e33cf004da",
+    "semantic_hash": "735e12225f6ea1f7298fb5e33cf004da"
+  },
+  "data-pipeline/refresh_all.mjs": {
+    "mtime": 1783809434.6388667,
+    "ast_hash": "add253b623b124bd51d75b77a3fb1cc5",
+    "semantic_hash": "add253b623b124bd51d75b77a3fb1cc5"
+  },
+  "data-pipeline/stamp.mjs": {
+    "mtime": 1783120964.6406767,
+    "ast_hash": "4f9a2feca6be89d2f1ea2f9d0be6f3af",
+    "semantic_hash": "4f9a2feca6be89d2f1ea2f9d0be6f3af"
+  },
+  "data-pipeline/wikidata_careers.mjs": {
+    "mtime": 1783120964.6408815,
+    "ast_hash": "1fabc3add468db2e0a5c9e2940826e6f",
+    "semantic_hash": "1fabc3add468db2e0a5c9e2940826e6f"
+  },
+  "data-pipeline/wikidata_honours.mjs": {
+    "mtime": 1783724436.1324348,
+    "ast_hash": "6f7250b87321cc23085756c8b3c04c49",
+    "semantic_hash": "6f7250b87321cc23085756c8b3c04c49"
+  },
+  "data-pipeline/wikidata_honours.test.mjs": {
+    "mtime": 1782426812.089243,
+    "ast_hash": "dc37ff67c3789bdc587f516b76ff633a",
+    "semantic_hash": "dc37ff67c3789bdc587f516b76ff633a"
+  },
+  "data-pipeline/wikidata_honours_extra.mjs": {
+    "mtime": 1783120964.6412413,
+    "ast_hash": "d9183cbbf76d7b5aeda3ab7b552cee17",
+    "semantic_hash": "d9183cbbf76d7b5aeda3ab7b552cee17"
+  },
+  "data-pipeline/wikidata_national.mjs": {
+    "mtime": 1783809434.6390746,
+    "ast_hash": "d37b464e391f27188676c0d14ee0d98d",
+    "semantic_hash": "d37b464e391f27188676c0d14ee0d98d"
+  },
+  "data-pipeline/wikidata_positions.mjs": {
+    "mtime": 1783120964.6414156,
+    "ast_hash": "844b825e42be877912164b3e262b1527",
+    "semantic_hash": "844b825e42be877912164b3e262b1527"
+  },
+  "data-pipeline/wikidata_positions.test.mjs": {
+    "mtime": 1782828042.644313,
+    "ast_hash": "7e81b63d40b50f885a42b2d6773c3dea",
+    "semantic_hash": "7e81b63d40b50f885a42b2d6773c3dea"
+  },
+  "data-pipeline/wikidata_roster.mjs": {
+    "mtime": 1783809434.6393356,
+    "ast_hash": "cdd9c5026ac3864078265fbdbf851b00",
+    "semantic_hash": "cdd9c5026ac3864078265fbdbf851b00"
+  },
+  "data-pipeline/wikidata_roster.test.mjs": {
+    "mtime": 1782424269.853695,
+    "ast_hash": "0b535037ba42cd7007918cb75facee7d",
+    "semantic_hash": "0b535037ba42cd7007918cb75facee7d"
+  },
+  "package.json": {
+    "mtime": 1783120964.6420853,
+    "ast_hash": "3a7ab19138f37c233f1c04f0a469c70f",
+    "semantic_hash": "3a7ab19138f37c233f1c04f0a469c70f"
+  },
+  "src/App.jsx": {
+    "mtime": 1783631390.346255,
+    "ast_hash": "183f1b2af143c6acf098fb5e0c8c5bd3",
+    "semantic_hash": "183f1b2af143c6acf098fb5e0c8c5bd3"
+  },
+  "src/Confetti.jsx": {
+    "mtime": 1783118771.0240505,
+    "ast_hash": "a3971dab64c8713ef0e3176a45214dac",
+    "semantic_hash": "a3971dab64c8713ef0e3176a45214dac"
+  },
+  "src/Daily.jsx": {
+    "mtime": 1783254145.6581743,
+    "ast_hash": "b990eb7852c2cca9580970cd0031049b",
+    "semantic_hash": "b990eb7852c2cca9580970cd0031049b"
+  },
+  "src/Emblems.jsx": {
+    "mtime": 1783720763.484549,
+    "ast_hash": "896fcd23b0a973e0220a97e7905d94ef",
+    "semantic_hash": "896fcd23b0a973e0220a97e7905d94ef"
+  },
+  "src/Game.jsx": {
+    "mtime": 1783720763.4847329,
+    "ast_hash": "7ecc4bb286e179bcfb16f2168823da4c",
+    "semantic_hash": "7ecc4bb286e179bcfb16f2168823da4c"
+  },
+  "src/Grid.jsx": {
+    "mtime": 1783720763.4849203,
+    "ast_hash": "4b4ffd70b71d743a8c918a9b2dbd99db",
+    "semantic_hash": "4b4ffd70b71d743a8c918a9b2dbd99db"
+  },
+  "src/Guess.jsx": {
+    "mtime": 1783720763.485104,
+    "ast_hash": "ccec52a193b90a7ab4800d683ba6c92e",
+    "semantic_hash": "ccec52a193b90a7ab4800d683ba6c92e"
+  },
+  "src/Lobby.jsx": {
+    "mtime": 1783631390.3464313,
+    "ast_hash": "c65dd9c3ae04ce77e9a6bd7cc99775c5",
+    "semantic_hash": "c65dd9c3ae04ce77e9a6bd7cc99775c5"
+  },
+  "src/Solo.jsx": {
+    "mtime": 1783631390.3465807,
+    "ast_hash": "2d114506ea283f411d2741889e091243",
+    "semantic_hash": "2d114506ea283f411d2741889e091243"
+  },
+  "src/dailyLogic.js": {
+    "mtime": 1783254145.6589077,
+    "ast_hash": "88bd1c57c85b556c1fa3a5f6a9719977",
+    "semantic_hash": "88bd1c57c85b556c1fa3a5f6a9719977"
+  },
+  "src/dailyLogic.test.js": {
+    "mtime": 1783254145.659057,
+    "ast_hash": "5db55e890abb896977131477d61256b6",
+    "semantic_hash": "5db55e890abb896977131477d61256b6"
+  },
+  "src/dataInfo.js": {
+    "mtime": 1783809434.6400433,
+    "ast_hash": "50131ef5f6c2e9fedda4f8b5e9e0f38c",
+    "semantic_hash": "50131ef5f6c2e9fedda4f8b5e9e0f38c"
+  },
+  "src/dataInfo.test.js": {
+    "mtime": 1783120964.643338,
+    "ast_hash": "dc6537934fdddc689212621bb2d850ab",
+    "semantic_hash": "dc6537934fdddc689212621bb2d850ab"
+  },
+  "src/gameData.js": {
+    "mtime": 1783809434.6403213,
+    "ast_hash": "565702360278f29f95df7e912a9f3ed7",
+    "semantic_hash": "565702360278f29f95df7e912a9f3ed7"
+  },
+  "src/gameData.test.js": {
+    "mtime": 1783809434.6406171,
+    "ast_hash": "381b4a999da78c3591e2fb52fab9e07f",
+    "semantic_hash": "381b4a999da78c3591e2fb52fab9e07f"
+  },
+  "src/main.jsx": {
+    "mtime": 1781901957.9235318,
+    "ast_hash": "18bbd8f17e2f09d7864f9b7b94ef50dc",
+    "semantic_hash": "18bbd8f17e2f09d7864f9b7b94ef50dc"
+  },
+  "src/players.js": {
+    "mtime": 1783809434.6471825,
+    "ast_hash": "9281a5f8acde9c8678f8461332987ee4",
+    "semantic_hash": "9281a5f8acde9c8678f8461332987ee4"
+  },
+  "src/playersStore.js": {
+    "mtime": 1782855468.2863183,
+    "ast_hash": "c9684de7ce7a7ce55392e7b02cab53c0",
+    "semantic_hash": "c9684de7ce7a7ce55392e7b02cab53c0"
+  },
+  "src/sound.js": {
+    "mtime": 1783118771.0250056,
+    "ast_hash": "1813a9059659491b59db6d37168839b6",
+    "semantic_hash": "1813a9059659491b59db6d37168839b6"
+  },
+  "src/supabaseClient.js": {
+    "mtime": 1783720763.4854426,
+    "ast_hash": "681880a4c8e583a842c6b589642bec3f",
+    "semantic_hash": "681880a4c8e583a842c6b589642bec3f"
+  },
+  "src/usePresence.js": {
+    "mtime": 1783720763.4855657,
+    "ast_hash": "80745531be5593e230f6416116e0e312",
+    "semantic_hash": "80745531be5593e230f6416116e0e312"
+  },
+  "supabase/schema.sql": {
+    "mtime": 1782829590.55714,
+    "ast_hash": "e049de8fe70e9523ae995a1120d40d31",
+    "semantic_hash": "e049de8fe70e9523ae995a1120d40d31"
+  },
+  "vite.config.js": {
+    "mtime": 1781901957.9238987,
+    "ast_hash": "2dc51eadd3ccf3ed74f72d3e85c05442",
+    "semantic_hash": "2dc51eadd3ccf3ed74f72d3e85c05442"
+  }
+}

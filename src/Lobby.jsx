@@ -130,6 +130,11 @@ export default function Lobby({ onEnter, onDaily, onSolo }) {
             <b>Karriere-Pfad</b>
             <small>Spieler an seinen Stationen erraten</small>
           </button>
+          <button type="button" className="soloTile" onClick={() => onSolo("odd")}>
+            <span className="soloIcon">🧩</span>
+            <b>Wer passt nicht?</b>
+            <small>Drei gehören zusammen, einer nicht</small>
+          </button>
         </div>
       </div>
 
