@@ -1,0 +1,479 @@
+{
+  "communities": {
+    "0": [
+      "data_pipeline_add_salzburg",
+      "data_pipeline_add_salzburg_agg",
+      "data_pipeline_add_salzburg_bykey",
+      "data_pipeline_add_salzburg_game_by_qid",
+      "data_pipeline_add_salzburg_here",
+      "data_pipeline_add_salzburg_players",
+      "data_pipeline_add_salzburg_players_path",
+      "data_pipeline_add_salzburg_qidof",
+      "data_pipeline_add_salzburg_rectostring",
+      "data_pipeline_add_salzburg_sleep",
+      "data_pipeline_add_salzburg_sparql",
+      "data_pipeline_apply_extra_players",
+      "data_pipeline_apply_extra_players_bykey",
+      "data_pipeline_apply_extra_players_extra_players",
+      "data_pipeline_apply_extra_players_here",
+      "data_pipeline_apply_extra_players_players",
+      "data_pipeline_apply_extra_players_players_path",
+      "data_pipeline_apply_extra_players_rectostring",
+      "data_pipeline_stamp",
+      "data_pipeline_stamp_here",
+      "data_pipeline_stamp_stampdatainfo",
+      "data_pipeline_wikidata_careers",
+      "data_pipeline_wikidata_careers_fetchclubperiods",
+      "data_pipeline_wikidata_careers_here",
+      "data_pipeline_wikidata_careers_main",
+      "data_pipeline_wikidata_careers_players_path",
+      "data_pipeline_wikidata_careers_rectostring",
+      "data_pipeline_wikidata_careers_sleep",
+      "data_pipeline_wikidata_careers_sparql",
+      "data_pipeline_wikidata_national",
+      "data_pipeline_wikidata_national_fetchsquad",
+      "data_pipeline_wikidata_national_here",
+      "data_pipeline_wikidata_national_main",
+      "data_pipeline_wikidata_national_nat_team_qid",
+      "data_pipeline_wikidata_national_players_path",
+      "data_pipeline_wikidata_national_rectostring",
+      "data_pipeline_wikidata_national_sleep",
+      "data_pipeline_wikidata_national_sparql",
+      "data_pipeline_wikidata_positions",
+      "data_pipeline_wikidata_positions_fetchclubpositions",
+      "data_pipeline_wikidata_positions_here",
+      "data_pipeline_wikidata_positions_main",
+      "data_pipeline_wikidata_positions_pickbucket",
+      "data_pipeline_wikidata_positions_players_path",
+      "data_pipeline_wikidata_positions_posbucket",
+      "data_pipeline_wikidata_positions_rectostring",
+      "data_pipeline_wikidata_positions_sleep",
+      "data_pipeline_wikidata_positions_sparql",
+      "data_pipeline_wikidata_positions_test",
+      "data_pipeline_wikidata_roster",
+      "data_pipeline_wikidata_roster_club_overrides",
+      "data_pipeline_wikidata_roster_club_qid",
+      "data_pipeline_wikidata_roster_derivelastname",
+      "data_pipeline_wikidata_roster_fetchclubroster",
+      "data_pipeline_wikidata_roster_game_by_qid",
+      "data_pipeline_wikidata_roster_here",
+      "data_pipeline_wikidata_roster_main",
+      "data_pipeline_wikidata_roster_nation_keys",
+      "data_pipeline_wikidata_roster_nation_qid",
+      "data_pipeline_wikidata_roster_norm",
+      "data_pipeline_wikidata_roster_particles",
+      "data_pipeline_wikidata_roster_players_path",
+      "data_pipeline_wikidata_roster_qidof",
+      "data_pipeline_wikidata_roster_rectostring",
+      "data_pipeline_wikidata_roster_sleep",
+      "data_pipeline_wikidata_roster_sparql",
+      "data_pipeline_wikidata_roster_test"
+    ],
+    "1": [
+      "src_gamedata",
+      "src_gamedata_activeinrange",
+      "src_gamedata_answerguessquestion",
+      "src_gamedata_buildboardserial",
+      "src_gamedata_buildgridserial",
+      "src_gamedata_buildguessserial",
+      "src_gamedata_checkguess",
+      "src_gamedata_club_lg",
+      "src_gamedata_clubs",
+      "src_gamedata_cpend",
+      "src_gamedata_decodetarget",
+      "src_gamedata_def_by_key",
+      "src_gamedata_encodetarget",
+      "src_gamedata_gencode",
+      "src_gamedata_grid_lines",
+      "src_gamedata_gridcellmatches",
+      "src_gamedata_guesseligibleindices",
+      "src_gamedata_guessquestionlabel",
+      "src_gamedata_honours",
+      "src_gamedata_idxbyrc",
+      "src_gamedata_leagues",
+      "src_gamedata_lg_country",
+      "src_gamedata_lookupdef",
+      "src_gamedata_nations",
+      "src_gamedata_neighborsrc",
+      "src_gamedata_pick",
+      "src_gamedata_playermatcheshex",
+      "src_gamedata_pos_label",
+      "src_gamedata_positions",
+      "src_gamedata_raw",
+      "src_gamedata_row_len",
+      "src_gamedata_shuffle",
+      "src_gamedata_specials",
+      "src_gamedata_test",
+      "src_gamedata_test_active",
+      "src_gamedata_test_iniesta",
+      "src_gamedata_test_kahn",
+      "src_gamedata_test_returner",
+      "src_gamedata_test_star",
+      "src_gamedata_test_xavi",
+      "src_gamedata_top5",
+      "src_gamedata_wereteammates",
+      "src_guess",
+      "src_guess_combo",
+      "src_guess_guess",
+      "src_guess_sigof"
+    ],
+    "2": [
+      "src_confetti",
+      "src_confetti_colors",
+      "src_confetti_confetti",
+      "src_confetti_makeparts",
+      "src_emblems",
+      "src_emblems_cell",
+      "src_emblems_clubbadge",
+      "src_emblems_emblem",
+      "src_emblems_flag",
+      "src_emblems_logo",
+      "src_game",
+      "src_game_game",
+      "src_gamedata_adjp",
+      "src_gamedata_cname",
+      "src_gamedata_fmtclock",
+      "src_gamedata_gridwinner",
+      "src_gamedata_hydrateboard",
+      "src_gamedata_liveremaining",
+      "src_gamedata_p",
+      "src_grid",
+      "src_grid_grid",
+      "src_players",
+      "src_players_players",
+      "src_playersstore",
+      "src_playersstore_loadplayers",
+      "src_solo",
+      "src_solo_solo",
+      "src_sound",
+      "src_sound_ismuted",
+      "src_sound_play",
+      "src_sound_togglemute",
+      "src_sound_tone",
+      "src_supabaseclient_beaconupdate",
+      "src_usepresence",
+      "src_usepresence_useleaveendsgame"
+    ],
+    "3": [
+      "src_app",
+      "src_app_app",
+      "src_app_codefromurl",
+      "src_app_dailyfromurl",
+      "src_app_gamerouter",
+      "src_app_solofromurl",
+      "src_daily",
+      "src_daily_combo",
+      "src_daily_daily",
+      "src_daily_sigof",
+      "src_daily_store",
+      "src_dailylogic",
+      "src_dailylogic_buildsharetext",
+      "src_dailylogic_dailydatestr",
+      "src_dailylogic_dailynumber",
+      "src_dailylogic_dailystarindex",
+      "src_dailylogic_hashstr",
+      "src_dailylogic_test",
+      "src_dailylogic_updatestreak",
+      "src_datainfo",
+      "src_datainfo_test",
+      "src_gamedata_norm",
+      "src_gamedata_suggestplayers",
+      "src_lobby",
+      "src_lobby_dailycard",
+      "src_lobby_lobby",
+      "src_main",
+      "src_supabaseclient",
+      "src_supabaseclient_getclientid",
+      "src_supabaseclient_getsavedname",
+      "src_supabaseclient_savename",
+      "src_supabaseclient_supabase"
+    ],
+    "4": [
+      "data_pipeline_apply_gap_winners",
+      "data_pipeline_apply_gap_winners_added",
+      "data_pipeline_apply_gap_winners_here",
+      "data_pipeline_apply_gap_winners_players",
+      "data_pipeline_apply_gap_winners_players_path",
+      "data_pipeline_apply_gap_winners_rectostring",
+      "data_pipeline_apply_honour_overrides",
+      "data_pipeline_apply_honour_overrides_here",
+      "data_pipeline_apply_honour_overrides_players",
+      "data_pipeline_apply_honour_overrides_players_path",
+      "data_pipeline_apply_honour_overrides_rectostring",
+      "data_pipeline_wikidata_honours",
+      "data_pipeline_wikidata_honours_applygapwinners",
+      "data_pipeline_wikidata_honours_comp_qid",
+      "data_pipeline_wikidata_honours_fetchhonourplayers",
+      "data_pipeline_wikidata_honours_gap_winners",
+      "data_pipeline_wikidata_honours_gapend",
+      "data_pipeline_wikidata_honours_here",
+      "data_pipeline_wikidata_honours_honour_overrides",
+      "data_pipeline_wikidata_honours_main",
+      "data_pipeline_wikidata_honours_norm",
+      "data_pipeline_wikidata_honours_players_path",
+      "data_pipeline_wikidata_honours_rectostring",
+      "data_pipeline_wikidata_honours_sleep",
+      "data_pipeline_wikidata_honours_sparql",
+      "data_pipeline_wikidata_honours_windows"
+    ],
+    "5": [
+      "package",
+      "package_dependencies",
+      "package_dependencies_react",
+      "package_dependencies_react_dom",
+      "package_dependencies_supabase_supabase_js",
+      "package_devdependencies",
+      "package_devdependencies_vite",
+      "package_devdependencies_vitejs_plugin_react",
+      "package_name",
+      "package_private",
+      "package_scripts",
+      "package_scripts_build",
+      "package_scripts_data_refresh",
+      "package_scripts_dev",
+      "package_scripts_preview",
+      "package_scripts_test",
+      "package_type",
+      "package_version",
+      "react",
+      "react_dom",
+      "supabase_supabase_js",
+      "vite",
+      "vitejs_plugin_react"
+    ],
+    "6": [
+      "data_pipeline_honours",
+      "data_pipeline_honours_cup_winner_by_season",
+      "data_pipeline_honours_detect_competitions",
+      "data_pipeline_honours_league_champion_by_season",
+      "data_pipeline_honours_norm",
+      "data_pipeline_honours_rationale_101",
+      "data_pipeline_honours_rationale_53",
+      "data_pipeline_honours_rationale_67",
+      "data_pipeline_honours_rationale_87",
+      "data_pipeline_honours_squad_player_ids",
+      "data_pipeline_make_game_json",
+      "data_pipeline_make_game_json_club_key_for",
+      "data_pipeline_make_game_json_is_youth",
+      "data_pipeline_make_game_json_main",
+      "data_pipeline_make_game_json_norm"
+    ],
+    "7": [
+      "data_pipeline_wikidata_honours_extra",
+      "data_pipeline_wikidata_honours_extra_expect",
+      "data_pipeline_wikidata_honours_extra_fetchawardplayers",
+      "data_pipeline_wikidata_honours_extra_fetchhonourplayers",
+      "data_pipeline_wikidata_honours_extra_here",
+      "data_pipeline_wikidata_honours_extra_main",
+      "data_pipeline_wikidata_honours_extra_norm",
+      "data_pipeline_wikidata_honours_extra_players_path",
+      "data_pipeline_wikidata_honours_extra_rectostring",
+      "data_pipeline_wikidata_honours_extra_sleep",
+      "data_pipeline_wikidata_honours_extra_sparql",
+      "data_pipeline_wikidata_honours_extra_verifyqids",
+      "data_pipeline_wikidata_honours_extra_windows"
+    ],
+    "8": [
+      "data_pipeline_fetch_logos",
+      "data_pipeline_fetch_logos_club_search",
+      "data_pipeline_fetch_logos_download",
+      "data_pipeline_fetch_logos_fetchok",
+      "data_pipeline_fetch_logos_getjson",
+      "data_pipeline_fetch_logos_here",
+      "data_pipeline_fetch_logos_league_ids",
+      "data_pipeline_fetch_logos_main",
+      "data_pipeline_fetch_logos_out",
+      "data_pipeline_fetch_logos_sleep",
+      "data_pipeline_fetch_logos_team_id"
+    ],
+    "9": [
+      "data_pipeline_apply_msa",
+      "data_pipeline_apply_msa_fetchwinners",
+      "data_pipeline_apply_msa_here",
+      "data_pipeline_apply_msa_norm",
+      "data_pipeline_apply_msa_players",
+      "data_pipeline_apply_msa_players_path",
+      "data_pipeline_apply_msa_rectostring",
+      "data_pipeline_apply_msa_sleep",
+      "data_pipeline_apply_msa_sparql",
+      "data_pipeline_apply_msa_windows"
+    ],
+    "10": [
+      "data_pipeline_refresh_all",
+      "data_pipeline_refresh_all_chain",
+      "data_pipeline_refresh_all_here"
+    ],
+    "11": [
+      "data_pipeline_build_db",
+      "data_pipeline_build_db_main"
+    ],
+    "12": [
+      "data_pipeline_wikidata_honours_test"
+    ],
+    "13": [
+      "vite_config"
+    ]
+  },
+  "cohesion": {
+    "0": 0.056535504296698326,
+    "1": 0.08888888888888889,
+    "2": 0.16806722689075632,
+    "3": 0.15120967741935484,
+    "4": 0.11384615384615385,
+    "5": 0.08695652173913043,
+    "6": 0.21904761904761905,
+    "7": 0.32051282051282054,
+    "8": 0.2909090909090909,
+    "9": 0.28888888888888886,
+    "10": 0.6666666666666666,
+    "11": 1.0,
+    "12": 1.0,
+    "13": 1.0
+  },
+  "gods": [
+    {
+      "id": "data_pipeline_stamp_stampdatainfo",
+      "label": "stampDataInfo()",
+      "degree": 18
+    },
+    {
+      "id": "src_playersstore_loadplayers",
+      "label": "loadPlayers()",
+      "degree": 14
+    },
+    {
+      "id": "src_grid_grid",
+      "label": "Grid()",
+      "degree": 13
+    },
+    {
+      "id": "src_guess_guess",
+      "label": "Guess()",
+      "degree": 13
+    },
+    {
+      "id": "src_gamedata_norm",
+      "label": "norm()",
+      "degree": 13
+    },
+    {
+      "id": "src_gamedata_suggestplayers",
+      "label": "suggestPlayers()",
+      "degree": 13
+    },
+    {
+      "id": "src_sound_ismuted",
+      "label": "isMuted()",
+      "degree": 13
+    },
+    {
+      "id": "src_game_game",
+      "label": "Game()",
+      "degree": 12
+    },
+    {
+      "id": "src_sound_togglemute",
+      "label": "toggleMute()",
+      "degree": 12
+    },
+    {
+      "id": "src_daily_daily",
+      "label": "Daily()",
+      "degree": 11
+    }
+  ],
+  "surprises": [
+    {
+      "source": "main()",
+      "target": "detect_competitions()",
+      "source_files": [
+        "data-pipeline/make_game_json.py",
+        "data-pipeline/honours.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source"
+    },
+    {
+      "source": "main()",
+      "target": "league_champion_by_season()",
+      "source_files": [
+        "data-pipeline/make_game_json.py",
+        "data-pipeline/honours.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source"
+    },
+    {
+      "source": "main()",
+      "target": "cup_winner_by_season()",
+      "source_files": [
+        "data-pipeline/make_game_json.py",
+        "data-pipeline/honours.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source"
+    },
+    {
+      "source": "main()",
+      "target": "squad_player_ids()",
+      "source_files": [
+        "data-pipeline/make_game_json.py",
+        "data-pipeline/honours.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source"
+    },
+    {
+      "source": "main()",
+      "target": "stampDataInfo()",
+      "source_files": [
+        "data-pipeline/wikidata_honours_extra.mjs",
+        "data-pipeline/stamp.mjs"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "bridges separate communities"
+    }
+  ],
+  "questions": [
+    {
+      "type": "bridge_node",
+      "question": "Why does `stampDataInfo()` connect `wikidata_roster.mjs` to `apply_msa.mjs`, `wikidata_honours.mjs`, `wikidata_honours_extra.mjs`?",
+      "why": "High betweenness centrality (0.067) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `loadPlayers()` connect `Game.jsx` to `gameData.js`, `Daily.jsx`?",
+      "why": "High betweenness centrality (0.007) - this node is a cross-community bridge."
+    },
+    {
+      "type": "isolated_nodes",
+      "question": "What connects `HERE`, `PLAYERS_PATH`, `GAME_BY_QID` to the rest of the system?",
+      "why": "82 weakly-connected nodes found - possible documentation gaps or missing edges."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `wikidata_roster.mjs` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.056535504296698326 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `gameData.js` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.08888888888888889 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `wikidata_honours.mjs` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.11384615384615385 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `package.json` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.08695652173913043 - nodes in this community are weakly interconnected."
+    }
+  ]
+}

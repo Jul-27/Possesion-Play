@@ -371,3 +371,14 @@ body::after {
 .careerClub { font-weight: 700; font-size: 14px; color: #fff; }
 .careerYears { font-family: 'DM Mono', monospace; font-size: 12px; color: #8ba79c; white-space: nowrap; }
 .careerMore { text-align: center; color: #7fa093; font-size: 12px; font-style: italic; padding: 4px 0; }
+
+/* ── Wer passt nicht? ──────────────────────────────────────────── */
+.oddGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-top: 14px; }
+.oddCard { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; padding: 16px 14px; background: rgba(10,22,19,.6); border: 1px solid rgba(176,224,200,.16); border-radius: 14px; color: #eaf3ee; cursor: pointer; text-align: left; transition: transform .15s, border-color .15s, opacity .2s; }
+.oddCard:hover:not(:disabled) { border-color: #2DD4BF; transform: translateY(-2px); }
+.oddCard:disabled { cursor: default; }
+.oddCard.right { border-color: #2DD4BF; background: rgba(45,212,191,.14); }
+.oddCard.wrong { border-color: #FB7185; background: rgba(251,113,133,.14); }
+.oddCard.dim { opacity: .45; }
+.oddName { font-weight: 700; font-size: 15px; color: #fff; line-height: 1.2; }
+.oddMeta { font-family: 'DM Mono', monospace; font-size: 11px; color: #8ba79c; }
