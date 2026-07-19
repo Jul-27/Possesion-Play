@@ -140,6 +140,11 @@ export default function Lobby({ onEnter, onDaily, onSolo }) {
             <b>Fußball-Kette</b>
             <small>Spieler verketten, gegen die Uhr</small>
           </button>
+          <button type="button" className="soloTile" onClick={() => onSolo("eleven")}>
+            <span className="soloIcon">👕</span>
+            <b>Elf des Tages</b>
+            <small>Startelf nach elf Bedingungen</small>
+          </button>
         </div>
       </div>
 

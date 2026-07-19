@@ -8,6 +8,7 @@ import Solo from "./Solo.jsx";
 import Career from "./Career.jsx";
 import OddOne from "./OddOne.jsx";
 import Chain from "./Chain.jsx";
+import Eleven from "./Eleven.jsx";
 import { supabase, getClientId } from "./supabaseClient.js";
 
 function codeFromUrl() {
@@ -77,6 +78,7 @@ export default function App() {
   if (solo === "career") return <Career onLeave={leave} />;
   if (solo === "odd") return <OddOne onLeave={leave} />;
   if (solo === "chain") return <Chain onLeave={leave} />;
+  if (solo === "eleven") return <Eleven onLeave={leave} />;
   return code
     ? <GameRouter code={code} clientId={clientId} onLeave={leave} />
     : <Lobby onEnter={enter} onDaily={enterDaily} onSolo={enterSolo} />;
