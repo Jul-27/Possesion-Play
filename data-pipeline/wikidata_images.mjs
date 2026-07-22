@@ -65,11 +65,17 @@ async function fetchTeamImages(qid) {
    der über den MediaWiki-Applikationsserver läuft — der drosselt Massenabrufe hart (gemessen
    ~8 s/Datei). upload.wikimedia.org ist der CDN davor und liefert in ~80 ms. Der Pfad ergibt
    sich aus dem MD5 des Dateinamens (Unterstriche statt Leerzeichen). */
-function thumbUrl(filePathUrl, width) {
+function commonsPath(filePathUrl) {
   const raw = decodeURIComponent(filePathUrl.split("/").pop()).replace(/ /g, "_");
   const md5 = createHash("md5").update(raw).digest("hex");
-  const enc = encodeURIComponent(raw);
-  return `https://upload.wikimedia.org/wikipedia/commons/thumb/${md5[0]}/${md5.slice(0, 2)}/${enc}/${width}px-${enc}`;
+  return `${md5[0]}/${md5.slice(0, 2)}/${raw}`;
+}
+
+function thumbUrl(filePathUrl, width) {
+  const p = commonsPath(filePathUrl);
+  const i = p.lastIndexOf("/");
+  const enc = encodeURIComponent(p.slice(i + 1));
+  return `https://upload.wikimedia.org/wikipedia/commons/thumb/${p.slice(0, i)}/${enc}/${width}px-${enc}`;
 }
 
 async function get(url) {
@@ -131,44 +137,54 @@ async function main() {
     if (ext === "svg") continue; // Vektorgrafik ist kein Porträt
     const file = `${qid}.${ext}`;
     takenKey.add(k);
-    index[k] = file;
+    index[k] = { file, commons: commonsPath(r.img) };
     if (existsSync(join(OUT, file))) { skip++; continue; }
     todo.push({ k, file, url: r.img, name: r.name });
   }
   console.log(`Zu laden: ${todo.length} (${skip} bereits vorhanden, ${nomatch} ohne Record-Treffer)`);
 
-  /* Index immer aus dem tatsächlichen Dateibestand schreiben — dann ist auch ein
-     abgebrochener Lauf konsistent, und die App zeigt für alles Übrige Initialen. */
+  /* Zwei Karten: lokal vorhandene Dateien und der Rest als Commons-Pfad.
+     Massen-Download scheitert an Wikimedias Limit (gemessen ~3,6 Dateien/min, für alle
+     ~2.100 also ~9 h). Deshalb hybrid: was lokal liegt, wird lokal ausgeliefert; alles
+     Übrige lädt der Browser des Spielers direkt von Commons — verteilte Einzelabrufe
+     fallen nicht unter das Bulk-Limit. Der Index ist dadurch immer vollständig. */
   function writeIndex() {
-    const have = {};
-    for (const k of Object.keys(index).sort()) if (existsSync(join(OUT, index[k]))) have[k] = index[k];
-    const body = Object.keys(have).map((k) => `  ${JSON.stringify(k)}: ${JSON.stringify(have[k])},`).join("\n");
+    const local = {}, remote = {};
+    for (const k of Object.keys(index).sort()) {
+      const { file, commons } = index[k];
+      if (existsSync(join(OUT, file))) local[k] = file;
+      else remote[k] = commons;
+    }
+    const fmt = (o) => Object.keys(o).map((k) => `  ${JSON.stringify(k)}: ${JSON.stringify(o[k])},`).join("\n");
     writeFileSync(INDEX,
       `// GENERIERT von data-pipeline/wikidata_images.mjs — Wikidata P18 via Wikimedia Commons.\n` +
-      `// Schlüssel: norm(name)|geburtsjahr. Nicht von Hand editieren.\n` +
-      `export const PLAYER_IMAGES = {\n${body}\n};\n`);
-    return Object.keys(have).length;
+      `// Schlüssel: norm(name)|geburtsjahr. Nicht von Hand editieren.\n\n` +
+      `// Lokal unter public/players/ vorliegende Thumbnails.\n` +
+      `export const PLAYER_IMG_LOCAL = {\n${fmt(local)}\n};\n\n` +
+      `// Rest: Commons-Pfad "<md5[0]>/<md5[0..1]>/<Dateiname>" — die URL baut playerImage.js.\n` +
+      `export const PLAYER_IMG_COMMONS = {\n${fmt(remote)}\n};\n`);
+    return [Object.keys(local).length, Object.keys(remote).length];
   }
-  writeIndex(); // sofort, damit der Bestand auch bei Abbruch nutzbar ist
 
-  /* Streng sequenziell mit 3 s Abstand. Wikimedia drosselt per Token-Bucket: Bursts
-     (auch 1 Worker ohne Pause) liefern ~90 % HTTP 429, 3 s Abstand läuft sauber durch.
-     Gemessen — nicht raten. Der Lauf ist idempotent und jederzeit fortsetzbar. */
+  /* Herunterladen nur auf ausdrücklichen Wunsch (IMAGES_DOWNLOAD=1), streng sequenziell
+     mit 3 s Abstand. Ohne die Variable aktualisiert der Lauf nur den Index — das ist der
+     schnelle Normalfall, weil fehlende Bilder ohnehin von Commons kommen. */
   let dl = 0, fail = 0;
-  for (const job of todo) {
-    try {
-      await download(job.url, join(OUT, job.file));
-      if (++dl % 50 === 0) console.log(`  … ${dl}/${todo.length} geladen (Index: ${writeIndex()})`);
-    } catch (e) {
-      fail++; delete index[job.k]; // ohne Datei kein Index-Eintrag
-      console.log(`  FEHLER ${job.name}: ${e.message}`);
+  if (process.env.IMAGES_DOWNLOAD === "1") {
+    for (const job of todo) {
+      try {
+        await download(job.url, join(OUT, job.file));
+        if (++dl % 50 === 0) console.log(`  … ${dl}/${todo.length} geladen`);
+      } catch (e) { fail++; console.log(`  FEHLER ${job.name}: ${e.message}`); }
+      await sleep(3000);
     }
-    await sleep(3000);
+  } else {
+    console.log("Kein Download (IMAGES_DOWNLOAD=1 setzt ihn in Gang) — fehlende Bilder kommen von Commons.");
   }
-  writeIndex();
+  const [nLocal, nRemote] = writeIndex();
 
   const files = readdirSync(OUT).length;
-  console.log(`\nFertig: ${dl} geladen, ${skip} vorhanden, ${fail} Fehler, ${nomatch} ohne Record-Treffer.`);
-  console.log(`public/players/: ${files} Dateien · Index: ${Object.keys(index).length} Einträge`);
+  console.log(`\nFertig: ${dl} geladen, ${fail} Fehler, ${nomatch} ohne Record-Treffer.`);
+  console.log(`public/players/: ${files} Dateien · Index: ${nLocal} lokal + ${nRemote} von Commons = ${nLocal + nRemote}`);
 }
 main();
