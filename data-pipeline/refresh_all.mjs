@@ -17,6 +17,7 @@ const CHAIN = [
   "wikidata_honours_extra.mjs", // 3) t += BDO/EM/CA/EL (additiv, NACH 2!)
   "wikidata_positions.mjs",     // 4) pos
   "wikidata_careers.mjs",       // 5) cp
+  "wikidata_images.mjs",        // 6) Fotos + src/playerImages.js (nutzt fertige Records)
 ];
 
 for (const script of CHAIN) {

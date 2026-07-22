@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { norm, suggestPlayers, POS_LABEL } from "./gameData.js";
 import { FORMATION, SLOT_POSITIONS, buildEleven, elevenAccepts } from "./eleven.js";
+import { Avatar } from "./Emblems.jsx";
 import { loadPlayers } from "./playersStore.js";
 import { dailyDateStr, dailyNumber } from "./dailyLogic.js";
 import { play, isMuted, toggleMute } from "./sound.js";
@@ -39,6 +40,12 @@ export default function Eleven({ onLeave }) {
 
   const slots = useMemo(() => (players ? buildEleven(dateStr, players).slots : []), [players, dateStr]);
   const usedNames = useMemo(() => new Set(names.filter(Boolean)), [names]);
+  // Namen -> Record, damit die besetzten Slots ein Foto zeigen können
+  const byName = useMemo(() => {
+    const m = new Map();
+    if (players) for (const p of players) if (!m.has(p.n)) m.set(p.n, p);
+    return m;
+  }, [players]);
   const filled = names.filter(Boolean).length;
   const done = filled === 11;
 
@@ -129,6 +136,7 @@ export default function Eleven({ onLeave }) {
                 return (
                   <button key={i} className={`slot ${names[i] ? "set" : ""} ${active === i ? "active" : ""}`} onClick={() => openSlot(i)}>
                     <span className="slotDef">{s.def.name}</span>
+                    {names[i] && byName.get(names[i]) && <Avatar player={byName.get(names[i])} size={30} />}
                     <span className="slotName">{names[i] || POS_LABEL[SLOT_POSITIONS[i]]}</span>
                   </button>
                 );
@@ -152,7 +160,7 @@ export default function Eleven({ onLeave }) {
                 <div className="sug">
                   {suggestions.map((s, i) => (
                     <div key={s.n} className={`sugItem ${i === sugActive ? "active" : ""}`} onMouseDown={(e) => { e.preventDefault(); chooseSug(s); }}>
-                      <span>{s.n}</span>
+                      <span className="sugWho"><Avatar player={s} size={26} />{s.n}</span>
                       <span className="sugMeta">{[s.pos, new Date().getFullYear() - s.by].filter(Boolean).join(" · ")}</span>
                     </div>
                   ))}

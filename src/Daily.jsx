@@ -7,6 +7,7 @@ import {
   DAILY_MAX_Q, DAILY_MAX_G, dailyDateStr, dailyNumber, dailyStarIndex,
   updateStreak, buildShareText,
 } from "./dailyLogic.js";
+import { Avatar } from "./Emblems.jsx";
 import { loadPlayers } from "./playersStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
@@ -264,7 +265,7 @@ export default function Daily({ onLeave }) {
                   <div className="sug">
                     {suggestions.map((s, i) => (
                       <div key={s.n} className={`sugItem ${i === sugActive ? "active" : ""}`} onMouseDown={(e) => { e.preventDefault(); chooseSug(s); }}>
-                        <span>{s.n}</span>
+                        <span className="sugWho"><Avatar player={s} size={26} />{s.n}</span>
                         <span className="sugMeta">{[s.pos, new Date().getFullYear() - s.by].filter(Boolean).join(" · ")}</span>
                       </div>
                     ))}
@@ -284,6 +285,7 @@ export default function Daily({ onLeave }) {
         <div className="panel dailyEnd">
           {game.won && <Confetti />}
           <h2 style={{ marginTop: 0 }}>{game.won ? "⭐ Gefunden!" : "💀 Nicht erwischt"}</h2>
+          {target && <div className="revealWho"><Avatar player={target} size={72} /><b>{target.n}</b></div>}
           <p>Der Star des Tages: <b>{target ? target.n : "…"}</b></p>
           {stats && (
             <div className="dailyStats">

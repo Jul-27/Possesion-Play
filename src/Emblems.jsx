@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 import { P, cname } from "./gameData.js";
+import { imageUrlFor, initialsOf, avatarHue } from "./playerImage.js";
 
 export function ClubBadge({ c1, c2, pat }) {
   const uid = useId().replace(/[:]/g, "");
@@ -60,6 +61,28 @@ export function Emblem({ def }) {
   return (
     <span className="emblem badge">
       <Logo src={`/logos/club/${def.key}.png`} fallback={<ClubBadge c1={def.c1} c2={def.c2} pat={def.pat} />} />
+    </span>
+  );
+}
+
+// Spielerfoto (Wikidata P18) mit Initialen-Fallback — greift auch, wenn das Bild 404t.
+export function Avatar({ player, size = 34 }) {
+  const [err, setErr] = useState(false);
+  const url = imageUrlFor(player);
+  const style = { width: size, height: size, flex: `0 0 ${size}px` };
+  if (!url || err) {
+    const h = avatarHue(player);
+    return (
+      <span className="avatar fallback" style={{ ...style, background: `linear-gradient(150deg, hsl(${h} 42% 34%), hsl(${h} 38% 20%))`, fontSize: Math.round(size * 0.36) }}>
+        {initialsOf(player)}
+      </span>
+    );
+  }
+  return (
+    <span className="avatar" style={style}>
+      {/* Kein loading="lazy": die Thumbnails sind ~8 KB und stehen sofort im Blick;
+          lazy laden sie in Containern ohne gemessene Höhe gar nicht erst. */}
+      <img className="avatarImg" src={url} alt="" onError={() => setErr(true)} />
     </span>
   );
 }

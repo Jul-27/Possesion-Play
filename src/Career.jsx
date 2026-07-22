@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Emblem } from "./Emblems.jsx";
+import { Emblem, Avatar } from "./Emblems.jsx";
 import { norm, suggestPlayers, lookupDef } from "./gameData.js";
 import { careerStations, pickCareerIndex } from "./careerPath.js";
 import { loadPlayers } from "./playersStore.js";
@@ -143,7 +143,7 @@ export default function Career({ onLeave }) {
                 <div className="sug">
                   {suggestions.map((s, i) => (
                     <div key={s.n} className={`sugItem ${i === sugActive ? "active" : ""}`} onMouseDown={(e) => { e.preventDefault(); chooseSug(s); }}>
-                      <span>{s.n}</span>
+                      <span className="sugWho"><Avatar player={s} size={26} />{s.n}</span>
                       <span className="sugMeta">{[s.pos, new Date().getFullYear() - s.by].filter(Boolean).join(" · ")}</span>
                     </div>
                   ))}
@@ -165,6 +165,7 @@ export default function Career({ onLeave }) {
         <div className="panel dailyEnd">
           {won && <Confetti />}
           <h2 style={{ marginTop: 0 }}>{won ? `🧭 Gelöst nach ${revealed} Station${revealed > 1 ? "en" : ""}!` : "💡 Aufgelöst"}</h2>
+          {target && <div className="revealWho"><Avatar player={target} size={72} /><b>{target.n}</b></div>}
           <p>Gesucht war: <b>{target ? target.n : "—"}</b></p>
           {stats && (
             <div className="dailyStats">
