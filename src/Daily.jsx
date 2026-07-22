@@ -11,7 +11,7 @@ import { Avatar } from "./Emblems.jsx";
 import { loadPlayers } from "./playersStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
-import { DATA_ASOF } from "./dataInfo.js";
+import DataStamp from "./DataStamp.jsx";
 
 const sigOf = (dim, val) =>
   dim === "born" ? `born:${val.cmp}:${val.year}` :
@@ -310,7 +310,7 @@ export default function Daily({ onLeave }) {
             <p className="ruleP">Jeden Tag ein <b>geheimer Star</b> — für alle Spieler weltweit derselbe.</p>
             <p className="ruleP">Du hast <b>{DAILY_MAX_Q} Attributfragen</b> (Nation, Verein, Liga, Position, Titel, Geburtsjahr) und <b>{DAILY_MAX_G} Tipps</b>.</p>
             <p className="ruleP">Errätst du ihn, wächst deine <b>Serie</b> — teile dein Ergebnis!</p>
-            <p className="dataStamp">Datenstand: {DATA_ASOF.split("-").reverse().join(".")} · Quelle: Wikidata</p>
+            <DataStamp />
             <div className="closeline"><button className="btn primary" style={{ flex: 1, padding: "11px" }} onClick={() => setShowRules(false)}>Los geht's</button></div>
           </div>
         </div>

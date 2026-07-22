@@ -8,7 +8,7 @@ import {
 import { loadPlayers } from "./playersStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
-import { DATA_ASOF } from "./dataInfo.js";
+import DataStamp from "./DataStamp.jsx";
 import { useLeaveEndsGame } from "./usePresence.js";
 
 export default function Grid({ code, clientId, onLeave }) {
@@ -347,7 +347,7 @@ export default function Grid({ code, clientId, onLeave }) {
             <p className="ruleP">Passt der Spieler, gehört euch die Zelle. Passt er nicht, <b>verfällt der Zug</b>.</p>
             <p className="ruleP">Jeder Spieler darf pro Raster nur <b>einmal</b> verwendet werden.</p>
             <p className="ruleP">Wer zuerst <b>drei in einer Reihe</b> hat, gewinnt — sonst der mit mehr Zellen. Läuft die Zeit ab, verliert man.</p>
-            <p className="dataStamp">Datenstand: {DATA_ASOF.split("-").reverse().join(".")} · Quelle: Wikidata</p>
+            <DataStamp />
             <div className="closeline"><button className="btn primary" style={{ flex: 1, padding: "11px" }} onClick={() => setShowRules(false)}>Los geht's</button></div>
           </div>
         </div>

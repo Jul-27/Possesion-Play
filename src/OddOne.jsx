@@ -4,7 +4,7 @@ import { loadPlayers } from "./playersStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
 import { Avatar } from "./Emblems.jsx";
-import { DATA_ASOF } from "./dataInfo.js";
+import DataStamp from "./DataStamp.jsx";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -101,7 +101,7 @@ export default function OddOne({ onLeave }) {
             <p className="ruleP">Von vier Spielern teilen <b>drei eine Eigenschaft</b> — ein Verein, eine Nation, eine Liga oder ein Titel.</p>
             <p className="ruleP">Finde den <b>Außenseiter</b>. Jede Runde ist eindeutig: Es gibt immer nur eine passende Gruppierung.</p>
             <p className="ruleP">Richtige Tipps in Folge bauen deine <b>Serie</b> auf.</p>
-            <p className="dataStamp">Datenstand: {DATA_ASOF.split("-").reverse().join(".")} · Quelle: Wikidata</p>
+            <DataStamp />
             <div className="closeline"><button className="btn primary" style={{ flex: 1, padding: "11px" }} onClick={() => setShowRules(false)}>Los geht's</button></div>
           </div>
         </div>

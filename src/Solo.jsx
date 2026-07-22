@@ -7,7 +7,7 @@ import {
 import { loadPlayers } from "./playersStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
-import { DATA_ASOF } from "./dataInfo.js";
+import DataStamp from "./DataStamp.jsx";
 
 // Hex-Training: volles Duell-Board, aber solo, ohne Uhr und ohne Zugverlust.
 export default function Solo({ onLeave }) {
@@ -195,7 +195,7 @@ export default function Solo({ onLeave }) {
             <p className="ruleP">Erobere das Board <b>alleine und ohne Zeitdruck</b> — perfekt zum Üben fürs Duell.</p>
             <p className="ruleP">Passt dein Spieler <b>auch zu Nachbarfeldern</b>, eroberst du sie mit — genau wie im Duell.</p>
             <p className="ruleP">Fehlversuche kosten hier <b>keinen Zug</b>, werden aber gezählt. Schaffst du ein Board ohne Fehler?</p>
-            <p className="dataStamp">Datenstand: {DATA_ASOF.split("-").reverse().join(".")} · Quelle: Wikidata</p>
+            <DataStamp />
             <div className="closeline"><button className="btn primary" style={{ flex: 1, padding: "11px" }} onClick={() => setShowRules(false)}>Los geht's</button></div>
           </div>
         </div>

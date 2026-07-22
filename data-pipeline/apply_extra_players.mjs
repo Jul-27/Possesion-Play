@@ -6,7 +6,7 @@ import { readFileSync, writeFileSync } from "fs";
 import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
 import { norm, deriveLastName } from "./wikidata_roster.mjs";
-import { stampDataInfo } from "./stamp.mjs";
+import { stampFixes } from "./stamp.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLAYERS_PATH = join(HERE, "..", "src", "players.js");
@@ -51,5 +51,5 @@ for (const x of EXTRA_PLAYERS) {
 players.sort((a, b) => a.n.localeCompare(b.n, "en"));
 const header = readFileSync(PLAYERS_PATH, "utf8").split("export const PLAYERS")[0];
 writeFileSync(PLAYERS_PATH, header + "export const PLAYERS = [\n  " + players.map(recToString).join(",\n  ") + "\n];\n");
-stampDataInfo();
+stampFixes(); // rein kuratiert — DATA_ASOF bleibt unberührt
 console.log(`Fertig: ${added} neu, ${merged} ergänzt.`);
