@@ -9,6 +9,7 @@ import { readFileSync, writeFileSync } from "fs";
 import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
 import { stampDataInfo } from "./stamp.mjs";
+import { LABEL_SERVICE, cleanName } from "./wikidata_label.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLAYERS_PATH = join(HERE, "..", "src", "players.js");
@@ -92,10 +93,10 @@ async function fetchHonourPlayers(qid) {
       OPTIONAL { ?st pq:P582 ?ce. }
       ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d . BIND(YEAR(?d) AS ?by)
       FILTER( YEAR(?cs) <= YEAR(COALESCE(?se, ?ss)) && (!BOUND(?ce) || YEAR(?ce) >= YEAR(?ss)) )
-      SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+      ${LABEL_SERVICE}
     }`;
     const rows = await sparql(q);
-    for (const b of rows) out.push({ name: b.pLabel?.value, by: b.by?.value ? parseInt(b.by.value) : null });
+    for (const b of rows) out.push({ name: cleanName(b.pLabel?.value), by: b.by?.value ? parseInt(b.by.value) : null });
     await sleep(700);
   }
   return out;

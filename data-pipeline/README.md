@@ -16,6 +16,9 @@ Kaggle (kein lokales Setup, kein Admin-Recht nötig).
 | `wikidata_roster.mjs` | Baut `src/players.js` neu aus Wikidata: ergänzt Vereine vorhandener Spieler UND legt fehlende Spieler an (Name, Nachname, Geburtsjahr, Nation via P1532/P27→ISO-3, Vereine, Bekanntheit `sl`). Pool wächst auf ~27k. Lauf: `node data-pipeline/wikidata_roster.mjs` (Internet nötig). Matcht über Name + Geburtsjahr; nur Spiel-Vereine/-Nationen; idempotent. |
 | `wikidata_honours.mjs` | Setzt das Feld `t` (Honours: CL, 5 Meister, 4 Pokale, WM) je Spieler komplett aus Wikidata (Saison-Sieger × Vereinszeitraum, gefenstert). Lauf **nach** dem Roster: `node data-pipeline/wikidata_honours.mjs` (Internet nötig). Idempotent. |
 | `wikidata_positions.mjs` | Ergänzt das Feld `pos` (Gruppen TW/ABW/MF/ST) je Spieler aus Wikidata P413, fürs Autocomplete (Name · Position · Alter). Lauf: `node data-pipeline/wikidata_positions.mjs` (Internet nötig). Idempotent; lässt clubs/nat/t/sl unverändert. |
+| `wikidata_label.mjs` | Gemeinsame Label-Auflösung: Sprach-Fallback-Kette (`LABEL_SERVICE`) statt nur `"en"` plus `cleanName()`, das QID-Rückfälle (`/^Q\d+$/`) verwirft. Von allen Wikidata-Skripten benutzt. |
+| `name_overrides.mjs` | Kuratierte Tabellen `NAME_OVERRIDES` (falscher → belegter Name, je mit Wikidata-QID als Quelle) und `EXCLUDED_PLAYERS` (Nicht-Fußballer und Records ohne belegbaren Namen). Reine Daten, kein Netz. |
+| `apply_name_overrides.mjs` | Wendet beide Tabellen auf `src/players.js` an und verschmilzt dabei entstehende Dubletten (Name + Geburtsjahr). Läuft als letzter Schritt in `refresh_all.mjs`. Idempotent, kein Netz. |
 
 Das Notebook ist die browserbasierte Zusammenführung der beiden `.py`-Skripte.
 Die Skripte selbst sind als Referenz / für lokale Läufe enthalten.
@@ -97,6 +100,38 @@ listen Meister/Sieger je Saison sowie die WM-Trefferquote.
 - **Einsätze** (`appearances.csv`): präzise, reichen aber nur ~2012 zurück.
 - **Transferhistorie** (`transfers.csv`): ergänzt Stationen auch **vor 2012**
   über die von-/zu-Vereinsnamen der Transfers.
+
+## Falsche Namen aus Wikidata
+
+Drei Fehlerbilder haben es in `src/players.js` geschafft:
+
+1. **QID statt Name.** `SERVICE wikibase:label` mit `wikibase:language "en"` gibt
+   die QID zurück, wenn kein englisches Label existiert — so entstanden Records
+   wie `{"n":"Q113704154", …}` (Lamine Yamal). Seit `wikidata_label.mjs` greifen
+   zwei Sicherungen: die Fallback-Kette `en,de,es,fr,pt,it,nl,ca,eu,pl,sv,mul`
+   und `cleanName()`, das ein verbliebenes `/^Q\d+$/` verwirft (der Record wird
+   dann übersprungen statt mit QID als Namen gespeichert).
+2. **Vandalismus in Wikidata.** Zum Zeitpunkt eines Laufs manipulierte Labels
+   („Divock Origi kolman", „João Moutinh0", „Romelu Lukaku LA CAKA"). Die Labels
+   sind inzwischen meist zurückgesetzt, die alten Records blieben aber liegen.
+   Korrektur über `NAME_OVERRIDES`.
+3. **Falsche Entitäten.** Personen mit `P106` „Fußballspieler" und einer
+   `P54`-Zuordnung, die nie Profifußball gespielt haben (Jason Statham).
+   Korrektur über `EXCLUDED_PLAYERS`.
+
+**Regel: keine Namen erfinden.** Jeder Eintrag in `NAME_OVERRIDES` trägt in `src`
+die belegende Wikidata-QID; Quelle ist das Label bzw. der Wikipedia-Artikeltitel
+dieser Entität. Wo sich kein lateinschriftlicher Name belegen ließ (nur ru/ka/ar/
+zh-Label), wird der Record ausgeschlossen statt transliteriert — fehlend ist
+besser als falsch.
+
+Neue Fälle finden:
+
+```bash
+# QID-Namen
+node -e "import('./src/players.js').then(m=>console.log(m.PLAYERS.filter(p=>/^Q\d+\$/.test(p.n)).map(p=>p.n).join('\n')))"
+node --test src/players.test.js
+```
 
 ## Caveats
 

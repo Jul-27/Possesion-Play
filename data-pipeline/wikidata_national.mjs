@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
 import { norm, deriveLastName } from "./wikidata_roster.mjs";
 import { stampDataInfo } from "./stamp.mjs";
+import { LABEL_SERVICE, cleanName } from "./wikidata_label.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLAYERS_PATH = join(HERE, "..", "src", "players.js");
@@ -41,10 +42,10 @@ async function fetchSquad(qid) {
     ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d ; wikibase:sitelinks ?sl .
     BIND(YEAR(?d) AS ?by)
     FILTER( ?by >= 1970 )
-    SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+    ${LABEL_SERVICE}
   }`;
   return (await sparql(q)).map((b) => ({
-    name: b.pLabel?.value, by: b.by?.value ? parseInt(b.by.value) : null,
+    name: cleanName(b.pLabel?.value), by: b.by?.value ? parseInt(b.by.value) : null,
     sl: b.sl?.value ? parseInt(b.sl.value) : 0,
   }));
 }

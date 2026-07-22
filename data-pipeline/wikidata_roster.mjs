@@ -9,6 +9,7 @@ import { readFileSync, writeFileSync } from "fs";
 import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
 import { stampDataInfo } from "./stamp.mjs";
+import { LABEL_SERVICE, cleanName } from "./wikidata_label.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLAYERS_PATH = join(HERE, "..", "src", "players.js");
@@ -85,10 +86,10 @@ async function fetchClubRoster(qid) {
     BIND(YEAR(?d) AS ?by)
     OPTIONAL { ?p wdt:P1532 ?snat. }
     OPTIONAL { ?p wdt:P27 ?cnat. }
-    SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+    ${LABEL_SERVICE}
   }`;
   return (await sparql(q)).map((b) => ({
-    name: b.pLabel?.value, by: b.by?.value ? parseInt(b.by.value) : null,
+    name: cleanName(b.pLabel?.value), by: b.by?.value ? parseInt(b.by.value) : null,
     sl: b.sl?.value ? parseInt(b.sl.value) : 0,
     siso: GAME_BY_QID[qidOf(b.snat?.value)] || null, ciso: GAME_BY_QID[qidOf(b.cnat?.value)] || null,
   }));

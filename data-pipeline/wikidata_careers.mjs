@@ -10,6 +10,7 @@ import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
 import { CLUB_QID, norm } from "./wikidata_roster.mjs";
 import { stampDataInfo } from "./stamp.mjs";
+import { LABEL_SERVICE, cleanName } from "./wikidata_label.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLAYERS_PATH = join(HERE, "..", "src", "players.js");
@@ -40,10 +41,10 @@ async function fetchClubPeriods(qid) {
     OPTIONAL { ?st pq:P582 ?e. }
     ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d .
     BIND(YEAR(?d) AS ?by) BIND(YEAR(?s) AS ?f) BIND(IF(BOUND(?e), YEAR(?e), 0) AS ?t)
-    SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+    ${LABEL_SERVICE}
   }`;
   return (await sparql(q)).map((b) => ({
-    name: b.pLabel?.value,
+    name: cleanName(b.pLabel?.value),
     by: b.by?.value ? parseInt(b.by.value) : null,
     from: b.f?.value ? parseInt(b.f.value) : null,
     to: b.t?.value != null ? parseInt(b.t.value) : 0,
