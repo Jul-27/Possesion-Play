@@ -9,6 +9,7 @@ import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
 import { CLUB_QID, norm } from "./wikidata_roster.mjs";
 import { stampDataInfo } from "./stamp.mjs";
+import { LABEL_SERVICE, cleanName } from "./wikidata_label.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLAYERS_PATH = join(HERE, "..", "src", "players.js");
@@ -52,10 +53,10 @@ async function fetchClubPositions(qid) {
     ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d ; wdt:P413 ?pos .
     BIND(YEAR(?d) AS ?by)
     ?pos rdfs:label ?posLabel . FILTER(LANG(?posLabel) = "en")
-    SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+    ${LABEL_SERVICE}
   }`;
   return (await sparql(q)).map((b) => ({
-    name: b.pLabel?.value, by: b.by?.value ? parseInt(b.by.value) : null, pos: b.posLabel?.value,
+    name: cleanName(b.pLabel?.value), by: b.by?.value ? parseInt(b.by.value) : null, pos: b.posLabel?.value,
   }));
 }
 

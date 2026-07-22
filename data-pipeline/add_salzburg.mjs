@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
 import { NATION_QID, norm, deriveLastName } from "./wikidata_roster.mjs";
 import { stampDataInfo } from "./stamp.mjs";
+import { LABEL_SERVICE, cleanName } from "./wikidata_label.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLAYERS_PATH = join(HERE, "..", "src", "players.js");
@@ -45,14 +46,14 @@ const q = `SELECT ?pLabel ?by ?sl ?snat ?cnat ?f ?t WHERE {
   BIND(YEAR(?d) AS ?by) BIND(YEAR(?s) AS ?f) BIND(IF(BOUND(?e), YEAR(?e), 0) AS ?t)
   OPTIONAL { ?p wdt:P1532 ?snat. }
   OPTIONAL { ?p wdt:P27 ?cnat. }
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+  ${LABEL_SERVICE}
 }`;
 
 const rows = await sparql(q);
 console.log(`Salzburg-Zeilen: ${rows.length}`);
 const agg = new Map();
 for (const b of rows) {
-  const name = b.pLabel?.value, by = b.by?.value ? parseInt(b.by.value) : null;
+  const name = cleanName(b.pLabel?.value), by = b.by?.value ? parseInt(b.by.value) : null;
   if (!name || !by) continue;
   const k = norm(name) + "|" + by;
   let e = agg.get(k);

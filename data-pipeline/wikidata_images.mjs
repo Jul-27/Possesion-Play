@@ -20,6 +20,13 @@ import { norm } from "../src/gameData.js";
 import { PLAYERS } from "../src/players.js";
 import { CLUB_QID } from "./wikidata_roster.mjs";
 import { NAT_TEAM_QID } from "./wikidata_national.mjs";
+import { NAME_OVERRIDES } from "./name_overrides.mjs";
+
+/* Die kuratierten Namen gelten auch hier: Der Index ist über norm(name)|by verschlüsselt,
+   und in Wikidata stehen bei einigen Spielern noch vandalierte oder fehlende englische
+   Labels (z. B. Q294204 = "elpisha" statt Joaquín Sánchez). Ohne diese Abbildung würden
+   die Schlüssel nicht zu den korrigierten Records in players.js passen. */
+const NAME_BY_QID = new Map(NAME_OVERRIDES.map((o) => [o.src, o.to]));
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, "..", "public", "players");
@@ -53,12 +60,14 @@ async function fetchTeamImages(qid) {
     FILTER(?sl >= ${SL_MIN})
     SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
   }`;
-  return (await sparql(q)).map((b) => ({
-    qid: b.p.value.split("/").pop(),
-    name: b.pLabel?.value,
+  return (await sparql(q)).map((b) => {
+    const qid = b.p.value.split("/").pop();
+    return {
+    qid,
+    name: NAME_BY_QID.get(qid) || b.pLabel?.value,
     by: b.by?.value ? parseInt(b.by.value) : null,
     img: b.img?.value, // bereits eine Special:FilePath-URL
-  }));
+  };});
 }
 
 /* Direkte Thumbnail-URL auf dem Bild-CDN. Wikidata liefert P18 als Special:FilePath-Link,
