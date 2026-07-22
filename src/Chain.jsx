@@ -8,7 +8,7 @@ import { Avatar } from "./Emblems.jsx";
 import { loadPlayers } from "./playersStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
-import { DATA_ASOF } from "./dataInfo.js";
+import DataStamp from "./DataStamp.jsx";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -206,7 +206,7 @@ export default function Chain({ onLeave }) {
             <p className="ruleP">Häng an den Startspieler einen weiteren an. Er muss mit ihm eine <b>Gemeinsamkeit</b> teilen: einen Verein, eine Nation, eine Liga oder einen Titel.</p>
             <p className="ruleP">Jede genutzte Verbindung ist danach <b>verbraucht</b>. Die noch freien Anschlüsse des aktuellen Spielers stehen unter der Kette.</p>
             <p className="ruleP">Du startest mit {CHAIN_START_SECONDS} Sekunden, jeder Treffer bringt <b>+{CHAIN_BONUS_SECONDS}s</b>. Wähle Spieler mit vielen offenen Anschlüssen — sonst endet die Kette in einer Sackgasse.</p>
-            <p className="dataStamp">Datenstand: {DATA_ASOF.split("-").reverse().join(".")} · Quelle: Wikidata</p>
+            <DataStamp />
             <div className="closeline"><button className="btn primary" style={{ flex: 1, padding: "11px" }} onClick={() => setShowRules(false)}>Los geht's</button></div>
           </div>
         </div>

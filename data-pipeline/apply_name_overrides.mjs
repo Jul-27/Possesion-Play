@@ -9,7 +9,7 @@ import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
 import { norm, deriveLastName } from "./wikidata_roster.mjs";
 import { NAME_OVERRIDES, EXCLUDED_PLAYERS } from "./name_overrides.mjs";
-import { stampDataInfo } from "./stamp.mjs";
+import { stampFixes } from "./stamp.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLAYERS_PATH = join(HERE, "..", "src", "players.js");
@@ -81,7 +81,7 @@ async function main() {
   players.sort((a, b) => a.n.localeCompare(b.n, "en"));
   const header = readFileSync(PLAYERS_PATH, "utf8").split("export const PLAYERS")[0];
   writeFileSync(PLAYERS_PATH, header + "export const PLAYERS = [\n  " + players.map(recToString).join(",\n  ") + "\n];\n");
-  stampDataInfo();
+  stampFixes(); // rein kuratiert — DATA_ASOF bleibt unberührt
   console.log(`Fertig: ${stats.renamed} umbenannt, ${stats.merged} verschmolzen, ${stats.removed} entfernt -> ${players.length} Spieler.`);
 }
 

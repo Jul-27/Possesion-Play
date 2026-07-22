@@ -6,7 +6,7 @@ import { loadPlayers } from "./playersStore.js";
 import { dailyDateStr, dailyNumber } from "./dailyLogic.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
-import { DATA_ASOF } from "./dataInfo.js";
+import DataStamp from "./DataStamp.jsx";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -192,7 +192,7 @@ export default function Eleven({ onLeave }) {
             <p className="ruleP">Stelle eine Elf in 4-4-2 auf. Jede Position hat eine eigene <b>Bedingung</b> — ein Verein, eine Nation, eine Liga oder ein Titel.</p>
             <p className="ruleP">Ein Spieler passt, wenn <b>Position und Bedingung</b> stimmen. Jeder Spieler nur einmal. Eine besetzte Position antippen gibt sie wieder frei.</p>
             <p className="ruleP">Jedes Tagesrätsel ist nachweislich lösbar: Es wird nur ausgegeben, wenn sich elf verschiedene bekannte Spieler darauf verteilen lassen. Gültig ist aber <b>jeder</b> passende Spieler — auch ein weniger bekannter.</p>
-            <p className="dataStamp">Datenstand: {DATA_ASOF.split("-").reverse().join(".")} · Quelle: Wikidata</p>
+            <DataStamp />
             <div className="closeline"><button className="btn primary" style={{ flex: 1, padding: "11px" }} onClick={() => setShowRules(false)}>Los geht's</button></div>
           </div>
         </div>
