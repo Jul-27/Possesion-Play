@@ -69,7 +69,7 @@ export default function OddOne({ onLeave }) {
               const state = picked === null ? "" : i === round.oddIndex ? "right" : i === picked ? "wrong" : "dim";
               return (
                 <button key={p.n + p.by} className={`oddCard ${state}`} disabled={picked !== null} onClick={() => choose(i)}>
-                  <Avatar player={p} size={64} />
+                  <Avatar player={p} size={92} />
                   <span className="oddName">{p.n}</span>
                   <span className="oddMeta">{[p.pos, new Date().getFullYear() - p.by].filter(Boolean).join(" · ")}</span>
                 </button>

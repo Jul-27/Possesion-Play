@@ -143,7 +143,7 @@ export default function Career({ onLeave }) {
                 <div className="sug">
                   {suggestions.map((s, i) => (
                     <div key={s.n} className={`sugItem ${i === sugActive ? "active" : ""}`} onMouseDown={(e) => { e.preventDefault(); chooseSug(s); }}>
-                      <span className="sugWho"><Avatar player={s} size={26} />{s.n}</span>
+                      <span className="sugWho"><Avatar player={s} size={30} />{s.n}</span>
                       <span className="sugMeta">{[s.pos, new Date().getFullYear() - s.by].filter(Boolean).join(" · ")}</span>
                     </div>
                   ))}
@@ -165,7 +165,7 @@ export default function Career({ onLeave }) {
         <div className="panel dailyEnd">
           {won && <Confetti />}
           <h2 style={{ marginTop: 0 }}>{won ? `🧭 Gelöst nach ${revealed} Station${revealed > 1 ? "en" : ""}!` : "💡 Aufgelöst"}</h2>
-          {target && <div className="revealWho"><Avatar player={target} size={72} /><b>{target.n}</b></div>}
+          {target && <div className="revealWho"><Avatar player={target} size={88} /><b>{target.n}</b></div>}
           <p>Gesucht war: <b>{target ? target.n : "—"}</b></p>
           {stats && (
             <div className="dailyStats">
