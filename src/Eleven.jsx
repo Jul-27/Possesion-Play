@@ -136,7 +136,7 @@ export default function Eleven({ onLeave }) {
                 return (
                   <button key={i} className={`slot ${names[i] ? "set" : ""} ${active === i ? "active" : ""}`} onClick={() => openSlot(i)}>
                     <span className="slotDef">{s.def.name}</span>
-                    {names[i] && byName.get(names[i]) && <Avatar player={byName.get(names[i])} size={30} />}
+                    {names[i] && byName.get(names[i]) && <Avatar player={byName.get(names[i])} size={34} />}
                     <span className="slotName">{names[i] || POS_LABEL[SLOT_POSITIONS[i]]}</span>
                   </button>
                 );
@@ -160,7 +160,7 @@ export default function Eleven({ onLeave }) {
                 <div className="sug">
                   {suggestions.map((s, i) => (
                     <div key={s.n} className={`sugItem ${i === sugActive ? "active" : ""}`} onMouseDown={(e) => { e.preventDefault(); chooseSug(s); }}>
-                      <span className="sugWho"><Avatar player={s} size={26} />{s.n}</span>
+                      <span className="sugWho"><Avatar player={s} size={30} />{s.n}</span>
                       <span className="sugMeta">{[s.pos, new Date().getFullYear() - s.by].filter(Boolean).join(" · ")}</span>
                     </div>
                   ))}

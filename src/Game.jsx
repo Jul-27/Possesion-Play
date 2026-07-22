@@ -308,7 +308,7 @@ export default function Game({ code, clientId, onLeave }) {
                   {suggestions.map((s, i) => (
                     <div key={s.n} className={`sugItem ${i === sugActive ? "active" : ""}`}
                       onMouseDown={(e) => { e.preventDefault(); chooseSug(s); }}>
-                      <span className="sugWho"><Avatar player={s} size={26} />{s.n}</span>
+                      <span className="sugWho"><Avatar player={s} size={30} />{s.n}</span>
                       <span className="sugMeta">{[s.pos, new Date().getFullYear() - s.by].filter(Boolean).join(" · ")}</span>
                     </div>
                   ))}
