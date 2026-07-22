@@ -373,7 +373,9 @@ body::after {
 .careerMore { text-align: center; color: #7fa093; font-size: 12px; font-style: italic; padding: 4px 0; }
 
 /* ── Wer passt nicht? ──────────────────────────────────────────── */
-.oddGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-top: 14px; }
+/* Feste 2x2-Anordnung: auto-fit hätte je nach Breite 3+1 ergeben — die vier Spieler
+   sollen aber gleichrangig nebeneinanderstehen, keiner darf herausstechen. */
+.oddGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 14px; }
 .oddCard { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; padding: 16px 14px; background: rgba(10,22,19,.6); border: 1px solid rgba(176,224,200,.16); border-radius: 14px; color: #eaf3ee; cursor: pointer; text-align: left; transition: transform .15s, border-color .15s, opacity .2s; }
 .oddCard:hover:not(:disabled) { border-color: #2DD4BF; transform: translateY(-2px); }
 .oddCard:disabled { cursor: default; }
