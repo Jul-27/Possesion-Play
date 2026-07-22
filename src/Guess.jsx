@@ -5,6 +5,7 @@ import {
   buildGuessSerial, answerGuessQuestion, guessQuestionLabel, decodeTarget, checkGuess,
   START_SECONDS, fmtClock, liveRemaining,
 } from "./gameData.js";
+import { Avatar } from "./Emblems.jsx";
 import { loadPlayers } from "./playersStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
@@ -370,7 +371,7 @@ export default function Guess({ code, clientId, onLeave }) {
                   <div className="sug">
                     {suggestions.map((s, i) => (
                       <div key={s.n} className={`sugItem ${i === sugActive ? "active" : ""}`} onMouseDown={(e) => { e.preventDefault(); chooseSug(s); }}>
-                        <span>{s.n}</span>
+                        <span className="sugWho"><Avatar player={s} size={30} />{s.n}</span>
                         <span className="sugMeta">{[s.pos, new Date().getFullYear() - s.by].filter(Boolean).join(" · ")}</span>
                       </div>
                     ))}
@@ -403,6 +404,7 @@ export default function Guess({ code, clientId, onLeave }) {
           <h2>Aufgelöst</h2>
           {winner === 0 ? <p className="winName">Spiel beendet</p> : <p className="winName" style={{ color: P[winner].c1 }}>{names[winner]} gewinnt</p>}
           {forfeit ? <p>🚪 {names[forfeit]} hat das Spiel verlassen</p> : null}
+          {target && <div className="revealWho"><Avatar player={target} size={88} /><b>{target.n}</b></div>}
           <p>Gesuchter Star: <b>{target ? target.n : "—"}</b></p>
           {clk.timeout ? <p>⏱ {names[clk.timeout]} — Zeit abgelaufen</p> : null}
           <div className="closeline">

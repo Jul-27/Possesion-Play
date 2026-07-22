@@ -3,6 +3,7 @@ import { buildOddRound, oddRuleLabel } from "./oddOneOut.js";
 import { loadPlayers } from "./playersStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
+import { Avatar } from "./Emblems.jsx";
 import { DATA_ASOF } from "./dataInfo.js";
 
 const store = {
@@ -68,6 +69,7 @@ export default function OddOne({ onLeave }) {
               const state = picked === null ? "" : i === round.oddIndex ? "right" : i === picked ? "wrong" : "dim";
               return (
                 <button key={p.n + p.by} className={`oddCard ${state}`} disabled={picked !== null} onClick={() => choose(i)}>
+                  <Avatar player={p} size={92} />
                   <span className="oddName">{p.n}</span>
                   <span className="oddMeta">{[p.pos, new Date().getFullYear() - p.by].filter(Boolean).join(" · ")}</span>
                 </button>

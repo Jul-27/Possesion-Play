@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "./supabaseClient.js";
-import { Cell } from "./Emblems.jsx";
+import { Cell, Avatar } from "./Emblems.jsx";
 import {
   P, cname, norm, suggestPlayers, ADJP, hydrateBoard, playerMatchesHex,
   buildBoardSerial, BOARDH, HEXH, START_SECONDS, fmtClock, liveRemaining,
@@ -308,7 +308,7 @@ export default function Game({ code, clientId, onLeave }) {
                   {suggestions.map((s, i) => (
                     <div key={s.n} className={`sugItem ${i === sugActive ? "active" : ""}`}
                       onMouseDown={(e) => { e.preventDefault(); chooseSug(s); }}>
-                      <span>{s.n}</span>
+                      <span className="sugWho"><Avatar player={s} size={30} />{s.n}</span>
                       <span className="sugMeta">{[s.pos, new Date().getFullYear() - s.by].filter(Boolean).join(" · ")}</span>
                     </div>
                   ))}

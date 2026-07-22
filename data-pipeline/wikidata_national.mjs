@@ -15,7 +15,7 @@ const UA = "PossessionPlay/1.0 (https://github.com/Jul-27; data enrichment)";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Spiel-Code -> Senior-Nationalteam-QID (verifiziert)
-const NAT_TEAM_QID = {
+export const NAT_TEAM_QID = {
   FRA: "Q47774", GER: "Q43310", ESP: "Q42267", ITA: "Q676899", NED: "Q47050",
   BEL: "Q166776", CRO: "Q134479", ENG: "Q47762", PRT: "Q267245", JPN: "Q170566",
   BRA: "Q83459", ARG: "Q79800", MEX: "Q164089", NGA: "Q181930", CIV: "Q175145",
