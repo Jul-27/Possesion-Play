@@ -117,6 +117,8 @@ function recToString(r) {
   if (r.sl) s += `, "sl": ${r.sl}`;
   if (r.pos) s += `, "pos": ${JSON.stringify(r.pos)}`; // pos erhalten (kam nach diesem Skript dazu)
   if (r.cp && r.cp.length) s += `, "cp": ${JSON.stringify(r.cp)}`;
+  if (r.lg && r.lg.length) s += `, "lg": ${JSON.stringify(r.lg)}`;
+  if (r.span && r.span.length) s += `, "span": ${JSON.stringify(r.span)}`;
   return s + "}";
 }
 
