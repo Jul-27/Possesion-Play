@@ -31,6 +31,9 @@ export function norm(s) {
 export const HONOUR_OVERRIDES = {
   "florian wirtz|2003": ["DFB"],  // DFB-Pokal 2024 mit Leverkusen
   "harry kane|1993": ["DFB"],
+  // Bayern-Meister 2020/21 + 2021/22; sein Bayern-Eintrag ist in Wikidata inzwischen
+  // verschwunden (nur noch PSG, fälschlich offen), daher greift die Query nicht.
+  "tanguy nianzou|2002": ["MBL"],
 };
 
 // Saison-Sieger, die Wikidata (noch) nicht als P1346 führt (Owner-bestätigt).
