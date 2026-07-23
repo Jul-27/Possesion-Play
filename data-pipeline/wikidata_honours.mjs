@@ -31,6 +31,9 @@ export function norm(s) {
 export const HONOUR_OVERRIDES = {
   "florian wirtz|2003": ["DFB"],  // DFB-Pokal 2024 mit Leverkusen
   "harry kane|1993": ["DFB"],
+  // Bayern-Meister 2020/21 + 2021/22; sein Bayern-Eintrag ist in Wikidata inzwischen
+  // verschwunden (nur noch PSG, fälschlich offen), daher greift die Query nicht.
+  "tanguy nianzou|2002": ["MBL"],
 };
 
 // Saison-Sieger, die Wikidata (noch) nicht als P1346 führt (Owner-bestätigt).
@@ -89,7 +92,13 @@ async function fetchHonourPlayers(qid) {
       ?season wdt:P3450 wd:${qid} ; wdt:P1346 ?winner ; (wdt:P580|wdt:P585) ?ss .
       FILTER( YEAR(?ss) >= ${from} && YEAR(?ss) < ${to} )
       OPTIONAL { ?season wdt:P582 ?se. }
-      ?p p:P54 ?st . ?st ps:P54 ?winner ; pq:P580 ?cs .
+      # Der Saison-Sieger (P1346) ist bei neueren Titeln die „Herrenfußballmannschaft"
+      # (eigene Entität), nicht der Verein, dem die Spieler per P54 zugeordnet sind.
+      # P831 (Mutterverein) als Zero-or-One-Pfad brückt darauf; bei älteren Saisons ist
+      # der Sieger direkt der Verein (kein P831) und ?club = ?winner. Ohne diese Brücke
+      # fehlten z. B. die Leverkusen-Meister 2023/24 (Wirtz, Boniface) komplett.
+      ?winner wdt:P831? ?club .
+      ?p p:P54 ?st . ?st ps:P54 ?club ; pq:P580 ?cs .
       OPTIONAL { ?st pq:P582 ?ce. }
       ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d . BIND(YEAR(?d) AS ?by)
       FILTER( YEAR(?cs) <= YEAR(COALESCE(?se, ?ss)) && (!BOUND(?ce) || YEAR(?ce) >= YEAR(?ss)) )
