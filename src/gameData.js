@@ -94,6 +94,10 @@ export function wereTeammates(a, b) {
 
 // Aktiv (bei einem unserer Vereine) im Jahresbereich [from, to]?
 export function activeInRange(p, from, to) {
+  // span deckt auch Stationen außerhalb der 42 Spielvereine ab (z. B. Sommer bei Basel);
+  // fehlt es, greift die alte cp-Logik (nur Spielvereine).
+  const sp = p?.span;
+  if (sp && sp.length === 2) return sp[0] <= to && cpEnd(sp[1]) >= from;
   const cp = p?.cp;
   if (!cp || !cp.length) return false;
   return cp.some(([, f, t]) => f <= to && cpEnd(t) >= from);
@@ -113,7 +117,7 @@ export const SPECIALS = [
   { key: "B80", label: "80ER JG.",   icon: "🎧", name: "Geboren 1980–1989", c1: "#C084FC", c2: "#581c87", test: (p) => p.by >= 1980 && p.by <= 1989 },
   { key: "B00", label: "2000ER JG.", icon: "🎮", name: "Geboren 2000–2009", c1: "#4ADE80", c2: "#14532d", test: (p) => p.by >= 2000 && p.by <= 2009 },
   { key: "T5L", label: "3+ TOP-LIGEN", icon: "🌐", name: "In 3+ Top-5-Ligen gespielt", c1: "#38BDF8", c2: "#0c4a6e",
-    test: (p) => new Set((p.clubs || []).map((k) => CLUB_LG[k]).filter((lg) => TOP5.has(lg))).size >= 3 },
+    test: (p) => [...leaguesOf(p)].filter((lg) => TOP5.has(lg)).length >= 3 },
 ].map((s) => ({ ...s, type: "spec" }));
 
 // Liga-Felder: erfüllt, wenn der Spieler einen Verein dieser Liga hat.
@@ -129,6 +133,14 @@ export const LEAGUES = [
 
 // Vereins-Key -> Liga-Code (für das Liga-Matching)
 const CLUB_LG = Object.fromEntries(CLUBS.map((c) => [c.key, c.lg]));
+
+// Alle Ligen, in denen ein Spieler gespielt hat: das kuratierte `lg` (aus Wikidata, inkl.
+// Nicht-Spielvereine wie Betis) vereinigt mit den verlässlichen Ligen seiner Spielvereine.
+export function leaguesOf(player) {
+  const s = new Set(player?.lg || []);
+  for (const c of player?.clubs || []) { const lg = CLUB_LG[c]; if (lg) s.add(lg); }
+  return s;
+}
 
 // Honour-Felder: erfüllt, wenn der Spieler den Titel gewonnen hat (player.t).
 export const HONOURS = [
@@ -197,7 +209,7 @@ export function playerMatchesHex(player, def) {
   if (def.type === "club") return (player.clubs || []).includes(def.key);
   if (def.type === "nat") return (player.nat || []).includes(def.key);
   if (def.type === "spec") return def.test ? def.test(player) : false;
-  if (def.type === "league") return (player.clubs || []).some((ck) => CLUB_LG[ck] === def.key);
+  if (def.type === "league") return leaguesOf(player).has(def.key);
   if (def.type === "honour") return (player.t || []).includes(def.key);
   return false;
 }
@@ -212,7 +224,7 @@ export function answerGuessQuestion(player, q) {
   switch (q.dim) {
     case "nat":    return (player.nat || []).includes(q.val);
     case "club":   return (player.clubs || []).includes(q.val);
-    case "league": return (player.clubs || []).some((ck) => CLUB_LG[ck] === q.val);
+    case "league": return leaguesOf(player).has(q.val);
     case "pos":    return player.pos === q.val;
     case "title":  return (player.t || []).includes(q.val);
     case "born":   return q.val.cmp === "before" ? player.by < q.val.year : player.by >= q.val.year;

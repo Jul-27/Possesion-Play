@@ -22,6 +22,7 @@ const CHAIN = [
   "apply_name_overrides.mjs",   // 6) kuratierte Namen/Ausschlüsse
   // 7) Fotos zuletzt: der Bildindex ist über norm(name)|by verschlüsselt und muss
   //    daher die bereits korrigierten Namen sehen, sonst zeigen die Schlüssel ins Leere.
+  "wikidata_player_careers.mjs", // 8) lg (gespielte Ligen) + span (Karriere-Spanne) — auch Nicht-Spielvereine
   "wikidata_images.mjs",
 ];
 
