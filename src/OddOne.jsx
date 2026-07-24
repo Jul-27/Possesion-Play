@@ -8,6 +8,7 @@ import DataStamp from "./DataStamp.jsx";
 import ShareButton from "./ShareButton.jsx";
 import { shareOdd } from "./share.js";
 import { dailyRnd, challengeState, recordChallenge, challengeStats } from "./dailyChallenge.js";
+import { submit as lbSubmit } from "./leaderboard.js";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -42,7 +43,10 @@ export default function OddOne({ onLeave }) {
       best: Math.max(stats.best || 0, streak),
     };
     setStats(next); store.set("pp:oddStats", next);
-    if (isDaily) recordChallenge("odd", right);
+    if (isDaily) {
+      recordChallenge("odd", right);
+      lbSubmit("odd", { correct: right }).catch(() => {});
+    }
     play(right ? "win" : "err");
   }
 
