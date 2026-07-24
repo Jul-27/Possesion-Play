@@ -36,7 +36,8 @@ if (!beforePath || !existsSync(beforePath)) {
 }
 
 const key = (p) => `${p.n}|${p.by}`;
-const FIELDS = ["clubs", "nat", "t", "cp", "lg"];
+const FIELDS = ["clubs", "nat", "t", "cp", "lg"];   // Listenfelder
+const SINGLE = ["pos"];                             // Einzelwerte
 
 const [before, after] = await Promise.all([
   import(pathToFileURL(beforePath).href),
@@ -64,6 +65,13 @@ for (const b of before.PLAYERS) {
       eigen += weg.length;
       if (beispiele.length < 8) beispiele.push(`${b.n}: ${f} verliert ${weg.map((x) => x.replace(/"/g, "")).join(", ")}`);
     }
+  }
+  // Einzelwerte gesondert: sie sind keine Listen und würden oben durchrutschen
+  for (const f of SINGLE) {
+    if (b[f] && !a[f]) {
+      feldVerluste++; eigen++;
+      if (beispiele.length < 8) beispiele.push(`${b.n}: ${f} verliert ${b[f]}`);
+    } else if (!b[f] && a[f]) feldGewinne++;
   }
   if (eigen > MAX_PER_PLAYER && (b.sl || 0) >= KNOWN_SL) schwerVerlust.push(`${b.n} (sl ${b.sl}): ${eigen} Werte`);
 }

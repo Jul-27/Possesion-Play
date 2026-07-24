@@ -15,6 +15,17 @@ test("posBucket mappt Positions-Labels auf Gruppen", () => {
   assert.equal(posBucket("referee"), null);
 });
 
+test("posBucket: feinere Wikidata-Begriffe, die in der Praxis vorkamen", () => {
+  // Diese Labels tauchten bei Spielern ohne pos auf
+  assert.equal(posBucket("full-back"), "ABW");
+  assert.equal(posBucket("playmaker"), "MF");
+  assert.equal(posBucket("defensive midfielder"), "MF");
+  assert.equal(posBucket("sweeper"), "ABW");
+  assert.equal(posBucket("forward"), "ST");
+  // Reihenfolge zählt: „attacking midfielder" darf NICHT im Sturm landen
+  assert.equal(posBucket("attacking midfielder"), "MF");
+});
+
 test("players.js: pos-Werte sind gültige Gruppen", async () => {
   const players = (await import("../src/players.js")).PLAYERS;
   const ok = new Set(["TW", "ABW", "MF", "ST"]);
@@ -25,4 +36,11 @@ test("players.js: pos-Werte sind gültige Gruppen", async () => {
     assert.ok(ok.has(p.pos), "ungültige pos " + p.pos);
   }
   assert.ok(withPos > 1000, "es sollten viele Spieler eine pos haben, sind: " + withPos);
+});
+
+test("Positionen werden auch für reine Nationalspieler geholt", async () => {
+  const src = await import("node:fs").then((fs) => fs.readFileSync(new URL("./wikidata_positions.mjs", import.meta.url), "utf8"));
+  // 94 % der Lücke betraf Spieler ohne Spielverein — die Abfrage muss beide Quellen kennen
+  assert.match(src, /NAT_TEAM_QID/, "Nationalteams müssen mit abgefragt werden");
+  assert.match(src, /CLUB_QID/, "Vereine ebenso");
 });
