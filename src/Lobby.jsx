@@ -6,7 +6,7 @@ import { dailyDateStr, dailyNumber } from "./dailyLogic.js";
 import DataStamp from "./DataStamp.jsx";
 import { challengeBadge } from "./dailyChallenge.js";
 
-export default function Lobby({ onEnter, onDaily, onSolo }) {
+export default function Lobby({ onEnter, onDaily, onSolo, onStats }) {
   const [name, setName] = useState(getSavedName());
   const [mode, setMode] = useState("hex"); // "hex" | "grid" | "guess"
   const [joinCode, setJoinCode] = useState("");
@@ -116,6 +116,15 @@ export default function Lobby({ onEnter, onDaily, onSolo }) {
           <small>Board allein lösen, ohne Zeitdruck</small>
         </button>
       </div>
+
+      <button type="button" className="duelToggle statsLink" onClick={onStats}>
+        <span className="duelIcon">📊</span>
+        <span className="duelText">
+          <b>Deine Statistik</b>
+          <small>Serien und Bestwerte aus allen Modi</small>
+        </span>
+        <span className="duelChev">›</span>
+      </button>
 
       <button type="button" className="duelToggle" aria-expanded={duelOpen} onClick={() => setDuelOpen((v) => !v)}>
         <span className="duelIcon">🤝</span>

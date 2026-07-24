@@ -463,3 +463,22 @@ body::after {
   border: 1px solid var(--line-soft); color: var(--muted); white-space: nowrap; }
 .tileBadge.won { color: #9fe1cb; border-color: rgba(45,212,191,.45); }
 .tileBadge.lost { color: var(--rose); border-color: rgba(251,113,133,.4); }
+
+/* ── Statistik-Übersicht ───────────────────────────────────────── */
+.statsLink { margin-top: 18px; }
+.statTotals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 18px 0 6px; }
+.statTotal { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 6px;
+  background: var(--glass); border: 1px solid var(--brd); border-radius: 14px; }
+.statTotal b { font-family: 'Anton', sans-serif; font-size: 26px; font-weight: 400; color: #fff; line-height: 1; }
+.statTotal span { font-size: 10px; letter-spacing: .04em; color: var(--muted); text-align: center; }
+.statList { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.statRow { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: rgba(10,22,19,.55);
+  border: 1px solid var(--line-soft); border-radius: 14px; color: var(--text); cursor: pointer; text-align: left;
+  transition: border-color .15s, transform .15s; }
+.statRow:hover { border-color: var(--teal); transform: translateY(-1px); }
+.statRow.empty { opacity: .55; }
+.statIcon { font-size: 22px; }
+.statBody { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.statName { font-weight: 700; font-size: 15px; }
+.statLines { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); overflow-wrap: anywhere; }
+.statStreak { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--gold); white-space: nowrap; }
