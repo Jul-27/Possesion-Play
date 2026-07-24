@@ -395,16 +395,36 @@ body::after {
 .chainChips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .chainChip { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: .04em; padding: 4px 9px; border-radius: 999px; background: rgba(244,201,93,.12); border: 1px solid rgba(244,201,93,.3); color: var(--gold); }
 
-/* ── Elf des Tages ─────────────────────────────────────────────── */
-.pitch { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; padding: 16px 10px; border: 1px solid var(--line-soft); border-radius: var(--radius); background: repeating-linear-gradient(180deg, rgba(70,150,110,.07) 0 22px, transparent 22px 44px), rgba(4,16,12,.5); }
-.pitchRow { display: flex; gap: 8px; justify-content: center; }
-.slot { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; align-items: center; padding: 9px 6px; border-radius: 11px; cursor: pointer; background: rgba(10,22,19,.72); border: 1px solid var(--brd); color: var(--text); transition: border-color .15s, background .15s, transform .15s; }
-.slot:hover { border-color: var(--teal); transform: translateY(-1px); }
-.slot.active { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(244,201,93,.4); }
-.slot.set { background: rgba(45,212,191,.13); border-color: rgba(45,212,191,.5); }
-.slotDef { font-family: 'DM Mono', monospace; font-size: 9px; line-height: 1.25; letter-spacing: .02em; color: var(--gold); text-align: center; }
-.slotName { font-size: 11px; font-weight: 700; line-height: 1.2; text-align: center; color: var(--muted); overflow-wrap: anywhere; }
-.slot.set .slotName { color: #fff; }
+/* ── Elf des Tages ────────────────────────────────────────────── */
+/* Feste Seitenverhältnis-Bühne: die Slots sitzen in Prozent darin, das SVG wird
+   per preserveAspectRatio="none" exakt darübergezogen. */
+/* Breite (nicht Höhe) begrenzen: mit max-height würde aspect-ratio überstimmt und das
+   Feld gestaucht — so bleibt das Hochformat eines echten Spielfelds immer erhalten. */
+.pitch { position: relative; width: min(100%, calc(68vh * 100 / 140)); aspect-ratio: 100 / 140; margin: 14px auto 4px;
+  border: 1px solid var(--line-soft); border-radius: var(--radius); overflow: hidden;
+  background: radial-gradient(120% 80% at 50% 0%, rgba(70,150,110,.10), rgba(4,16,12,.55)); }
+.pitchSvg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.pslot { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column;
+  align-items: center; gap: 2px; padding: 0; background: none; border: 0; cursor: pointer;
+  width: min(62px, calc(100% / var(--maxn1, 5) - 5px));
+  color: var(--text); transition: transform .15s; }
+.pslot:hover { transform: translate(-50%, -50%) scale(1.06); }
+.pslot.active .pslotFig { outline: 2px solid var(--gold); outline-offset: 3px; border-radius: 50%; }
+
+/* Figur + Emblem-Badge: das Emblem trägt die Bedingung und ersetzt den langen Text. */
+.pslotFig { position: relative; display: grid; place-items: center; width: 44px; height: 44px; }
+.jersey { width: 40px; height: 36px; display: block; }
+.pslotEm { position: absolute; right: -5px; bottom: -3px; width: 20px; height: 20px; display: grid;
+  place-items: center; border-radius: 50%; background: rgba(4,16,12,.92);
+  border: 1px solid rgba(176,224,200,.35); overflow: hidden; }
+.pslotEm .emblem { width: 100%; }
+.pslotEm .emblem.icon, .pslotEm .emblem.league { width: 100%; font-size: 9px; border-radius: 50%; }
+
+.pslotName { font-size: 10px; line-height: 1.15; font-weight: 700; color: var(--muted);
+  max-width: 100%; overflow-wrap: anywhere; text-shadow: 0 1px 3px rgba(0,0,0,.9); }
+.pslot.set .pslotName { color: #fff; }
+.pslot.set .pslotEm { border-color: rgba(45,212,191,.6); }
 
 /* ── Spielerfotos ──────────────────────────────────────────────── */
 .avatar { display: grid; place-items: center; border-radius: 50%; overflow: hidden; background: rgba(10,22,19,.8); border: 1px solid var(--line-soft); }
@@ -420,3 +440,4 @@ body::after {
 .sugWho { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .revealWho { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 6px 0 12px; font-size: 17px; color: #fff; }
 .revealWho .avatar { border-color: rgba(45,212,191,.5); box-shadow: 0 0 18px rgba(45,212,191,.25); }
+.dailyCount.form { font-family: 'DM Mono', monospace; color: var(--gold); border-color: rgba(244,201,93,.4); letter-spacing: .06em; }

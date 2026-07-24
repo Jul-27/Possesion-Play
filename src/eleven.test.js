@@ -2,15 +2,48 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { lookupDef } from "./gameData.js";
 import {
-  FORMATION, SLOT_POSITIONS, elevenPool, slotCandidates, hasPerfectMatching,
-  buildEleven, elevenAccepts, ELEVEN_MIN_CANDIDATES,
+  FORMATIONS, formationPositions, slotLayout, formationFor, elevenPool, slotCandidates,
+  hasPerfectMatching, buildEleven, elevenAccepts, ELEVEN_MIN_CANDIDATES,
 } from "./eleven.js";
 
-test("FORMATION ergibt elf Positionen in 4-4-2", () => {
-  assert.equal(SLOT_POSITIONS.length, 11);
-  assert.deepEqual(FORMATION.map((f) => f.count), [1, 4, 4, 2]);
-  assert.equal(SLOT_POSITIONS.filter((p) => p === "TW").length, 1);
-  assert.equal(SLOT_POSITIONS.filter((p) => p === "ST").length, 2);
+test("Jede Formation hat elf Positionen und genau einen Torwart", () => {
+  assert.ok(FORMATIONS.length >= 3);
+  for (const f of FORMATIONS) {
+    const pos = formationPositions(f);
+    assert.equal(pos.length, 11, `${f.name} hat ${pos.length} statt 11 Positionen`);
+    assert.equal(pos.filter((p) => p === "TW").length, 1, `${f.name} braucht genau einen Torwart`);
+    // Der Name muss zur Linienfolge passen (ohne Torwart), sonst ist die Tabelle inkonsistent
+    const feld = f.lines.slice(1).map(([, n]) => n).join("-");
+    assert.equal(feld, f.name, `Linien von ${f.name} ergeben ${feld}`);
+  }
+});
+
+test("slotLayout: elf Koordinaten im Feld, keine Überlappung je Linie", () => {
+  for (const f of FORMATIONS) {
+    const lay = slotLayout(f);
+    assert.equal(lay.length, 11);
+    for (const s of lay) {
+      assert.ok(s.x > 0 && s.x < 100, `${f.name}: x=${s.x} außerhalb`);
+      assert.ok(s.y > 0 && s.y < 100, `${f.name}: y=${s.y} außerhalb`);
+    }
+    // innerhalb einer Linie strikt aufsteigend und gleichmäßig verteilt
+    const byY = new Map();
+    for (const s of lay) { const a = byY.get(s.y) || []; a.push(s.x); byY.set(s.y, a); }
+    for (const [y, xs] of byY) {
+      const sorted = [...xs].sort((a, b) => a - b);
+      assert.deepEqual(xs, sorted, `${f.name}: Linie y=${y} nicht sortiert`);
+      assert.equal(new Set(xs).size, xs.length, `${f.name}: doppelte x in Linie y=${y}`);
+    }
+    // Torwart hinten, vorderste Linie vorne
+    assert.ok(lay[0].y > lay[lay.length - 1].y, `${f.name}: Torwart muss hinten stehen`);
+  }
+});
+
+test("formationFor: deterministisch, wechselt über die Tage", () => {
+  assert.equal(formationFor("2026-07-24").name, formationFor("2026-07-24").name);
+  const namen = new Set();
+  for (let d = 1; d <= 20; d++) namen.add(formationFor(`2026-08-${String(d).padStart(2, "0")}`).name);
+  assert.ok(namen.size >= 3, `in 20 Tagen nur ${namen.size} verschiedene Formationen`);
 });
 
 test("hasPerfectMatching: erkennt Hall-Verletzung", () => {
@@ -36,7 +69,7 @@ test("Echtdaten: das Tagesrätsel ist gültig und lösbar", async () => {
   const { slots } = buildEleven("2026-07-19", PLAYERS);
 
   assert.equal(slots.length, 11);
-  assert.deepEqual(slots.map((s) => s.pos), SLOT_POSITIONS);
+  assert.deepEqual(slots.map((s) => s.pos), formationPositions(formationFor("2026-07-19")));
 
   const keys = slots.map((s) => `${s.def.type}:${s.def.key}`);
   assert.equal(new Set(keys).size, 11, "alle elf Bedingungen müssen verschieden sein");

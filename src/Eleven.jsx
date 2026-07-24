@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { norm, suggestPlayers, POS_LABEL } from "./gameData.js";
-import { FORMATION, SLOT_POSITIONS, buildEleven, elevenAccepts } from "./eleven.js";
-import { Avatar } from "./Emblems.jsx";
+import { buildEleven, elevenAccepts } from "./eleven.js";
+import { Avatar, Emblem } from "./Emblems.jsx";
+import Pitch, { Jersey } from "./Pitch.jsx";
 import { loadPlayers } from "./playersStore.js";
 import { dailyDateStr, dailyNumber } from "./dailyLogic.js";
 import { play, isMuted, toggleMute } from "./sound.js";
@@ -13,13 +14,6 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ohne Speicherstand weiter */ } },
 };
 
-// Reihen von vorne nach hinten anzeigen: Sturm oben, Tor unten.
-const ROWS = (() => {
-  let at = 0;
-  const rows = FORMATION.map((f) => { const r = { ...f, from: at }; at += f.count; return r; });
-  return rows.reverse();
-})();
-
 export default function Eleven({ onLeave }) {
   const dateStr = dailyDateStr();
   const saveKey = `pp:eleven:${dateStr}`;
@@ -27,6 +21,7 @@ export default function Eleven({ onLeave }) {
   const [players, setPlayers] = useState(null);
   const [names, setNames] = useState(() => store.get(saveKey)?.names || Array(11).fill(null));
   const [wrong, setWrong] = useState(() => store.get(saveKey)?.wrong || 0);
+  const [formChecked, setFormChecked] = useState(false);
   const [active, setActive] = useState(null);
   const [feedback, setFeedback] = useState(null);
   const [nameInput, setNameInput] = useState("");
@@ -38,7 +33,12 @@ export default function Eleven({ onLeave }) {
 
   useEffect(() => { loadPlayers().then(setPlayers); }, []);
 
-  const slots = useMemo(() => (players ? buildEleven(dateStr, players).slots : []), [players, dateStr]);
+  const puzzle = useMemo(() => (players ? buildEleven(dateStr, players) : null), [players, dateStr]);
+  const slots = puzzle?.slots || [];
+  const formation = puzzle?.formation;
+  /* Slot-Breite richtet sich nach der dichtesten Linie: der Abstand zweier Slots ist
+     100/(n+1) % der Feldbreite — bei einer 5er-Reihe nur ~62 px auf dem Handy. */
+  const maxLine = formation ? Math.max(...formation.lines.map((l) => l[1])) : 4;
   const usedNames = useMemo(() => new Set(names.filter(Boolean)), [names]);
   // Namen -> Record, damit die besetzten Slots ein Foto zeigen können
   const byName = useMemo(() => {
@@ -54,15 +54,25 @@ export default function Eleven({ onLeave }) {
     [players, nameInput, usedNames],
   );
 
+  /* Ein Deploy kann die Formation eines laufenden Tages ändern. Dann passen die
+     gespeicherten Namen nicht mehr zu den Slots — Tagesstand verwerfen statt falsch zuordnen. */
   useEffect(() => {
-    store.set(saveKey, { names, wrong, done });
+    if (!formation || formChecked) return;
+    const saved = store.get(saveKey);
+    if (saved?.form && saved.form !== formation.name) { setNames(Array(11).fill(null)); setWrong(0); }
+    setFormChecked(true);
+  }, [formation, formChecked, saveKey]);
+
+  useEffect(() => {
+    if (!formation) return;
+    store.set(saveKey, { names, wrong, done, form: formation.name });
     if (done) {
       const prev = store.get("pp:elevenStats") || { played: 0, solved: 0 };
       if (!prev.lastSolved || prev.lastSolved !== dateStr) {
         store.set("pp:elevenStats", { played: prev.played + 1, solved: prev.solved + 1, lastSolved: dateStr });
       }
     }
-  }, [names, wrong, done]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [names, wrong, done, formation]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function openSlot(i) {
     if (names[i]) { // besetzte Position wieder freigeben
@@ -122,27 +132,28 @@ export default function Eleven({ onLeave }) {
       </div>
 
       <div className="dailyMeta">
+        {formation && <span className="dailyCount form">{formation.name}</span>}
         <span className="dailyCount">{filled}/11 besetzt</span>
         <span className={`dailyCount ${wrong ? "spent" : ""}`}>Fehlversuche {wrong}</span>
       </div>
 
       {!players || !slots.length ? <div className="qlogEmpty">Lade Spielerdaten…</div> : (
-        <div className="pitch">
-          {ROWS.map((row) => (
-            <div key={row.pos} className="pitchRow">
-              {Array.from({ length: row.count }, (_, k) => {
-                const i = row.from + k;
-                const s = slots[i];
-                return (
-                  <button key={i} className={`slot ${names[i] ? "set" : ""} ${active === i ? "active" : ""}`} onClick={() => openSlot(i)}>
-                    <span className="slotDef">{s.def.name}</span>
-                    {names[i] && byName.get(names[i]) && <Avatar player={byName.get(names[i])} size={34} />}
-                    <span className="slotName">{names[i] || POS_LABEL[SLOT_POSITIONS[i]]}</span>
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+        <div className="pitch" style={{ "--maxn1": maxLine + 1 }}>
+          <Pitch />
+          {slots.map((s, i) => {
+            const p = names[i] ? byName.get(names[i]) : null;
+            return (
+              <button key={i} type="button" title={`${POS_LABEL[s.pos]} · ${s.def.name}`}
+                className={`pslot ${p ? "set" : ""} ${active === i ? "active" : ""}`}
+                style={{ left: `${s.x}%`, top: `${s.y}%` }} onClick={() => openSlot(i)}>
+                <span className="pslotFig">
+                  {p ? <Avatar player={p} size={42} /> : <Jersey pos={s.pos} />}
+                  <span className="pslotEm"><Emblem def={s.def} /></span>
+                </span>
+                <span className="pslotName">{p ? p.ln : POS_LABEL[s.pos]}</span>
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -189,7 +200,7 @@ export default function Eleven({ onLeave }) {
         <div className="overlay" onClick={() => setShowRules(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h2>Elf des Tages</h2>
-            <p className="ruleP">Stelle eine Elf in 4-4-2 auf. Jede Position hat eine eigene <b>Bedingung</b> — ein Verein, eine Nation, eine Liga oder ein Titel.</p>
+            <p className="ruleP">Stelle eine Elf auf — die <b>Formation wechselt täglich</b>{formation ? ` (heute ${formation.name})` : ""}. Jede Position hat eine eigene <b>Bedingung</b>: ein Verein, eine Nation, eine Liga oder ein Titel. Das Wappen an der Position zeigt sie, den vollen Namen siehst du beim Antippen.</p>
             <p className="ruleP">Ein Spieler passt, wenn <b>Position und Bedingung</b> stimmen. Jeder Spieler nur einmal. Eine besetzte Position antippen gibt sie wieder frei.</p>
             <p className="ruleP">Jedes Tagesrätsel ist nachweislich lösbar: Es wird nur ausgegeben, wenn sich elf verschiedene bekannte Spieler darauf verteilen lassen. Gültig ist aber <b>jeder</b> passende Spieler — auch ein weniger bekannter.</p>
             <DataStamp />
