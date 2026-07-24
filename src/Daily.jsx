@@ -259,7 +259,7 @@ export default function Daily({ onLeave }) {
                 <input ref={inputRef} className="field"
                   placeholder={players ? "Spielernamen tippen…" : "Lade Spielerdaten…"}
                   disabled={!players} value={nameInput} autoComplete="off"
-                  onChange={(e) => { setNameInput(e.target.value); setChosen(null); setSugOpen(true); setSugActive(-1); }}
+                  onChange={(e) => { setNameInput(e.target.value); setChosen(null); setSugOpen(true); setSugActive(-1); setFeedback(null); }}
                   onKeyDown={onInputKey} onBlur={() => setTimeout(() => setSugOpen(false), 120)} onFocus={() => setSugOpen(true)} />
                 {sugOpen && suggestions.length > 0 && (
                   <div className="sug">
@@ -275,11 +275,12 @@ export default function Daily({ onLeave }) {
               <button className="btn primary" disabled={!chosen && !nameInput.trim()} onClick={submitGuess}>Tippen</button>
             </div>
           )}
+          {/* Meldung INS Panel: als Geschwister läge sie über dem Autocomplete-Dropdown
+              (.ppRoot > * setzt z-index:1, wodurch dessen z-index:20 im Panel gefangen bleibt). */}
+          {feedback && (<div className={`fb ${feedback.type}`}>{feedback.text}</div>)}
           <div className="minirow"><button className="btn ghost" onClick={giveUp}>Auflösen (aufgeben)</button></div>
         </div>
       )}
-
-      {feedback && (<div className={`fb ${feedback.type}`}>{feedback.text}</div>)}
 
       {game.done && (
         <div className="panel dailyEnd">

@@ -131,7 +131,7 @@ export default function Solo({ onLeave }) {
               <input ref={inputRef} className="field"
                 placeholder={players ? "Nachname eingeben (ab 2 Buchstaben)…" : "Lade Spielerdaten…"}
                 disabled={!players} value={nameInput} autoComplete="off"
-                onChange={(e) => { setNameInput(e.target.value); setChosen(null); setSugOpen(true); setSugActive(-1); }}
+                onChange={(e) => { setNameInput(e.target.value); setChosen(null); setSugOpen(true); setSugActive(-1); setFeedback(null); }}
                 onKeyDown={onInputKey} onBlur={() => setTimeout(() => setSugOpen(false), 120)} onFocus={() => setSugOpen(true)} />
               {sugOpen && suggestions.length > 0 && (
                 <div className="sug">
@@ -146,6 +146,9 @@ export default function Solo({ onLeave }) {
             </div>
             <button className="btn primary" disabled={!chosen && !nameInput.trim()} onClick={handleSubmit}>Prüfen</button>
           </div>
+          {/* Meldung INS Panel: als Geschwister läge sie über dem Autocomplete-Dropdown
+              (.ppRoot > * setzt z-index:1, wodurch dessen z-index:20 im Panel gefangen bleibt). */}
+          {feedback && (<div className={`fb ${feedback.type}`}>{feedback.text}{feedback.detail && <div className="fbDetail">{feedback.detail}</div>}</div>)}
           <div className="minirow">
             <button className="btn ghost" onClick={() => { setSelected(null); setNameInput(""); setChosen(null); setSugOpen(false); }}>Anderes Feld</button>
           </div>
@@ -154,8 +157,6 @@ export default function Solo({ onLeave }) {
       {!done && selected === null && (
         <div className="hint"><span className="turnpill" style={{ color: P[1].c1, borderColor: P[1].c1 }}><span className="dot" style={{ background: P[1].c1 }} />Training</span><span>— wähle ein freies Feld, kein Zeitdruck</span></div>
       )}
-
-      {feedback && (<div className={`fb ${feedback.type}`}>{feedback.text}{feedback.detail && <div className="fbDetail">{feedback.detail}</div>}</div>)}
 
       {done && (
         <div className="panel dailyEnd">
