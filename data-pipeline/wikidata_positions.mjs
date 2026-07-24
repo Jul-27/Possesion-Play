@@ -8,6 +8,7 @@ import { readFileSync, writeFileSync } from "fs";
 import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
 import { CLUB_QID, norm } from "./wikidata_roster.mjs";
+import { NAT_TEAM_QID } from "./wikidata_national.mjs";
 import { stampDataInfo } from "./stamp.mjs";
 import { LABEL_SERVICE, cleanName } from "./wikidata_label.mjs";
 
@@ -19,7 +20,8 @@ const UA = "PossessionPlay/1.0 (https://github.com/Jul-27; data enrichment)";
 export function posBucket(label) {
   const s = String(label).toLowerCase();
   if (s.includes("goalkeeper")) return "TW";
-  if (s.includes("midfield")) return "MF"; // vor "attack", da "attacking midfield" -> MF
+  // vor "attack" prüfen, sonst landet "attacking midfielder" im Sturm
+  if (s.includes("midfield") || s.includes("playmaker")) return "MF";
   if (s.includes("forward") || s.includes("striker") || s.includes("wing") || s.includes("attack")) return "ST";
   if (s.includes("back") || s.includes("defender") || s.includes("defence") || s.includes("sweeper")) return "ABW";
   return null;
@@ -47,7 +49,7 @@ async function sparql(query) {
   throw new Error("SPARQL fehlgeschlagen (Retries erschöpft)");
 }
 
-async function fetchClubPositions(qid) {
+async function fetchTeamPositions(qid) {
   const q = `SELECT ?pLabel ?by ?posLabel WHERE {
     ?p p:P54 ?st . ?st ps:P54 wd:${qid} .
     ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d ; wdt:P413 ?pos .
@@ -74,9 +76,13 @@ function recToString(r) {
 async function main() {
   // 1) Positionen aus Wikidata: key "norm|by" -> Set(buckets)
   const idx = new Map();
-  for (const [key, qid] of Object.entries(CLUB_QID)) {
+  /* Auch die Nationalteams abfragen: 94 % der Spieler ohne Position waren nie bei einem
+     der 42 Spielvereine, sondern kamen über wikidata_national.mjs in den Datensatz —
+     die reine Vereinsschleife konnte sie also nie erreichen. */
+  const teams = [...Object.entries(CLUB_QID), ...Object.entries(NAT_TEAM_QID)];
+  for (const [key, qid] of teams) {
     let rows;
-    try { rows = await fetchClubPositions(qid); } catch (e) { console.log(`  ${key} FEHLER ${e.message}`); continue; }
+    try { rows = await fetchTeamPositions(qid); } catch (e) { console.log(`  ${key} FEHLER ${e.message}`); continue; }
     let c = 0;
     for (const r of rows) {
       const bucket = posBucket(r.pos || "");
