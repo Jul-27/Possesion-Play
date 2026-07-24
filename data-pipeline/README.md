@@ -141,3 +141,29 @@ node --test src/players.test.js
 - Die TM-Vereinsnamen sind als normalisierte Teilstrings in `GAME_CLUBS`
   hinterlegt. Der Prüfbericht deckt jetzt Einsatz- **und** Transfer-Namen ab;
   bei Abweichungen den Teilstring anpassen.
+
+
+## Datenqualität — was eine Lücke ist und was nicht
+
+**Fehlende Nation ist meist KEINE Lücke.** Das Spiel kennt 19 Nationen. Ein Spieler ohne
+`nat` ist in aller Regel schlicht kein Angehöriger einer davon. Gemessen an den bekannten
+Spielern (sl≥60): von 55 Spielern ohne Nation hatten **2** überhaupt eine Spiel-Nation in
+Wikidata — und beide zweifelhaft (Aaron Ramsey ist Waliser, „England" wäre falsch; Luis
+Suárez ist Uruguayer mit zusätzlicher spanischer Staatsbürgerschaft). Also nicht versuchen,
+diese „Lücke" zu schließen — sie ist korrektes Verhalten.
+
+**Fehlende Position IST eine Lücke.** Jeder Fußballer hat eine; fehlt `pos`, ist er für
+„Elf des Tages" unbrauchbar. Betroffen sind 321 Spieler mit sl≥40 (15 %), auffällig oft
+außereuropäische und historische Spieler — Wikidatas `P413` ist dort schlechter gepflegt.
+
+## Nach jedem Refresh prüfen
+
+```bash
+node data-pipeline/verify_refresh.mjs src/.players.before.js
+```
+
+`refresh_all.mjs` sichert den Stand vorher automatisch und ruft die Prüfung am Ende auf.
+Sie meldet, wenn Spieler verschwinden oder **ein bekannter Spieler mehrere Werte auf einmal
+verliert** — das typische Vandalismus-Muster. Wikidata wird aktiv manipuliert; in diesem
+Projekt sind bereits De Bruynes Vereinszeiten, Nianzous Bayern-Zeit und mehrere Spielernamen
+betroffen gewesen. Ohne diese Prüfung gingen solche Verluste still live.
