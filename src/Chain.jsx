@@ -11,6 +11,7 @@ import Confetti from "./Confetti.jsx";
 import DataStamp from "./DataStamp.jsx";
 import ShareButton from "./ShareButton.jsx";
 import { shareChain } from "./share.js";
+import { dailyRnd, challengeState, recordChallenge, challengeStats } from "./dailyChallenge.js";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -20,6 +21,8 @@ const store = {
 // Fußball-Kette: Spieler aneinanderreihen, jede Verbindung nur einmal.
 export default function Chain({ onLeave }) {
   const [players, setPlayers] = useState(null);
+  // Tagesaufgabe = fester Startspieler für alle; danach frei weiterspielen.
+  const [isDaily, setIsDaily] = useState(() => !challengeState("chain"));
   const [chain, setChain] = useState([]);          // [{ player, via }] — via = Verbindung zum Vorgänger
   const [burned, setBurned] = useState(() => new Set());
   const [left, setLeft] = useState(CHAIN_START_SECONDS);
@@ -53,8 +56,8 @@ export default function Chain({ onLeave }) {
     [players, nameInput, usedNames],
   );
 
-  function startGame(list) {
-    const i = pickChainStart(list);
+  function startGame(list, daily = isDaily) {
+    const i = pickChainStart(list, daily ? dailyRnd("chain") : Math.random);
     setChain(i >= 0 ? [{ player: list[i], via: null }] : []);
     setBurned(new Set());
     setLeft(CHAIN_START_SECONDS);
@@ -66,6 +69,8 @@ export default function Chain({ onLeave }) {
       ? chainHint(players, current, burned, usedNames)
       : null;
     setOver({ reason, hint });
+    // Für die Tagesserie zählt eine Kette ab 5 als geschafft — sonst wäre sie geschenkt.
+    if (isDaily) recordChallenge("chain", chain.length >= 5);
     const prev = store.get("pp:chainStats") || { played: 0, best: 0, total: 0 };
     const next = { played: prev.played + 1, best: Math.max(prev.best, chain.length), total: prev.total + chain.length };
     store.set("pp:chainStats", next);
@@ -100,6 +105,7 @@ export default function Chain({ onLeave }) {
     if (!openAttrs(hit, nextBurned).length) {
       const prev = store.get("pp:chainStats") || { played: 0, best: 0, total: 0 };
       store.set("pp:chainStats", { played: prev.played + 1, best: Math.max(prev.best, nextChain.length), total: prev.total + nextChain.length });
+      if (isDaily) recordChallenge("chain", nextChain.length >= 5);
       setOver({ reason: "stuck", hint: null });
     }
   }
@@ -121,7 +127,7 @@ export default function Chain({ onLeave }) {
   return (
     <div className="ppRoot">
       <div className="topbar">
-        <div><h1 className="title">POSSESSION PLAY</h1><div className="subtitle">⛓️ Fußball-Kette · Solo</div></div>
+        <div><h1 className="title">POSSESSION PLAY</h1><div className="subtitle">⛓️ Fußball-Kette · {isDaily ? "Aufgabe des Tages" : "frei"}</div></div>
         <div className="iconrow">
           <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
           <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
@@ -130,6 +136,8 @@ export default function Chain({ onLeave }) {
       </div>
 
       <div className="dailyMeta">
+        {isDaily && (() => { const st = challengeStats("chain");
+          return <span className="dailyCount form">Serie {st?.streak || 0}</span>; })()}
         <span className="dailyCount">Kette {chain.length}</span>
         <span className="dailyCount">Rekord {stats.best}</span>
         <span className={`timer ${left <= 15 ? "low" : ""}`} style={{ fontSize: 16, padding: "4px 12px", minWidth: 0 }}>
@@ -198,7 +206,8 @@ export default function Chain({ onLeave }) {
             <ShareButton text={shareChain(chain.length, stats.best, isRecord)} style={{ flex: 1, padding: "12px" }} />
           </div>
           <div className="closeline">
-            <button className="btn ghost" style={{ flex: 1, padding: "12px" }} onClick={() => startGame(players)}>Neue Kette</button>
+            <button className="btn ghost" style={{ flex: 1, padding: "12px" }}
+              onClick={() => { setIsDaily(false); startGame(players, false); }}>{isDaily ? "Frei weiterspielen" : "Neue Kette"}</button>
             <button className="btn ghost" style={{ flex: 1, padding: "12px" }} onClick={onLeave}>Zur Lobby</button>
           </div>
         </div>

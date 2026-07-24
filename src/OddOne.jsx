@@ -7,6 +7,7 @@ import { Avatar } from "./Emblems.jsx";
 import DataStamp from "./DataStamp.jsx";
 import ShareButton from "./ShareButton.jsx";
 import { shareOdd } from "./share.js";
+import { dailyRnd, challengeState, recordChallenge, challengeStats } from "./dailyChallenge.js";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -16,6 +17,8 @@ const store = {
 // Wer passt nicht? — drei Spieler teilen eine Eigenschaft, einer nicht.
 export default function OddOne({ onLeave }) {
   const [players, setPlayers] = useState(null);
+  // Tagesaufgabe = eine feste Runde für alle; danach frei weiterspielen.
+  const [isDaily, setIsDaily] = useState(() => !challengeState("odd"));
   const [round, setRound] = useState(null);
   const [picked, setPicked] = useState(null);   // Index der Wahl, null = offen
   const [stats, setStats] = useState(() => store.get("pp:oddStats") || { played: 0, solved: 0, streak: 0, best: 0 });
@@ -23,7 +26,9 @@ export default function OddOne({ onLeave }) {
   const [showRules, setShowRules] = useState(false);
 
   useEffect(() => { loadPlayers().then(setPlayers); }, []);
-  useEffect(() => { if (players && !round) setRound(buildOddRound(players)); }, [players, round]);
+  useEffect(() => {
+    if (players && !round) setRound(buildOddRound(players, isDaily ? dailyRnd("odd") : Math.random));
+  }, [players, round, isDaily]);
 
   function choose(i) {
     if (picked !== null || !round) return;
@@ -37,6 +42,7 @@ export default function OddOne({ onLeave }) {
       best: Math.max(stats.best || 0, streak),
     };
     setStats(next); store.set("pp:oddStats", next);
+    if (isDaily) recordChallenge("odd", right);
     play(right ? "win" : "err");
   }
 
@@ -47,7 +53,7 @@ export default function OddOne({ onLeave }) {
   return (
     <div className="ppRoot">
       <div className="topbar">
-        <div><h1 className="title">POSSESSION PLAY</h1><div className="subtitle">🧩 Wer passt nicht? · Solo</div></div>
+        <div><h1 className="title">POSSESSION PLAY</h1><div className="subtitle">🧩 Wer passt nicht? · {isDaily ? "Aufgabe des Tages" : "frei"}</div></div>
         <div className="iconrow">
           <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
           <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
@@ -56,6 +62,8 @@ export default function OddOne({ onLeave }) {
       </div>
 
       <div className="dailyMeta">
+        {isDaily && (() => { const st = challengeStats("odd");
+          return <span className="dailyCount form">Tagesserie {st?.streak || 0}</span>; })()}
         <span className="dailyCount">Serie {stats.streak}</span>
         <span className="dailyCount">Rekord {stats.best || 0}</span>
         <span className="dailyCount">{stats.solved}/{stats.played} richtig</span>
@@ -93,7 +101,8 @@ export default function OddOne({ onLeave }) {
             <div className="closeline"><ShareButton text={shareOdd(stats.streak, stats.best || 0)} style={{ flex: 1, padding: "12px" }} /></div>
           )}
           <div className="closeline">
-            <button className="btn primary" style={{ flex: 1, padding: "12px" }} onClick={nextRound}>Nächste Runde</button>
+            <button className="btn primary" style={{ flex: 1, padding: "12px" }}
+              onClick={() => { setIsDaily(false); nextRound(); }}>{isDaily ? "Frei weiterspielen" : "Nächste Runde"}</button>
             <button className="btn ghost" style={{ flex: 1, padding: "12px" }} onClick={onLeave}>Zur Lobby</button>
           </div>
         </div>

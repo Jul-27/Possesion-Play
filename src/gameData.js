@@ -311,12 +311,14 @@ export const ADJP = Object.fromEntries(
 );
 
 // ── Board: bauen + (de)serialisieren für Supabase ────────────────────────────
-const shuffle = (a) => {
+/* rnd ist einsetzbar, damit sich ein Board aus einem Datum ableiten lässt
+   (Tagesaufgabe im Hex-Training). Ohne Argument bleibt alles wie bisher. */
+const shuffle = (a, rnd = Math.random) => {
   const x = [...a];
-  for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; }
+  for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; }
   return x;
 };
-const pick = (a, n) => shuffle(a).slice(0, n);
+const pick = (a, n, rnd = Math.random) => shuffle(a, rnd).slice(0, n);
 
 const DEF_BY_KEY = {
   club: Object.fromEntries(CLUBS.map((c) => [c.key, c])),
@@ -328,17 +330,17 @@ const DEF_BY_KEY = {
 export const lookupDef = (type, key) => DEF_BY_KEY[type]?.[key];
 
 // kompakte, serialisierbare Form: pro Feld nur { t: type, k: key }
-export function buildBoardSerial() {
-  const nLeague = 1 + Math.floor(Math.random() * 3); // 1–3
-  const nHonour = 2 + Math.floor(Math.random() * 3); // 2–4
-  const leagues = pick(LEAGUES, nLeague);
-  const honours = pick(HONOURS, nHonour);
-  const specials = pick(SPECIALS, 3);
-  const blClubs = pick(CLUBS.filter((c) => c.lg === "BL"), 4);
-  const nNat = 3 + Math.floor(Math.random() * 2); // 3–4 Nationen
-  const nations = pick(NATIONS, nNat);
-  const rest = pick(CLUBS.filter((c) => !blClubs.includes(c)), 31 - 3 - 4 - nNat - nLeague - nHonour);
-  const chosen = shuffle([...specials, ...blClubs, ...nations, ...rest, ...leagues, ...honours]);
+export function buildBoardSerial(rnd = Math.random) {
+  const nLeague = 1 + Math.floor(rnd() * 3); // 1–3
+  const nHonour = 2 + Math.floor(rnd() * 3); // 2–4
+  const leagues = pick(LEAGUES, nLeague, rnd);
+  const honours = pick(HONOURS, nHonour, rnd);
+  const specials = pick(SPECIALS, 3, rnd);
+  const blClubs = pick(CLUBS.filter((c) => c.lg === "BL"), 4, rnd);
+  const nNat = 3 + Math.floor(rnd() * 2); // 3–4 Nationen
+  const nations = pick(NATIONS, nNat, rnd);
+  const rest = pick(CLUBS.filter((c) => !blClubs.includes(c)), 31 - 3 - 4 - nNat - nLeague - nHonour, rnd);
+  const chosen = shuffle([...specials, ...blClubs, ...nations, ...rest, ...leagues, ...honours], rnd);
   return chosen.map((d) => ({ t: d.type, k: d.key }));
 }
 

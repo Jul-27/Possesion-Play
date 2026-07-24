@@ -4,6 +4,7 @@ import { buildBoardSerial, buildGridSerial, buildGuessSerial, genCode, START_SEC
 import { loadPlayers } from "./playersStore.js";
 import { dailyDateStr, dailyNumber } from "./dailyLogic.js";
 import DataStamp from "./DataStamp.jsx";
+import { challengeBadge } from "./dailyChallenge.js";
 
 export default function Lobby({ onEnter, onDaily, onSolo }) {
   const [name, setName] = useState(getSavedName());
@@ -95,22 +96,22 @@ export default function Lobby({ onEnter, onDaily, onSolo }) {
       <div className="lobSection">Jederzeit spielen</div>
       <div className="soloGrid">
         <button type="button" className="soloTile" onClick={() => onSolo("career")}>
-          <span className="soloIcon">🧭</span>
+          <span className="soloTop"><span className="soloIcon">🧭</span><span className={`tileBadge ${challengeBadge("career").tone}`}>{challengeBadge("career").text}</span></span>
           <b>Karriere-Pfad</b>
           <small>Spieler an seinen Stationen erraten</small>
         </button>
         <button type="button" className="soloTile" onClick={() => onSolo("odd")}>
-          <span className="soloIcon">🧩</span>
+          <span className="soloTop"><span className="soloIcon">🧩</span><span className={`tileBadge ${challengeBadge("odd").tone}`}>{challengeBadge("odd").text}</span></span>
           <b>Wer passt nicht?</b>
           <small>Drei gehören zusammen, einer nicht</small>
         </button>
         <button type="button" className="soloTile" onClick={() => onSolo("chain")}>
-          <span className="soloIcon">⛓️</span>
+          <span className="soloTop"><span className="soloIcon">⛓️</span><span className={`tileBadge ${challengeBadge("chain").tone}`}>{challengeBadge("chain").text}</span></span>
           <b>Fußball-Kette</b>
           <small>Spieler verketten, gegen die Uhr</small>
         </button>
         <button type="button" className="soloTile" onClick={() => onSolo("hex")}>
-          <span className="soloIcon">🎯</span>
+          <span className="soloTop"><span className="soloIcon">🎯</span><span className={`tileBadge ${challengeBadge("hex").tone}`}>{challengeBadge("hex").text}</span></span>
           <b>Hex-Training</b>
           <small>Board allein lösen, ohne Zeitdruck</small>
         </button>
