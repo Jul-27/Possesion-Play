@@ -137,7 +137,7 @@ export default function Career({ onLeave }) {
           <div className="inrow">
             <div className="inwrap">
               <input ref={inputRef} className="field" placeholder="Spielernamen tippen…" value={nameInput} autoComplete="off"
-                onChange={(e) => { setNameInput(e.target.value); setChosen(null); setSugOpen(true); setSugActive(-1); }}
+                onChange={(e) => { setNameInput(e.target.value); setChosen(null); setSugOpen(true); setSugActive(-1); setFeedback(null); }}
                 onKeyDown={onInputKey} onBlur={() => setTimeout(() => setSugOpen(false), 120)} onFocus={() => setSugOpen(true)} />
               {sugOpen && suggestions.length > 0 && (
                 <div className="sug">
@@ -152,14 +152,16 @@ export default function Career({ onLeave }) {
             </div>
             <button className="btn primary" disabled={!chosen && !nameInput.trim()} onClick={submitGuess}>Tippen</button>
           </div>
+          {/* Die Meldung gehört INS Panel: als Geschwister der Eingabe läge sie sonst
+              über dem Autocomplete-Dropdown (.ppRoot > * setzt z-index:1, wodurch der
+              z-index:20 des Dropdowns im Panel gefangen bleibt) und verdeckte Vorschläge. */}
+          {feedback && (<div className={`fb ${feedback.type}`}>{feedback.text}</div>)}
           <div className="minirow">
             <button className="btn ghost" disabled={allShown} onClick={revealNext}>Nächste Station</button>
             <button className="btn ghost" onClick={giveUp}>Auflösen</button>
           </div>
         </div>
       )}
-
-      {feedback && (<div className={`fb ${feedback.type}`}>{feedback.text}</div>)}
 
       {done && (
         <div className="panel dailyEnd">
