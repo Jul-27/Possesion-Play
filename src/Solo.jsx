@@ -11,6 +11,7 @@ import DataStamp from "./DataStamp.jsx";
 import ShareButton from "./ShareButton.jsx";
 import { shareSolo } from "./share.js";
 import { SOLO_STATS_KEY, updateSoloStats, soloStatsLine } from "./soloStats.js";
+import { dailyRnd, challengeState, recordChallenge, challengeStats } from "./dailyChallenge.js";
 
 // Hex-Training: volles Duell-Board, aber solo, ohne Uhr und ohne Zugverlust.
 /* Hex-Training war der einzige Modus ohne jeden gespeicherten Fortschritt — gelöste
@@ -21,7 +22,9 @@ const store = {
 };
 
 export default function Solo({ onLeave }) {
-  const [serial, setSerial] = useState(() => buildBoardSerial());
+  // Tagesaufgabe = für alle dasselbe Board; danach frei weiterspielen.
+  const [isDaily, setIsDaily] = useState(() => !challengeState("hex"));
+  const [serial, setSerial] = useState(() => buildBoardSerial(challengeState("hex") ? Math.random : dailyRnd("hex")));
   const board = useMemo(() => hydrateBoard(serial), [serial]);
   const [owners, setOwners] = useState({});
   const [moves, setMoves] = useState(0);
@@ -87,14 +90,17 @@ export default function Solo({ onLeave }) {
     setLastClaimed(claimed); setTimeout(() => setLastClaimed([]), 900);
     setSelected(null); setNameInput(""); setChosen(null); setSugOpen(false);
     const doneNow = Object.keys(newOwners).length === 31;
-    if (doneNow) store.set(SOLO_STATS_KEY, updateSoloStats(store.get(SOLO_STATS_KEY), moves + 1, misses));
+    if (doneNow) {
+      store.set(SOLO_STATS_KEY, updateSoloStats(store.get(SOLO_STATS_KEY), moves + 1, misses));
+      if (isDaily) recordChallenge("hex", true); // ein gelöstes Board zählt
+    }
     setFeedback(doneNow ? null : { type: "ok",
       text: `✓ ${player.n} → „${cname(board[selected].def)}" erobert${extra ? ` · +${extra} Nachbarfeld${extra > 1 ? "er" : ""}` : ""}` });
     play(doneNow ? "win" : "ok");
   }
 
   function newBoard() {
-    setSerial(buildBoardSerial()); setOwners({}); setMoves(0); setMisses(0); setBestMoves(null);
+    setIsDaily(false); setSerial(buildBoardSerial()); setOwners({}); setMoves(0); setMisses(0); setBestMoves(null);
     setSelected(null); setNameInput(""); setChosen(null); setSugOpen(false); setFeedback(null);
   }
 
@@ -112,7 +118,7 @@ export default function Solo({ onLeave }) {
   return (
     <div className="ppRoot">
       <div className="topbar">
-        <div><h1 className="title">POSSESSION PLAY</h1><div className="subtitle">🎯 Hex-Training · Solo</div></div>
+        <div><h1 className="title">POSSESSION PLAY</h1><div className="subtitle">🎯 Hex-Training · {isDaily ? "Board des Tages" : "frei"}</div></div>
         <div className="iconrow">
           <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
           <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
@@ -122,6 +128,8 @@ export default function Solo({ onLeave }) {
 
       <div className="dailyMeta">
         <span className="dailyCount">Erobert {captured}/31</span>
+        {isDaily && (() => { const st = challengeStats("hex");
+          return <span className="dailyCount form">Serie {st?.streak || 0}</span>; })()}
         <span className="dailyCount">Züge {moves}</span>
         <span className={`dailyCount ${misses ? "spent" : ""}`}>Fehlversuche {misses}</span>
       </div>

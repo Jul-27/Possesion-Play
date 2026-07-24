@@ -8,6 +8,7 @@ import Confetti from "./Confetti.jsx";
 import DataStamp from "./DataStamp.jsx";
 import ShareButton from "./ShareButton.jsx";
 import { shareCareer } from "./share.js";
+import { dailyRnd, challengeState, recordChallenge, challengeStats } from "./dailyChallenge.js";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -17,6 +18,8 @@ const store = {
 // Karriere-Pfad: Stationen nacheinander aufdecken, Spieler möglichst früh erraten.
 export default function Career({ onLeave }) {
   const [players, setPlayers] = useState(null);
+  // Tagesaufgabe zuerst — solange sie offen ist. Danach frei weiterspielen.
+  const [isDaily, setIsDaily] = useState(() => !challengeState("career"));
   const [idx, setIdx] = useState(-1);
   const [revealed, setRevealed] = useState(1);
   const [wrong, setWrong] = useState(0);
@@ -32,7 +35,9 @@ export default function Career({ onLeave }) {
   const inputRef = useRef(null);
 
   useEffect(() => { loadPlayers().then(setPlayers); }, []);
-  useEffect(() => { if (players && idx < 0) setIdx(pickCareerIndex(players)); }, [players, idx]);
+  useEffect(() => {
+    if (players && idx < 0) setIdx(pickCareerIndex(players, isDaily ? dailyRnd("career") : Math.random));
+  }, [players, idx, isDaily]);
 
   const target = players && idx >= 0 ? players[idx] : null;
   const stations = useMemo(() => (target ? careerStations(target) : []), [target]);
@@ -41,6 +46,7 @@ export default function Career({ onLeave }) {
 
   function finish(success) {
     setDone(true); setWon(success);
+    if (isDaily) recordChallenge("career", success);
     const s = store.get("pp:careerStats") || { played: 0, solved: 0, best: 0 };
     const next = {
       played: s.played + 1,
@@ -103,7 +109,7 @@ export default function Career({ onLeave }) {
   return (
     <div className="ppRoot">
       <div className="topbar">
-        <div><h1 className="title">POSSESSION PLAY</h1><div className="subtitle">🧭 Karriere-Pfad · Solo</div></div>
+        <div><h1 className="title">POSSESSION PLAY</h1><div className="subtitle">🧭 Karriere-Pfad · {isDaily ? "Aufgabe des Tages" : "frei"}</div></div>
         <div className="iconrow">
           <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
           <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
@@ -112,6 +118,8 @@ export default function Career({ onLeave }) {
       </div>
 
       <div className="dailyMeta">
+        {isDaily && (() => { const st = challengeStats("career");
+          return <span className="dailyCount form">Serie {st?.streak || 0}</span>; })()}
         <span className="dailyCount">Station {Math.min(revealed, stations.length) || 0}/{stations.length || "–"}</span>
         <span className={`dailyCount ${wrong ? "spent" : ""}`}>Fehlversuche {wrong}</span>
       </div>
@@ -182,7 +190,8 @@ export default function Career({ onLeave }) {
             <ShareButton text={shareCareer(revealed, wrong, won)} style={{ flex: 1, padding: "12px" }} />
           </div>
           <div className="closeline">
-            <button className="btn ghost" style={{ flex: 1, padding: "12px" }} onClick={newRound}>Neue Karriere</button>
+            <button className="btn ghost" style={{ flex: 1, padding: "12px" }}
+              onClick={() => { setIsDaily(false); newRound(); }}>{isDaily ? "Frei weiterspielen" : "Neue Karriere"}</button>
             <button className="btn ghost" style={{ flex: 1, padding: "12px" }} onClick={onLeave}>Zur Lobby</button>
           </div>
         </div>
