@@ -12,6 +12,7 @@ import DataStamp from "./DataStamp.jsx";
 import ShareButton from "./ShareButton.jsx";
 import { shareChain } from "./share.js";
 import { dailyRnd, challengeState, recordChallenge, challengeStats } from "./dailyChallenge.js";
+import { submit as lbSubmit } from "./leaderboard.js";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -70,7 +71,10 @@ export default function Chain({ onLeave }) {
       : null;
     setOver({ reason, hint });
     // Für die Tagesserie zählt eine Kette ab 5 als geschafft — sonst wäre sie geschenkt.
-    if (isDaily) recordChallenge("chain", chain.length >= 5);
+    if (isDaily) {
+      recordChallenge("chain", chain.length >= 5);
+      lbSubmit("chain", { length: chain.length }).catch(() => {});
+    }
     const prev = store.get("pp:chainStats") || { played: 0, best: 0, total: 0 };
     const next = { played: prev.played + 1, best: Math.max(prev.best, chain.length), total: prev.total + chain.length };
     store.set("pp:chainStats", next);
@@ -105,7 +109,10 @@ export default function Chain({ onLeave }) {
     if (!openAttrs(hit, nextBurned).length) {
       const prev = store.get("pp:chainStats") || { played: 0, best: 0, total: 0 };
       store.set("pp:chainStats", { played: prev.played + 1, best: Math.max(prev.best, nextChain.length), total: prev.total + nextChain.length });
-      if (isDaily) recordChallenge("chain", nextChain.length >= 5);
+      if (isDaily) {
+        recordChallenge("chain", nextChain.length >= 5);
+        lbSubmit("chain", { length: nextChain.length }).catch(() => {});
+      }
       setOver({ reason: "stuck", hint: null });
     }
   }

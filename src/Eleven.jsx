@@ -10,6 +10,7 @@ import Confetti from "./Confetti.jsx";
 import DataStamp from "./DataStamp.jsx";
 import ShareButton from "./ShareButton.jsx";
 import { shareEleven } from "./share.js";
+import { submit as lbSubmit } from "./leaderboard.js";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -72,6 +73,7 @@ export default function Eleven({ onLeave }) {
       const prev = store.get("pp:elevenStats") || { played: 0, solved: 0 };
       if (!prev.lastSolved || prev.lastSolved !== dateStr) {
         store.set("pp:elevenStats", { played: prev.played + 1, solved: prev.solved + 1, lastSolved: dateStr });
+        lbSubmit("eleven", { solved: true, wrong }, dateStr).catch(() => {});
       }
     }
   }, [names, wrong, done, formation]); // eslint-disable-line react-hooks/exhaustive-deps

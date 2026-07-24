@@ -482,3 +482,20 @@ body::after {
 .statName { font-weight: 700; font-size: 15px; }
 .statLines { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); overflow-wrap: anywhere; }
 .statStreak { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--gold); white-space: nowrap; }
+
+/* ── Bestenliste ───────────────────────────────────────────────── */
+.lbHead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.lbGroupName { font-weight: 700; font-size: 16px; color: #fff; }
+.lbCode { font-family: 'DM Mono', monospace; letter-spacing: .18em; padding: 7px 12px; }
+.lbTabs { display: flex; gap: 6px; margin: 16px 0 10px; }
+.lbTab { flex: 1; padding: 10px 0; font-size: 19px; background: rgba(10,22,19,.55); border: 1px solid var(--line-soft);
+  border-radius: 12px; cursor: pointer; transition: border-color .15s, background .15s; }
+.lbTab.active { border-color: var(--teal); background: rgba(45,212,191,.14); }
+.lbList { display: flex; flex-direction: column; gap: 6px; }
+.lbRow { display: flex; align-items: center; gap: 10px; padding: 11px 13px; background: rgba(10,22,19,.5);
+  border: 1px solid var(--line-soft); border-radius: 12px; }
+.lbRow.me { border-color: rgba(45,212,191,.5); background: rgba(45,212,191,.1); }
+.lbRank { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); min-width: 20px; }
+.lbName { flex: 1; font-weight: 700; font-size: 14px; overflow-wrap: anywhere; }
+.lbDetail { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); white-space: nowrap; }
+.lbScore { font-family: 'Anton', sans-serif; font-size: 18px; color: var(--gold); min-width: 34px; text-align: right; }

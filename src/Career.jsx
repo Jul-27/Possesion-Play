@@ -9,6 +9,7 @@ import DataStamp from "./DataStamp.jsx";
 import ShareButton from "./ShareButton.jsx";
 import { shareCareer } from "./share.js";
 import { dailyRnd, challengeState, recordChallenge, challengeStats } from "./dailyChallenge.js";
+import { submit as lbSubmit } from "./leaderboard.js";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -46,7 +47,11 @@ export default function Career({ onLeave }) {
 
   function finish(success) {
     setDone(true); setWon(success);
-    if (isDaily) recordChallenge("career", success);
+    if (isDaily) {
+      recordChallenge("career", success);
+      // still melden: eine fehlende Gruppe oder Netzprobleme dürfen das Spiel nicht stören
+      lbSubmit("career", { solved: success, stations: revealed, wrong }).catch(() => {});
+    }
     const s = store.get("pp:careerStats") || { played: 0, solved: 0, best: 0 };
     const next = {
       played: s.played + 1,

@@ -1,0 +1,132 @@
+import { useState, useEffect } from "react";
+import { getGroup, setGroup, leaveGroup, getName, setName, createGroup, joinGroup, top, MODES } from "./leaderboard.js";
+import { dailyDateStr, dailyNumber } from "./dailyLogic.js";
+import DataStamp from "./DataStamp.jsx";
+
+/* Bestenliste für einen Freundeskreis. Ohne Gruppencode ist nichts sichtbar — die
+   Datenbanktabellen sind gesperrt, jeder Zugriff verlangt den Code. */
+export default function Leaderboard({ onLeave }) {
+  const [group, setG] = useState(getGroup());
+  const [name, setN] = useState(getName() || "");
+  const [mode, setMode] = useState("chain");
+  const [rows, setRows] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [joinCode, setJoinCode] = useState("");
+  const [groupName, setGroupName] = useState("");
+  const [copied, setCopied] = useState(false);
+  const day = dailyDateStr();
+
+  useEffect(() => {
+    if (!group) return;
+    let aktiv = true;
+    setRows(null);
+    top(mode, day).then((r) => { if (aktiv) setRows(r); });
+    return () => { aktiv = false; };
+  }, [group, mode, day]);
+
+  async function doCreate() {
+    if (!groupName.trim()) { setError("Bitte einen Gruppennamen eingeben."); return; }
+    setBusy(true); setError("");
+    try { setG(await createGroup(groupName)); }
+    catch (e) { setError("Gruppe konnte nicht erstellt werden: " + e.message); }
+    finally { setBusy(false); }
+  }
+
+  async function doJoin() {
+    if (joinCode.trim().length !== 6) { setError("Der Code hat 6 Zeichen."); return; }
+    setBusy(true); setError("");
+    try {
+      const g = await joinGroup(joinCode);
+      if (!g) setError("Keine Gruppe mit diesem Code gefunden.");
+      else setG(g);
+    } catch (e) { setError("Beitritt fehlgeschlagen: " + e.message); }
+    finally { setBusy(false); }
+  }
+
+  function saveName(v) { setN(v); setName(v); }
+  function copyCode() {
+    navigator.clipboard?.writeText(group.code).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
+  }
+
+  return (
+    <div className="ppRoot">
+      <div className="topbar">
+        <div><h1 className="title">POSSESSION PLAY</h1><div className="subtitle">🏆 Bestenliste · Tag #{dailyNumber(day)}</div></div>
+        <div className="iconrow">
+          <button className="iconbtn" title="Zur Lobby" onClick={onLeave}>⏏</button>
+        </div>
+      </div>
+
+      {!group ? (
+        <div className="panel" style={{ marginTop: 18 }}>
+          <div className="prompt">Bestenliste für deinen Freundeskreis</div>
+          <p className="ruleP">Erstelle eine Gruppe und teile den Code. Nur wer ihn hat, sieht die Liste — und trägt sich ein.</p>
+
+          <label className="lobLabel">Gruppenname</label>
+          <div className="inrow">
+            <input className="field" placeholder="z. B. Kegelclub" value={groupName} maxLength={40}
+              onChange={(e) => { setGroupName(e.target.value); setError(""); }} />
+            <button className="btn primary" disabled={busy} onClick={doCreate}>Erstellen</button>
+          </div>
+
+          <div className="orline"><span>oder</span></div>
+
+          <label className="lobLabel">Mit Code beitreten</label>
+          <div className="inrow">
+            <input className="field mono" placeholder="ABC123" value={joinCode} maxLength={6}
+              onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setError(""); }}
+              onKeyDown={(e) => e.key === "Enter" && doJoin()} />
+            <button className="btn ghost" disabled={busy} onClick={doJoin}>Beitreten</button>
+          </div>
+
+          {error && <div className="fb err" style={{ marginTop: 12 }}>{error}</div>}
+        </div>
+      ) : (
+        <>
+          <div className="panel" style={{ marginTop: 16 }}>
+            <div className="lbHead">
+              <span className="lbGroupName">{group.name}</span>
+              <button className="btn ghost lbCode" onClick={copyCode}>{copied ? "Kopiert ✓" : group.code}</button>
+            </div>
+            <label className="lobLabel">Dein Anzeigename</label>
+            <input className="field" placeholder="z. B. Julian" value={name} maxLength={24}
+              onChange={(e) => saveName(e.target.value)} />
+            {!name.trim() && <p className="ruleP" style={{ marginTop: 8 }}>Ohne Namen wird dein Ergebnis nicht übertragen.</p>}
+          </div>
+
+          <div className="lbTabs">
+            {Object.entries(MODES).map(([k, m]) => (
+              <button key={k} type="button" className={`lbTab ${mode === k ? "active" : ""}`} onClick={() => setMode(k)}>
+                <span>{m.icon}</span>
+              </button>
+            ))}
+          </div>
+
+          {rows === null ? <div className="qlogEmpty">Lade Bestenliste…</div>
+            : rows.length === 0 ? (
+              <div className="qlogEmpty">Für {MODES[mode].name} hat heute noch niemand gespielt.</div>
+            ) : (
+              <div className="lbList">
+                {rows.map((r) => (
+                  <div key={r.client_id} className={`lbRow ${r.isMe ? "me" : ""}`}>
+                    <span className="lbRank">{r.rank}</span>
+                    <span className="lbName">{r.display_name}{r.isMe ? " (du)" : ""}</span>
+                    <span className="lbDetail">{MODES[mode].label(r.score, r.detail)}</span>
+                    <span className="lbScore">{r.score}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+          <div className="closeline" style={{ marginTop: 14 }}>
+            <button className="btn ghost" style={{ flex: 1, padding: "11px" }}
+              onClick={() => { leaveGroup(); setG(null); }}>Gruppe verlassen</button>
+          </div>
+        </>
+      )}
+
+      <DataStamp />
+    </div>
+  );
+}

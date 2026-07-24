@@ -10,11 +10,16 @@ import OddOne from "./OddOne.jsx";
 import Chain from "./Chain.jsx";
 import Eleven from "./Eleven.jsx";
 import Stats from "./Stats.jsx";
+import Leaderboard from "./Leaderboard.jsx";
 import { supabase, getClientId } from "./supabaseClient.js";
 
 function codeFromUrl() {
   const c = new URLSearchParams(window.location.search).get("game");
   return c ? c.toUpperCase() : null;
+}
+
+function boardFromUrl() {
+  return new URLSearchParams(window.location.search).get("board") != null;
 }
 
 function statsFromUrl() {
@@ -53,10 +58,11 @@ export default function App() {
   const [daily, setDaily] = useState(dailyFromUrl());
   const [solo, setSolo] = useState(soloFromUrl());
   const [stats, setStats] = useState(statsFromUrl());
+  const [board, setBoard] = useState(boardFromUrl());
   const clientId = getClientId();
 
   useEffect(() => {
-    const onPop = () => { setCode(codeFromUrl()); setDaily(dailyFromUrl()); setSolo(soloFromUrl()); setStats(statsFromUrl()); };
+    const onPop = () => { setCode(codeFromUrl()); setDaily(dailyFromUrl()); setSolo(soloFromUrl()); setStats(statsFromUrl()); setBoard(boardFromUrl()); };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
@@ -64,25 +70,30 @@ export default function App() {
   function enter(c) {
     const url = `${window.location.pathname}?game=${c}`;
     window.history.pushState({}, "", url);
-    setDaily(false); setSolo(null); setCode(c); setStats(false);
+    setDaily(false); setSolo(null); setCode(c); setStats(false); setBoard(false);
   }
   function enterDaily() {
     window.history.pushState({}, "", `${window.location.pathname}?daily=1`);
-    setCode(null); setSolo(null); setDaily(true); setStats(false);
+    setCode(null); setSolo(null); setDaily(true); setStats(false); setBoard(false);
   }
   function enterSolo(mode) {
     window.history.pushState({}, "", `${window.location.pathname}?solo=${mode}`);
-    setCode(null); setDaily(false); setSolo(mode); setStats(false);
+    setCode(null); setDaily(false); setSolo(mode); setStats(false); setBoard(false);
   }
   function enterStats() {
     window.history.pushState({}, "", `${window.location.pathname}?stats=1`);
     setCode(null); setDaily(false); setSolo(null); setStats(true);
   }
+  function enterBoard() {
+    window.history.pushState({}, "", `${window.location.pathname}?board=1`);
+    setCode(null); setDaily(false); setSolo(null); setStats(false); setBoard(true);
+  }
   function leave() {
     window.history.pushState({}, "", window.location.pathname);
-    setCode(null); setDaily(false); setSolo(null); setStats(false);
+    setCode(null); setDaily(false); setSolo(null); setStats(false); setBoard(false);
   }
 
+  if (board) return <Leaderboard onLeave={leave} />;
   if (stats) return <Stats onLeave={leave} onSolo={enterSolo} onDaily={enterDaily} />;
   if (daily) return <Daily onLeave={leave} />;
   if (solo === "hex") return <Solo onLeave={leave} />;
@@ -92,5 +103,5 @@ export default function App() {
   if (solo === "eleven") return <Eleven onLeave={leave} />;
   return code
     ? <GameRouter code={code} clientId={clientId} onLeave={leave} />
-    : <Lobby onEnter={enter} onDaily={enterDaily} onSolo={enterSolo} onStats={enterStats} />;
+    : <Lobby onEnter={enter} onDaily={enterDaily} onSolo={enterSolo} onStats={enterStats} onBoard={enterBoard} />;
 }

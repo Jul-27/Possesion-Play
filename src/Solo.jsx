@@ -12,6 +12,7 @@ import ShareButton from "./ShareButton.jsx";
 import { shareSolo } from "./share.js";
 import { SOLO_STATS_KEY, updateSoloStats, soloStatsLine } from "./soloStats.js";
 import { dailyRnd, challengeState, recordChallenge, challengeStats } from "./dailyChallenge.js";
+import { submit as lbSubmit } from "./leaderboard.js";
 
 // Hex-Training: volles Duell-Board, aber solo, ohne Uhr und ohne Zugverlust.
 /* Hex-Training war der einzige Modus ohne jeden gespeicherten Fortschritt — gelöste
@@ -92,7 +93,10 @@ export default function Solo({ onLeave }) {
     const doneNow = Object.keys(newOwners).length === 31;
     if (doneNow) {
       store.set(SOLO_STATS_KEY, updateSoloStats(store.get(SOLO_STATS_KEY), moves + 1, misses));
-      if (isDaily) recordChallenge("hex", true); // ein gelöstes Board zählt
+      if (isDaily) {
+        recordChallenge("hex", true); // ein gelöstes Board zählt
+        lbSubmit("hex", { moves: moves + 1, misses }).catch(() => {});
+      }
     }
     setFeedback(doneNow ? null : { type: "ok",
       text: `✓ ${player.n} → „${cname(board[selected].def)}" erobert${extra ? ` · +${extra} Nachbarfeld${extra > 1 ? "er" : ""}` : ""}` });
