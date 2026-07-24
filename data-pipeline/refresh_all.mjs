@@ -10,8 +10,11 @@
 import { spawnSync } from "child_process";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import { copyFileSync } from "fs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+const PLAYERS = join(HERE, "..", "src", "players.js");
+const SNAPSHOT = join(HERE, "..", "src", ".players.before.js");
 const CHAIN = [
   "wikidata_roster.mjs",        // 1) Spieler/Vereine/sl
   "wikidata_national.mjs",      // 1b) Nationalteam-Kader (nat auch für Vereinlose)
@@ -26,6 +29,12 @@ const CHAIN = [
   "wikidata_images.mjs",
 ];
 
+/* Stand sichern, damit verify_refresh.mjs am Ende Verluste erkennen kann. Wikidata
+   wird aktiv vandaliert — ohne diesen Vergleich gingen gelöschte Vereine und Titel
+   still live. */
+copyFileSync(PLAYERS, SNAPSHOT);
+console.log(`Stand gesichert: ${SNAPSHOT}`);
+
 for (const script of CHAIN) {
   console.log(`\n════════ ${script} ════════`);
   const r = spawnSync(process.execPath, [join(HERE, script)], { stdio: "inherit" });
@@ -33,5 +42,12 @@ for (const script of CHAIN) {
     console.error(`\nAbbruch: ${script} endete mit Exit-Code ${r.status}`);
     process.exit(r.status || 1);
   }
+}
+console.log("\n════════ verify_refresh.mjs ════════");
+const check = spawnSync(process.execPath, [join(HERE, "verify_refresh.mjs"), SNAPSHOT], { stdio: "inherit" });
+if (check.status === 1) {
+  console.error("\nRefresh durchgelaufen, aber die Prüfung meldet auffällige Verluste (siehe oben).");
+  console.error(`Vergleichsstand liegt unter ${SNAPSHOT} — vor dem Commit prüfen.`);
+  process.exit(1);
 }
 console.log("\nRefresh komplett — players.js + dataInfo.js aktualisiert.");
