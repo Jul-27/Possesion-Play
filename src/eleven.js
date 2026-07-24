@@ -7,13 +7,42 @@ import { CHAIN_DEFS } from "./chain.js";
 export const ELEVEN_SL_MIN = 40;        // Generierungspool: garantiert eine Lösung aus bekannten Spielern
 export const ELEVEN_MIN_CANDIDATES = 8; // Mindestauswahl je Position
 
-export const FORMATION = [
-  { pos: "TW", count: 1, label: "Tor" },
-  { pos: "ABW", count: 4, label: "Abwehr" },
-  { pos: "MF", count: 4, label: "Mittelfeld" },
-  { pos: "ST", count: 2, label: "Sturm" },
+/* Eine Formation ist nur ihre Linienfolge (von hinten nach vorne). Daraus berechnet
+   slotLayout() die Koordinaten — dadurch kostet eine neue Formation eine Zeile, und
+   mehrlinige Mittelfelder (4-2-3-1) brauchen keinen Sonderfall.
+   Alle sechs sind auf Lösbarkeit geprüft (bipartites Matching, 20/20). */
+export const FORMATIONS = [
+  { name: "4-4-2",   lines: [["TW",1],["ABW",4],["MF",4],["ST",2]] },
+  { name: "4-3-3",   lines: [["TW",1],["ABW",4],["MF",3],["ST",3]] },
+  { name: "3-5-2",   lines: [["TW",1],["ABW",3],["MF",5],["ST",2]] },
+  { name: "4-2-3-1", lines: [["TW",1],["ABW",4],["MF",2],["MF",3],["ST",1]] },
+  { name: "5-3-2",   lines: [["TW",1],["ABW",5],["MF",3],["ST",2]] },
+  { name: "3-4-3",   lines: [["TW",1],["ABW",3],["MF",4],["ST",3]] },
 ];
-export const SLOT_POSITIONS = FORMATION.flatMap((f) => Array(f.count).fill(f.pos));
+
+// Positionsfolge einer Formation (Reihenfolge = Slot-Index, hinten nach vorne).
+export function formationPositions(f) {
+  return f.lines.flatMap(([pos, n]) => Array(n).fill(pos));
+}
+
+/* Koordinaten in Prozent: Tor unten (y groß), Sturm oben. Innerhalb einer Linie
+   gleichmäßig verteilt, damit auch 5er-Reihen sauber sitzen. */
+export function slotLayout(f) {
+  const rows = f.lines.length;
+  const out = [];
+  f.lines.forEach(([pos, n], li) => {
+    // 90 % (Torwart, im eigenen Strafraum) bis 18 % — die vorderste Linie bleibt VOR
+    // dem gegnerischen Strafraum (der endet bei ~14 %), sonst stehen Stürmer im Tor.
+    const y = rows > 1 ? 90 - (li / (rows - 1)) * 72 : 50;
+    for (let k = 0; k < n; k++) out.push({ pos, x: ((k + 1) / (n + 1)) * 100, y });
+  });
+  return out;
+}
+
+// Formation des Tages — deterministisch, wie das Rätsel selbst.
+export function formationFor(dateStr) {
+  return FORMATIONS[hashStr(`form:${dateStr}`) % FORMATIONS.length];
+}
 
 function hashStr(s) {
   let h = 1779033703 ^ s.length;
@@ -71,16 +100,18 @@ export function hasPerfectMatching(candLists) {
   return true;
 }
 
-// { slots: [{ pos, def }] } — deterministisch aus dem Datum.
+// { formation, slots: [{ pos, def, x, y }] } — deterministisch aus dem Datum.
 export function buildEleven(dateStr, players, maxTries = 40) {
   const pool = elevenPool(players);
+  const formation = formationFor(dateStr);
+  const layout = slotLayout(formation);
   for (let attempt = 1; attempt <= maxTries; attempt++) {
     const rnd = mulberry32(hashStr(attempt === 1 ? `elf:${dateStr}` : `elf:${dateStr}#${attempt}`));
     const used = new Set();
     const slots = [];
     let ok = true;
 
-    for (const pos of SLOT_POSITIONS) {
+    for (const { pos, x, y } of layout) {
       // Bedingungen mit genug Auswahl für genau diese Position
       const fits = CHAIN_DEFS.filter((d) => {
         const k = `${d.type}:${d.key}`;
@@ -90,12 +121,12 @@ export function buildEleven(dateStr, players, maxTries = 40) {
       if (!fits.length) { ok = false; break; }
       const def = fits[Math.floor(rnd() * fits.length)];
       used.add(`${def.type}:${def.key}`);
-      slots.push({ pos, def });
+      slots.push({ pos, def, x, y });
     }
     if (!ok) continue;
 
     const lists = slots.map((s) => slotCandidates(players, pool, s.pos, s.def));
-    if (hasPerfectMatching(lists)) return { slots };
+    if (hasPerfectMatching(lists)) return { formation, slots };
   }
-  return { slots: [] }; // in der Praxis unerreichbar; die Tests decken 30 Tage ab
+  return { formation, slots: [] }; // in der Praxis unerreichbar; Tests decken 30 Tage ab
 }
