@@ -11,6 +11,7 @@ export default function Lobby({ onEnter, onDaily, onSolo }) {
   const [joinCode, setJoinCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [duelOpen, setDuelOpen] = useState(false);
 
   useEffect(() => { loadPlayers(); }, []); // Hintergrund-Prefetch der Spielerliste
 
@@ -83,11 +84,49 @@ export default function Lobby({ onEnter, onDaily, onSolo }) {
   return (
     <div className="lobby">
       <h1 className="title">POSSESSION PLAY</h1>
-      <div className="subtitle">{{ hex: "Hex-Duell", grid: "Raster-Duell", guess: "Errate den Star" }[mode]} · Online gegen einen Freund</div>
+      <div className="subtitle">Fußball-Rätsel · solo oder gegen einen Freund</div>
 
+      {/* Zuerst das, was sofort spielbar ist: die beiden Tagesrätsel, dann die freien
+          Modi. Das Duell-Formular braucht eine zweite Person und steht deshalb hinten. */}
+      <div className="lobSection">Heute</div>
       <DailyCard onDaily={onDaily} />
+      <ElevenCard onSolo={onSolo} />
 
-      <div className="panel" style={{ marginTop: 22 }}>
+      <div className="lobSection">Jederzeit spielen</div>
+      <div className="soloGrid">
+        <button type="button" className="soloTile" onClick={() => onSolo("career")}>
+          <span className="soloIcon">🧭</span>
+          <b>Karriere-Pfad</b>
+          <small>Spieler an seinen Stationen erraten</small>
+        </button>
+        <button type="button" className="soloTile" onClick={() => onSolo("odd")}>
+          <span className="soloIcon">🧩</span>
+          <b>Wer passt nicht?</b>
+          <small>Drei gehören zusammen, einer nicht</small>
+        </button>
+        <button type="button" className="soloTile" onClick={() => onSolo("chain")}>
+          <span className="soloIcon">⛓️</span>
+          <b>Fußball-Kette</b>
+          <small>Spieler verketten, gegen die Uhr</small>
+        </button>
+        <button type="button" className="soloTile" onClick={() => onSolo("hex")}>
+          <span className="soloIcon">🎯</span>
+          <b>Hex-Training</b>
+          <small>Board allein lösen, ohne Zeitdruck</small>
+        </button>
+      </div>
+
+      <button type="button" className="duelToggle" aria-expanded={duelOpen} onClick={() => setDuelOpen((v) => !v)}>
+        <span className="duelIcon">🤝</span>
+        <span className="duelText">
+          <b>Mit einem Freund spielen</b>
+          <small>Spiel erstellen oder mit Code beitreten</small>
+        </span>
+        <span className={`duelChev ${duelOpen ? "open" : ""}`}>⌄</span>
+      </button>
+
+      {duelOpen && (
+      <div className="panel" style={{ marginTop: 10 }}>
         <label className="lobLabel">Dein Name</label>
         <input className="field" placeholder="z. B. Julian" value={name} maxLength={20}
           onChange={(e) => setName(e.target.value)} />
@@ -98,7 +137,6 @@ export default function Lobby({ onEnter, onDaily, onSolo }) {
           <button type="button" className={`btn ${mode === "grid" ? "primary" : "ghost"}`} style={{ flex: 1 }} onClick={() => setMode("grid")}>Raster-Duell</button>
           <button type="button" className={`btn ${mode === "guess" ? "primary" : "ghost"}`} style={{ flex: 1 }} onClick={() => setMode("guess")}>Errate den Star</button>
         </div>
-
 
         <button className="btn primary block" style={{ marginTop: 14 }} disabled={busy} onClick={createGame}>
           Neues Spiel erstellen
@@ -116,41 +154,28 @@ export default function Lobby({ onEnter, onDaily, onSolo }) {
 
         {error && <div className="fb err" style={{ marginTop: 12 }}>{error}</div>}
       </div>
+      )}
 
-      <div className="soloSection">
-        <div className="soloTitle">Solo spielen</div>
-        <div className="soloGrid">
-          <button type="button" className="soloTile" onClick={() => onSolo("hex")}>
-            <span className="soloIcon">🎯</span>
-            <b>Hex-Training</b>
-            <small>Board allein lösen, ohne Zeitdruck</small>
-          </button>
-          <button type="button" className="soloTile" onClick={() => onSolo("career")}>
-            <span className="soloIcon">🧭</span>
-            <b>Karriere-Pfad</b>
-            <small>Spieler an seinen Stationen erraten</small>
-          </button>
-          <button type="button" className="soloTile" onClick={() => onSolo("odd")}>
-            <span className="soloIcon">🧩</span>
-            <b>Wer passt nicht?</b>
-            <small>Drei gehören zusammen, einer nicht</small>
-          </button>
-          <button type="button" className="soloTile" onClick={() => onSolo("chain")}>
-            <span className="soloIcon">⛓</span>
-            <b>Fußball-Kette</b>
-            <small>Spieler verketten, gegen die Uhr</small>
-          </button>
-          <button type="button" className="soloTile" onClick={() => onSolo("eleven")}>
-            <span className="soloIcon">👕</span>
-            <b>Elf des Tages</b>
-            <small>Startelf nach elf Bedingungen</small>
-          </button>
-        </div>
-      </div>
-
-      <p className="lobHint">Erstelle ein Spiel, teile den Code mit deinem Freund — ihr spielt in Echtzeit, jeder im eigenen Browser.</p>
       <DataStamp />
     </div>
+  );
+}
+
+function ElevenCard({ onSolo }) {
+  const dateStr = dailyDateStr();
+  let st = null;
+  try { st = JSON.parse(localStorage.getItem(`pp:eleven:${dateStr}`) || "null"); } catch { /* egal */ }
+  const filled = (st?.names || []).filter(Boolean).length;
+  const badge = st?.done ? "✓ komplett" : filled ? `${filled}/11` : "heute offen";
+  return (
+    <button className="dailyCard eleven" onClick={() => onSolo("eleven")}>
+      <span className="dailyCardIcon">👕</span>
+      <span className="dailyCardText">
+        <b>Elf des Tages #{dailyNumber(dateStr)}</b>
+        <small>Startelf nach elf Bedingungen — Formation wechselt täglich</small>
+      </span>
+      <span className={`dailyBadge ${st?.done ? "won" : ""}`}>{badge}</span>
+    </button>
   );
 }
 

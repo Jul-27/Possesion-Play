@@ -119,7 +119,7 @@ export default function Chain({ onLeave }) {
   return (
     <div className="ppRoot">
       <div className="topbar">
-        <div><h1 className="title">POSSESSION PLAY</h1><div className="subtitle">⛓ Fußball-Kette · Solo</div></div>
+        <div><h1 className="title">POSSESSION PLAY</h1><div className="subtitle">⛓️ Fußball-Kette · Solo</div></div>
         <div className="iconrow">
           <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
           <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
