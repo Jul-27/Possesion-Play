@@ -9,6 +9,8 @@ import { loadPlayers } from "./playersStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
 import DataStamp from "./DataStamp.jsx";
+import ShareButton from "./ShareButton.jsx";
+import { shareChain } from "./share.js";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -193,7 +195,10 @@ export default function Chain({ onLeave }) {
             <p className="ruleP">Möglich gewesen wäre etwa <b>{over.hint.player.n}</b> über {attrLabel(over.hint.via)}.</p>
           )}
           <div className="closeline">
-            <button className="btn primary" style={{ flex: 1, padding: "12px" }} onClick={() => startGame(players)}>Neue Kette</button>
+            <ShareButton text={shareChain(chain.length, stats.best, isRecord)} style={{ flex: 1, padding: "12px" }} />
+          </div>
+          <div className="closeline">
+            <button className="btn ghost" style={{ flex: 1, padding: "12px" }} onClick={() => startGame(players)}>Neue Kette</button>
             <button className="btn ghost" style={{ flex: 1, padding: "12px" }} onClick={onLeave}>Zur Lobby</button>
           </div>
         </div>

@@ -8,8 +8,18 @@ import { loadPlayers } from "./playersStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
 import DataStamp from "./DataStamp.jsx";
+import ShareButton from "./ShareButton.jsx";
+import { shareSolo } from "./share.js";
+import { SOLO_STATS_KEY, updateSoloStats, soloStatsLine } from "./soloStats.js";
 
 // Hex-Training: volles Duell-Board, aber solo, ohne Uhr und ohne Zugverlust.
+/* Hex-Training war der einzige Modus ohne jeden gespeicherten Fortschritt — gelöste
+   Boards verschwanden spurlos. Gleiches Muster wie die übrigen Solo-Modi. */
+const store = {
+  get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ohne Statistik weiter */ } },
+};
+
 export default function Solo({ onLeave }) {
   const [serial, setSerial] = useState(() => buildBoardSerial());
   const board = useMemo(() => hydrateBoard(serial), [serial]);
@@ -77,6 +87,7 @@ export default function Solo({ onLeave }) {
     setLastClaimed(claimed); setTimeout(() => setLastClaimed([]), 900);
     setSelected(null); setNameInput(""); setChosen(null); setSugOpen(false);
     const doneNow = Object.keys(newOwners).length === 31;
+    if (doneNow) store.set(SOLO_STATS_KEY, updateSoloStats(store.get(SOLO_STATS_KEY), moves + 1, misses));
     setFeedback(doneNow ? null : { type: "ok",
       text: `✓ ${player.n} → „${cname(board[selected].def)}" erobert${extra ? ` · +${extra} Nachbarfeld${extra > 1 ? "er" : ""}` : ""}` });
     play(doneNow ? "win" : "ok");
@@ -166,6 +177,11 @@ export default function Solo({ onLeave }) {
             <span><b>{moves}</b> Züge</span>
             <span><b>{misses}</b> Fehlversuche</span>
             <span><b>{(31 / Math.max(1, moves)).toFixed(1)}</b> Felder/Zug</span>
+          </div>
+          {(() => { const line = soloStatsLine(store.get(SOLO_STATS_KEY)); return line
+            ? <p className="dataStamp" style={{ marginTop: 2 }}>{line}</p> : null; })()}
+          <div className="closeline">
+            <ShareButton text={shareSolo(moves, misses)} style={{ flex: 1, padding: "12px" }} />
           </div>
           <div className="bestBlock">
             <div className="bestTitle">Die 5 stärksten Züge auf diesem Board</div>

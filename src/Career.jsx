@@ -6,6 +6,8 @@ import { loadPlayers } from "./playersStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
 import DataStamp from "./DataStamp.jsx";
+import ShareButton from "./ShareButton.jsx";
+import { shareCareer } from "./share.js";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -177,7 +179,10 @@ export default function Career({ onLeave }) {
             </div>
           )}
           <div className="closeline">
-            <button className="btn primary" style={{ flex: 1, padding: "12px" }} onClick={newRound}>Neue Karriere</button>
+            <ShareButton text={shareCareer(revealed, wrong, won)} style={{ flex: 1, padding: "12px" }} />
+          </div>
+          <div className="closeline">
+            <button className="btn ghost" style={{ flex: 1, padding: "12px" }} onClick={newRound}>Neue Karriere</button>
             <button className="btn ghost" style={{ flex: 1, padding: "12px" }} onClick={onLeave}>Zur Lobby</button>
           </div>
         </div>

@@ -5,6 +5,8 @@ import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
 import { Avatar } from "./Emblems.jsx";
 import DataStamp from "./DataStamp.jsx";
+import ShareButton from "./ShareButton.jsx";
+import { shareOdd } from "./share.js";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -87,6 +89,9 @@ export default function OddOne({ onLeave }) {
           <p className="dataStamp" style={{ marginTop: 4 }}>
             Außenseiter war: <b>{round.options[round.oddIndex].n}</b>
           </p>
+          {stats.streak > 0 && (
+            <div className="closeline"><ShareButton text={shareOdd(stats.streak, stats.best || 0)} style={{ flex: 1, padding: "12px" }} /></div>
+          )}
           <div className="closeline">
             <button className="btn primary" style={{ flex: 1, padding: "12px" }} onClick={nextRound}>Nächste Runde</button>
             <button className="btn ghost" style={{ flex: 1, padding: "12px" }} onClick={onLeave}>Zur Lobby</button>
