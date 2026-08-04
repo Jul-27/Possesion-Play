@@ -30,15 +30,15 @@ export const EXTRA_PLAYERS = [
   { n: "Rasmus Kristensen", by: 1997, clubs: ["RBS"] },
   { n: "Maximilian Wöber",  by: 1998, clubs: ["RBS"] },
 
-  /* Gemeldet nach einem HEX-Duell (03.08.2026). Alle drei sind in Wikidata NICHT
-     belegt — nachgeprüft am Live-Stand, nicht nur in unserem Snapshot:
-       Merlin Röhl (Q99752352)    führt überhaupt keinen Verein (P54 leer)
-       Fábio Vieira (Q63032399)   führt Arsenal und Porto, aber keinen HSV
+  /* Gemeldet nach einem HEX-Duell (03.08.2026), vom Owner bestätigt. Wikidata liefert
+     diese Stationen nicht — nachgeprüft am Live-Stand, nicht nur in unserem Snapshot:
+       Merlin Röhl (Q99752352)     führt überhaupt keinen Verein (P54 leer)
+       Fábio Vieira (Q63032399)    führt Arsenal und Porto, aber keinen HSV
        Marin Pongračić (Q29427316) führt nur Bayern — Salzburg fehlt
      Die neuen Vereine (SCF/HSV) allein reparieren das also nicht; es braucht diese
      Einträge. Zeiträume (cp) bleiben weg, wo sie sich nicht belegen lassen — das
      HEX-Vereinsfeld prüft ohnehin nur clubs[]. */
-  { n: "Merlin Röhl",     by: 2002, nat: ["GER"], clubs: ["SCF"] },
+  { n: "Merlin Röhl",     by: 2002, nat: ["GER"], clubs: ["SCF", "EVE"] },  // Freiburg, inzwischen Everton
   { n: "Fábio Vieira",    by: 2000, clubs: ["HSV"] },
   { n: "Marin Pongracic", by: 1997, clubs: ["RBS"] },
 
@@ -53,15 +53,17 @@ export const EXTRA_PLAYERS = [
 ];
 
 /* Vereine, die bei einem Spieler nachweislich falsch stehen. Gegenstück zu
-   EXTRA_PLAYERS: das ergänzt, das hier nimmt weg.
-   Merlin Röhl kam mit Everton in unseren Datensatz — er hat dort nie gespielt, und
-   Wikidata führt heute überhaupt keinen Verein für ihn. Der Eintrag stammt damit
-   mit hoher Wahrscheinlichkeit aus einem vandalierten Zwischenstand, den unser
-   Abzug vom 15.07. mitgenommen hat. Falsch ist schlechter als fehlend.
-   Schlüssel ist norm(name)|jahr — norm() entfernt Diakritika, „Röhl" wird also
-   zu „rohl". */
+   EXTRA_PLAYERS: das ergänzt, das hier nimmt weg. Schlüssel ist norm(name)|jahr —
+   norm() entfernt Diakritika, „Röhl" wird also zu „rohl".
+
+   Derzeit leer, und das ist Absicht. Hier stand kurzzeitig Merlin Röhl mit Everton,
+   weil sein Wikidata-Eintrag gar keinen Verein führt. Genau dieser Schluss ist falsch:
+   ein leerer Eintrag belegt nicht, dass unser Wert falsch ist — er belegt nur, dass
+   Wikidata nichts weiß. Röhl spielt tatsächlich bei Everton (Owner-bestätigt); dass
+   Freiburg fehlte, lag allein daran, dass Freiburg bis dahin kein Spielverein war.
+   Ein Eintrag kommt hier also nur hinein, wenn ein Verein positiv widerlegt ist —
+   nicht, wenn eine Quelle bloß schweigt. */
 export const WRONG_CLUBS = {
-  "merlin rohl|2002": ["EVE"],
 };
 
 // Entfernt die Vereine aus clubs[] und die zugehörigen cp-Einträge.

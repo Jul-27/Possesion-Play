@@ -173,12 +173,13 @@ steht in Wikidata mit 1976 im Liverpool-Kader, bei uns korrekt mit 1979, und der
 Schlüssel `norm(name)|by` trifft dann nie. `backfill_positions.mjs` geht deshalb nicht
 über Kader, sondern löst die QID direkt auf.
 
-**Ein falscher Verein ist schlimmer als ein fehlender.** Merlin Röhl stand bei uns mit
-Everton, wo er nie gespielt hat — Wikidata führt für ihn heute überhaupt keinen Verein.
-Solche Einträge stammen aus vandalierten Zwischenständen, die ein Abzug mitnimmt.
-`audit_clubs.mjs` misst, wie verbreitet das ist; korrigiert wird ausschließlich über
-`WRONG_CLUBS` nach Sichtung, denn die Gegenrichtung (Wikidata löscht echte Vereinszeiten)
-ist genauso häufig.
+**Eine schweigende Quelle widerlegt nichts.** Dass Wikidata einen Verein nicht führt,
+heißt nicht, dass unser Wert falsch ist — es heißt nur, dass Wikidata nichts weiß.
+Dieser Fehlschluss ist hier schon einmal passiert: Merlin Röhls Wikidata-Eintrag hat
+gar keinen Verein, woraufhin sein Everton als Falscheintrag entfernt wurde. Er spielt
+dort tatsächlich; dass Freiburg fehlte, lag allein daran, dass Freiburg damals kein
+Spielverein war. `audit_clubs.mjs` überspringt solche Fälle deshalb, und in
+`WRONG_CLUBS` kommt nur, was **positiv widerlegt** ist.
 
 ## WDQS-Fenster: warum 4 Jahre
 

@@ -5,16 +5,17 @@
  *
  *   node data-pipeline/audit_clubs.mjs [--min-sl 40] [--limit 500]
  *
- * Anlass: Merlin Röhl stand bei uns mit Everton — er hat dort nie gespielt, und
- * Wikidata führt für ihn überhaupt keinen Verein. Solche Einträge entstehen, wenn
- * ein Abzug einen vandalierten Zwischenstand erwischt. Dieses Skript misst, wie
- * verbreitet das ist, statt es zu raten.
- *
  * WICHTIG bei der Auswertung: ein Treffer ist ein VERDACHT, kein Befund. Die
  * Gegenrichtung ist genauso häufig — Wikidata löscht laufend echte Vereinszeiten
  * (De Bruynes Chelsea- und City-Jahre waren zeitweise weg). Ein gemeldeter Spieler
  * kann also ebenso gut korrekt bei uns und kaputt in Wikidata sein. Deshalb wandert
  * von hier nichts automatisch nach WRONG_CLUBS, sondern nur nach Sichtung.
+ *
+ * Spieler, für die Wikidata GAR KEINEN unserer Vereine führt, werden deshalb erst gar
+ * nicht gemeldet. Genau daran ist die erste Fassung dieses Gedankens gescheitert:
+ * Merlin Röhls Wikidata-Eintrag ist leer, woraufhin sein Everton fälschlich als
+ * Falscheintrag galt — er spielt dort tatsächlich. Ein schweigender Eintrag
+ * widerlegt nichts.
  */
 import { pathToFileURL } from "url";
 import { CLUB_QID, norm } from "./wikidata_roster.mjs";
@@ -98,12 +99,16 @@ async function main() {
   }
   const clubsByQid = await fetchClubs([...alle]);
 
-  let geprueft = 0, sauber = 0, nichtAufloesbar = 0;
+  let geprueft = 0, sauber = 0, nichtAufloesbar = 0, ohneVereinInWikidata = 0;
   const verdacht = [];
   for (const p of ziel) {
     const ids = cands.get(norm(p.n) + "|" + p.by) || [];
     const hit = ids.map((id) => clubsByQid.get(id)).find((e) => e && e.by === p.by);
     if (!hit) { nichtAufloesbar++; continue; }
+    /* Führt Wikidata für den Spieler keinen einzigen unserer Vereine, ist der Eintrag
+       dort unvollständig — daraus folgt nichts über unsere Daten. Vergleichbar wird es
+       erst, wenn beide Seiten etwas zu sagen haben. */
+    if (!hit.clubs.size) { ohneVereinInWikidata++; continue; }
     geprueft++;
     const fehlen = (p.clubs || []).filter((c) => !hit.clubs.has(c));
     if (!fehlen.length) { sauber++; continue; }
@@ -116,9 +121,7 @@ async function main() {
   console.log(`  deckungsgleich mit Wikidata:          ${sauber}`);
   console.log(`  mit Verein, den Wikidata nicht führt: ${verdacht.length}`);
   console.log(`  nicht auflösbar (Name/Jahr):          ${nichtAufloesbar}`);
-  const komplett = verdacht.filter((v) => !v.wikidata.length).length;
-  console.log(`\n  davon Spieler, für die Wikidata GAR KEINEN Spielverein führt: ${komplett}`);
-  console.log(`  (das ist das Röhl-Muster — bei den übrigen fehlt nur ein einzelner Verein)`);
+  console.log(`  Wikidata führt keinen unserer Vereine (nicht vergleichbar): ${ohneVereinInWikidata}`);
 
   console.log(`\nDie 30 bekanntesten Verdachtsfälle:`);
   for (const v of verdacht.slice(0, 30)) {

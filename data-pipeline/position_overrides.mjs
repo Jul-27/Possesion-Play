@@ -13,4 +13,10 @@ export const POSITION_OVERRIDES = {
      Jahrgang 1979. Der automatische Abgleich verlangt ein exakt passendes Jahr und
      lässt ihn deshalb liegen. Die Position selbst ist damit belegt, nicht geraten. */
   "michael owen|1979": "ST",
+
+  // Vom Owner bestätigt; Wikidata führt bei diesen vieren gar kein P413.
+  "dani carvajal|1992": "ABW",
+  "henrikh mkhitaryan|1989": "MF",
+  "darwin nunez|1999": "ST",
+  "nicolas jackson|2001": "ST",
 };
