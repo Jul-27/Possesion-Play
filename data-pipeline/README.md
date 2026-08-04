@@ -19,6 +19,11 @@ Kaggle (kein lokales Setup, kein Admin-Recht nötig).
 | `wikidata_label.mjs` | Gemeinsame Label-Auflösung: Sprach-Fallback-Kette (`LABEL_SERVICE`) statt nur `"en"` plus `cleanName()`, das QID-Rückfälle (`/^Q\d+$/`) verwirft. Von allen Wikidata-Skripten benutzt. |
 | `name_overrides.mjs` | Kuratierte Tabellen `NAME_OVERRIDES` (falscher → belegter Name, je mit Wikidata-QID als Quelle) und `EXCLUDED_PLAYERS` (Nicht-Fußballer und Records ohne belegbaren Namen). Reine Daten, kein Netz. |
 | `apply_name_overrides.mjs` | Wendet beide Tabellen auf `src/players.js` an und verschmilzt dabei entstehende Dubletten (Name + Geburtsjahr). Läuft als letzter Schritt in `refresh_all.mjs`. Idempotent, kein Netz. |
+| `add_clubs.mjs` | Trägt einen oder mehrere Spielvereine additiv nach, ohne alles neu zu bauen: `node data-pipeline/add_clubs.mjs S04 HSV`. Der Weg, um einen Verein aufzunehmen. Anders als das abgelöste `add_salzburg.mjs` ist das Startdatum optional — bei Salzburg führen 76 von 436 Spielern keines, die fielen vorher still aus dem Kader. |
+| `apply_title.mjs` | Holt **einen** Wettbewerbstitel gezielt nach, mit feinen Fenstern: `node data-pipeline/apply_title.mjs MBL --ab 1903`. Additiv. Löst `apply_msa.mjs` ab (gleiche Logik, aber mit der P831-Brücke). Für Reparaturen, wenn ein einzelner Wettbewerb im Gesamtlauf gescheitert ist. |
+| `backfill_positions.mjs` | Füllt `pos` bei allen, die `wikidata_positions.mjs` nicht erreicht: löst die QID über Name + Geburtsjahr auf und liest `P413` direkt, statt über Vereins-Kader zu gehen. Ein Treffer zählt nur bei exakt passendem Geburtsjahr **und** Beruf Fußballspieler. |
+| `position_overrides.mjs` | Kuratierte Positionen für Spieler ohne `P413`. Wie `HONOUR_OVERRIDES`: nur Belegtes, nichts Geratenes. |
+| `audit_clubs.mjs` | **Diagnose, schreibt nichts.** Meldet Spieler, bei denen wir einen Verein führen, den Wikidata nicht kennt. Treffer sind Verdacht, kein Befund — siehe „Datenqualität". |
 
 Das Notebook ist die browserbasierte Zusammenführung der beiden `.py`-Skripte.
 Die Skripte selbst sind als Referenz / für lokale Läufe enthalten.
@@ -153,8 +158,40 @@ Suárez ist Uruguayer mit zusätzlicher spanischer Staatsbürgerschaft). Also ni
 diese „Lücke" zu schließen — sie ist korrektes Verhalten.
 
 **Fehlende Position IST eine Lücke.** Jeder Fußballer hat eine; fehlt `pos`, ist er für
-„Elf des Tages" unbrauchbar. Betroffen sind 321 Spieler mit sl≥40 (15 %), auffällig oft
-außereuropäische und historische Spieler — Wikidatas `P413` ist dort schlechter gepflegt.
+„Elf des Tages" unbrauchbar. Sie hat zwei getrennte Ursachen, die verschiedene Mittel
+brauchen — gemessen am 03.08.2026 an den 62 Spielern mit sl≥20 ohne Position:
+
+| Ursache | Anteil | Mittel |
+|---|---|---|
+| Wikidata **hat** `P413`, unsere Kader-Abfrage findet den Spieler nicht | 31 von 62 | `backfill_positions.mjs` |
+| Wikidata hat **kein** `P413` | 26 von 62 | `position_overrides.mjs` (nur Belegtes) |
+| QID über Name + Geburtsjahr nicht auflösbar | 5 von 62 | offen, wird gemeldet |
+
+Der erste Fall entsteht auf zwei Wegen, die beide real vorkommen: der `P54`-Link zum
+Spielverein wurde gelöscht (Vandalismus), oder das Geburtsjahr weicht ab — Michael Owen
+steht in Wikidata mit 1976 im Liverpool-Kader, bei uns korrekt mit 1979, und der
+Schlüssel `norm(name)|by` trifft dann nie. `backfill_positions.mjs` geht deshalb nicht
+über Kader, sondern löst die QID direkt auf.
+
+**Ein falscher Verein ist schlimmer als ein fehlender.** Merlin Röhl stand bei uns mit
+Everton, wo er nie gespielt hat — Wikidata führt für ihn heute überhaupt keinen Verein.
+Solche Einträge stammen aus vandalierten Zwischenständen, die ein Abzug mitnimmt.
+`audit_clubs.mjs` misst, wie verbreitet das ist; korrigiert wird ausschließlich über
+`WRONG_CLUBS` nach Sichtung, denn die Gegenrichtung (Wikidata löscht echte Vereinszeiten)
+ist genauso häufig.
+
+## WDQS-Fenster: warum 4 Jahre
+
+Die Honours-Abfragen sind nach Saison-Startjahr gefenstert. Die Fenster waren früher bis
+zu 70 Jahre breit; das kippt inzwischen zuverlässig ins Timeout. Gemessen am 03.08.2026:
+von fünf Wettbewerben scheiterten **vier**, dieselbe Abfrage in 4-Jahres-Schritten
+antwortete mit 200. Ursache ist die gewachsene Datenmenge — allein die fünf neuen
+Bundesligisten bringen ~1300 Spieler mit.
+
+Ein gescheitertes Fenster ist gefährlich, nicht nur ärgerlich: `wikidata_honours.mjs`
+setzt `t` standardmäßig **neu**. Ein übersprungener Wettbewerb löschte damit jeden Titel
+dieser Art bei jedem Spieler. Das Skript bricht deshalb ab, statt weiterzulaufen. Wer nur
+neu aufgenommene Spieler versorgen will, nimmt `--additiv`.
 
 ## Nach jedem Refresh prüfen
 

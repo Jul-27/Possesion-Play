@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { LEAGUES, playerMatchesHex, lookupDef, buildBoardSerial, hydrateBoard } from "./gameData.js";
+import { existsSync } from "node:fs";
+import { CLUBS, LEAGUES, playerMatchesHex, lookupDef, buildBoardSerial, hydrateBoard } from "./gameData.js";
 
 test("LEAGUES enthält 7 Ligen als type 'league'", () => {
   assert.equal(LEAGUES.length, 7);
@@ -352,4 +353,35 @@ test("bestOpeningMoves: Gleichstand -> bekanntere Spieler (sl) zuerst", () => {
   const res = bestOpeningMoves([leise, laut], board, 5);
   assert.equal(res[0].player.n, "Laut");
   assert.equal(res[0].count, res[1].count);
+});
+
+/* Ein Verein ohne Logo-Datei fällt im Spiel auf die farbige Ersatz-Raute zurück —
+   das sieht neben 46 echten Wappen nach einem Fehler aus. Beim Aufnehmen eines
+   Vereins ist `node data-pipeline/fetch_logos.mjs` daher Pflicht, nicht Kür. */
+test("jeder Verein und jede Liga hat eine Logo-Datei", () => {
+  for (const c of CLUBS) {
+    assert.ok(existsSync(new URL(`../public/logos/club/${c.key}.png`, import.meta.url)),
+      `Logo fehlt: ${c.key} (${c.name}) — fetch_logos.mjs laufen lassen`);
+  }
+  for (const l of LEAGUES) {
+    assert.ok(existsSync(new URL(`../public/logos/league/${l.key}.png`, import.meta.url)),
+      `Liga-Logo fehlt: ${l.key}`);
+  }
+});
+
+test("Vereinsschlüssel und Kürzel sind eindeutig", () => {
+  const keys = CLUBS.map((c) => c.key);
+  assert.equal(new Set(keys).size, keys.length, "doppelter Vereinsschlüssel");
+  const names = CLUBS.map((c) => c.name);
+  assert.equal(new Set(names).size, names.length, "doppelter Vereinsname");
+  for (const c of CLUBS) assert.ok(c.key.length <= 3, `${c.key} ist zu lang fürs Wappen`);
+});
+
+/* Das HEX-Brett garantiert vier Bundesliga-Felder und füllt den Rest aus allen
+   Vereinen. Mit zu wenigen Vereinen einer Liga läuft pick() leer. */
+test("jede Liga hat genug Vereine für die Brettgenerierung", () => {
+  const proLiga = {};
+  for (const c of CLUBS) proLiga[c.lg] = (proLiga[c.lg] || 0) + 1;
+  assert.ok(proLiga.BL >= 4, `Bundesliga braucht mindestens 4 Vereine, hat ${proLiga.BL}`);
+  for (const l of LEAGUES) assert.ok(proLiga[l.key] >= 1, `Liga ${l.key} hat keinen Verein`);
 });

@@ -20,6 +20,8 @@ const CLUB_SEARCH = {
   RBL: ["RB Leipzig", "Germany"], B04: ["Bayer Leverkusen", "Germany"],
   SGE: ["Eintracht Frankfurt", "Germany"], BMG: ["Borussia Monchengladbach", "Germany"],
   VFB: ["VfB Stuttgart", "Germany"], WOB: ["VfL Wolfsburg", "Germany"], SVW: ["Werder Bremen", "Germany"],
+  S04: ["Schalke 04", "Germany"], HSV: ["Hamburger SV", "Germany"], M05: ["Mainz", "Germany"],
+  SCF: ["Freiburg", "Germany"], TSG: ["Hoffenheim", "Germany"],
   MCI: ["Manchester City", "England"], MUN: ["Manchester United", "England"],
   LIV: ["Liverpool", "England"], CHE: ["Chelsea", "England"], ARS: ["Arsenal", "England"],
   TOT: ["Tottenham Hotspur", "England"], NEW: ["Newcastle United", "England"],
@@ -37,8 +39,9 @@ const CLUB_SEARCH = {
 };
 
 // Direkte Team-IDs für Fälle, in denen die Namenssuche fehlgreift
-// (PSG-Suche liefert „Torcy"). Verifikation: strTeam muss Namensbestandteil enthalten.
-const TEAM_ID = { PSG: [133714, "Paris"], SCP: [135708, "Sporting"], RBS: [133970, "Salzburg"] };
+// Verifikation: strTeam muss den Namensbestandteil enthalten.
+// (PSG-Suche liefert „Torcy", der HSV heißt dort schlicht „Hamburg").
+const TEAM_ID = { PSG: [133714, "Paris"], SCP: [135708, "Sporting"], RBS: [133970, "Salzburg"], HSV: [133651, "Hamburg"] };
 
 // Liga-Key -> [TheSportsDB-Liga-ID, erwarteter Namensbestandteil]
 const LEAGUE_IDS = {

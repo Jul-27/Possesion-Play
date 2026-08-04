@@ -16,7 +16,7 @@ const PLAYERS_PATH = join(HERE, "..", "src", "players.js");
 const UA = "PossessionPlay/1.0 (https://github.com/Jul-27; data enrichment)";
 
 // Honour-Key -> Wikidata-Wettbewerb (verifiziert: Label + vorhandene Saison-Sieger)
-const COMP_QID = {
+export const COMP_QID = {
   CL:"Q18756", WM:"Q19317",
   MBL:"Q82595", MPL:"Q9448", MLL:"Q324867", MSA:"Q15804", ML1:"Q13394",
   DFB:"Q150880", FAC:"Q11151", CDR:"Q483794", CIT:"Q169918",
@@ -80,9 +80,14 @@ async function sparql(query) {
   throw new Error("SPARQL fehlgeschlagen (Retries erschöpft)");
 }
 
-// Zeitfenster (Saison-Startjahr), um zu große WDQS-Antworten zu vermeiden.
-const WINDOWS = [[1890, 1960], [1960, 1980], [1980, 1995], [1995, 2005], [2005, 2010],
-                 [2010, 2014], [2014, 2018], [2018, 2022], [2022, 2025], [2025, 2031]];
+/* Zeitfenster (Saison-Startjahr), um zu große WDQS-Antworten zu vermeiden.
+   Früher waren das bis zu 70 Jahre breite Blöcke. Die kippen inzwischen zuverlässig
+   ins Timeout — gemessen am 03.08.2026: von fünf Wettbewerben scheiterten vier,
+   dasselbe Fenster in 4-Jahres-Schritten antwortet dagegen mit 200. Ursache ist die
+   gewachsene Datenmenge (mit Schalke, HSV, Mainz, Freiburg und Hoffenheim allein
+   ~1300 Spieler mehr). Feiner = mehr Abfragen, aber sie kommen durch. */
+export const WINDOWS = [];
+for (let y = 1890; y < 2032; y += 4) WINDOWS.push([y, y + 4]);
 
 // Spieler, die im Titel-Saison-Zeitraum beim Sieger des Wettbewerbs waren (gefenstert).
 async function fetchHonourPlayers(qid) {
@@ -126,8 +131,12 @@ async function main() {
   // 1) Honours pro Spieler aus Wikidata: key "norm|by" -> Set(honourKeys)
   const hon = new Map();
   for (const [key, qid] of Object.entries(COMP_QID)) {
+    /* Kein `continue` im Fehlerfall: ohne --additiv setzt dieser Lauf `t` neu, und
+       ein übersprungener Wettbewerb löschte dann jeden Titel dieser Art bei jedem
+       Spieler — still und großflächig. Lieber abbrechen und den alten Stand behalten. */
     let rows;
-    try { rows = await fetchHonourPlayers(qid); } catch (e) { console.log(`  ${key} FEHLER ${e.message}`); continue; }
+    try { rows = await fetchHonourPlayers(qid); }
+    catch (e) { throw new Error(`${key} (${qid}) fehlgeschlagen: ${e.message} — Abbruch, damit kein Titel verloren geht.`); }
     let c = 0;
     for (const r of rows) {
       if (!r.name || !r.by) continue;
@@ -142,11 +151,17 @@ async function main() {
   // 2) players.js laden, t neu setzen
   const mod = await import(pathToFileURL(PLAYERS_PATH).href + "?t=" + Date.now());
   const players = mod.PLAYERS.map((p) => ({ ...p, clubs: [...(p.clubs || [])], nat: [...(p.nat || [])] }));
+  /* --additiv: bereits eingetragene Titel bleiben stehen, es kommen nur welche dazu.
+     Wikidata wird aktiv vandaliert — ein neu setzender Lauf hätte hier schon einmal
+     38 real gewonnene Titel bei 20 Spielern still gelöscht. Wenn der Lauf nur dazu
+     dient, neu aufgenommene Spieler zu versorgen, ist additiv die richtige Wahl. */
+  const additiv = process.argv.includes("--additiv");
+  console.log(additiv ? "  Modus: additiv (vorhandene t bleiben erhalten)" : "  Modus: t wird neu gesetzt");
   let withT = 0;
   for (const p of players) {
     const keys = hon.get(norm(p.n) + "|" + p.by);
-    if (keys && keys.size) { p.t = [...keys].sort(); withT++; }
-    else delete p.t;
+    if (keys && keys.size) { p.t = [...new Set([...(additiv ? p.t || [] : []), ...keys])].sort(); withT++; }
+    else if (!additiv) delete p.t;
   }
 
   // Wikidata-Sieger-Lücken über cp schließen

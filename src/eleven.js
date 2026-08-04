@@ -1,7 +1,7 @@
 /* „Elf des Tages" — reine Logik (kein React).
    Elf Positionen mit je einer Bedingung. Ausgegeben wird ein Rätsel nur, wenn sich
    nachweislich elf VERSCHIEDENE Spieler darauf verteilen lassen (bipartites Matching). */
-import { playerMatchesHex } from "./gameData.js";
+import { playerMatchesHex, POS_LABEL } from "./gameData.js";
 import { CHAIN_DEFS } from "./chain.js";
 
 export const ELEVEN_SL_MIN = 40;        // Generierungspool: garantiert eine Lösung aus bekannten Spielern
@@ -80,6 +80,16 @@ export function slotCandidates(players, pool, pos, def) {
 export function elevenAccepts(player, slot) {
   if (!player || !slot) return false;
   return player.pos === slot.pos && playerMatchesHex(player, slot.def);
+}
+
+/* Begründung einer Ablehnung. Der Fall „Spieler ohne hinterlegte Position" braucht
+   einen eigenen Satz: vorher stand dort „X ist undefined, gesucht ist Torwart" — das
+   las sich wie ein Fehler im Spiel und nicht wie eine Lücke im Datensatz. */
+export function elevenReason(player, slot) {
+  if (!player || !slot) return "";
+  if (!player.pos) return `Zu ${player.n} ist keine Position hinterlegt — such dir jemand anderen.`;
+  if (player.pos !== slot.pos) return `${player.n} ist ${POS_LABEL[player.pos]}, gesucht ist ${POS_LABEL[slot.pos]}.`;
+  return `${player.n} erfüllt „${slot.def.name}" nicht.`;
 }
 
 /* Bipartites Matching (Kuhn): Lassen sich allen Positionen paarweise verschiedene

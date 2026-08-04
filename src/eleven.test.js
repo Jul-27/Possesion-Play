@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { lookupDef } from "./gameData.js";
 import {
   FORMATIONS, formationPositions, slotLayout, formationFor, elevenPool, slotCandidates,
-  hasPerfectMatching, buildEleven, elevenAccepts, ELEVEN_MIN_CANDIDATES,
+  hasPerfectMatching, buildEleven, elevenAccepts, elevenReason, ELEVEN_MIN_CANDIDATES,
 } from "./eleven.js";
 
 test("Jede Formation hat elf Positionen und genau einen Torwart", () => {
@@ -97,4 +97,21 @@ test("Echtdaten: 30 aufeinanderfolgende Tage sind alle lösbar", async () => {
     const lists = slots.map((s) => slotCandidates(PLAYERS, pool, s.pos, s.def));
     assert.ok(hasPerfectMatching(lists), `${dateStr} ist nicht lösbar`);
   }
+});
+
+test("elevenReason: Spieler ohne hinterlegte Position bekommt einen eigenen Satz", () => {
+  const slot = { pos: "TW", def: { name: "FC Bayern München", type: "club", key: "FCB" } };
+  const text = elevenReason({ n: "Merlin Röhl" }, slot);
+  assert.ok(!/undefined/.test(text), `„undefined" darf nicht in der Meldung stehen: ${text}`);
+  assert.match(text, /keine Position hinterlegt/);
+});
+
+test("elevenReason: falsche Position nennt beide Positionen im Klartext", () => {
+  const slot = { pos: "TW", def: { name: "FC Bayern München", type: "club", key: "FCB" } };
+  assert.equal(elevenReason({ n: "Harry Kane", pos: "ST" }, slot), "Harry Kane ist Sturm, gesucht ist Torwart.");
+});
+
+test("elevenReason: passende Position, aber Bedingung verfehlt", () => {
+  const slot = { pos: "ST", def: { name: "FC Bayern München", type: "club", key: "FCB" } };
+  assert.equal(elevenReason({ n: "Harry Kane", pos: "ST" }, slot), 'Harry Kane erfüllt „FC Bayern München" nicht.');
 });
