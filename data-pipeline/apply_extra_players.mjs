@@ -30,6 +30,18 @@ export const EXTRA_PLAYERS = [
   { n: "Rasmus Kristensen", by: 1997, clubs: ["RBS"] },
   { n: "Maximilian Wöber",  by: 1998, clubs: ["RBS"] },
 
+  /* Gemeldet nach einem HEX-Duell (03.08.2026), vom Owner bestätigt. Wikidata liefert
+     diese Stationen nicht — nachgeprüft am Live-Stand, nicht nur in unserem Snapshot:
+       Merlin Röhl (Q99752352)     führt überhaupt keinen Verein (P54 leer)
+       Fábio Vieira (Q63032399)    führt Arsenal und Porto, aber keinen HSV
+       Marin Pongračić (Q29427316) führt nur Bayern — Salzburg fehlt
+     Die neuen Vereine (SCF/HSV) allein reparieren das also nicht; es braucht diese
+     Einträge. Zeiträume (cp) bleiben weg, wo sie sich nicht belegen lassen — das
+     HEX-Vereinsfeld prüft ohnehin nur clubs[]. */
+  { n: "Merlin Röhl",     by: 2002, nat: ["GER"], clubs: ["SCF", "EVE"] },  // Freiburg, inzwischen Everton
+  { n: "Fábio Vieira",    by: 2000, clubs: ["HSV"] },
+  { n: "Marin Pongracic", by: 1997, clubs: ["RBS"] },
+
   // Lothar Matthäus fehlte komplett: sein Wikidata-Eintrag führt als Beruf nur
   // „Fußballtrainer", nicht „Fußballspieler" (P106=Q937857) — der Roster-Filter
   // schließt ihn dadurch aus. Vereine/Titel/cp sind aus Wikidata belegt (P54 + die
@@ -39,6 +51,34 @@ export const EXTRA_PLAYERS = [
     t: ["BDO", "DFB", "EM", "MBL", "MSA", "WM"], sl: 85, pos: "MF",
     cp: [["BMG", 1979, 1984], ["FCB", 1984, 1988], ["INT", 1988, 1992], ["FCB", 1992, 2000]] },
 ];
+
+/* Vereine, die bei einem Spieler nachweislich falsch stehen. Gegenstück zu
+   EXTRA_PLAYERS: das ergänzt, das hier nimmt weg. Schlüssel ist norm(name)|jahr —
+   norm() entfernt Diakritika, „Röhl" wird also zu „rohl".
+
+   Derzeit leer, und das ist Absicht. Hier stand kurzzeitig Merlin Röhl mit Everton,
+   weil sein Wikidata-Eintrag gar keinen Verein führt. Genau dieser Schluss ist falsch:
+   ein leerer Eintrag belegt nicht, dass unser Wert falsch ist — er belegt nur, dass
+   Wikidata nichts weiß. Röhl spielt tatsächlich bei Everton (Owner-bestätigt); dass
+   Freiburg fehlte, lag allein daran, dass Freiburg bis dahin kein Spielverein war.
+   Ein Eintrag kommt hier also nur hinein, wenn ein Verein positiv widerlegt ist —
+   nicht, wenn eine Quelle bloß schweigt. */
+export const WRONG_CLUBS = {
+};
+
+// Entfernt die Vereine aus clubs[] und die zugehörigen cp-Einträge.
+export function stripWrongClubs(players, table = WRONG_CLUBS) {
+  let n = 0;
+  for (const p of players) {
+    const weg = table[norm(p.n) + "|" + p.by];
+    if (!weg) continue;
+    const vorher = (p.clubs || []).length;
+    p.clubs = (p.clubs || []).filter((c) => !weg.includes(c));
+    if (p.cp) p.cp = p.cp.filter((c) => !weg.includes(c[0]));
+    n += vorher - p.clubs.length;
+  }
+  return n;
+}
 
 function recToString(r) {
   let s = `{"n": ${JSON.stringify(r.n)}, "ln": ${JSON.stringify(r.ln)}, "by": ${r.by}, "nat": ${JSON.stringify(r.nat)}, "clubs": ${JSON.stringify(r.clubs)}`;
@@ -51,27 +91,40 @@ function recToString(r) {
   return s + "}";
 }
 
-const mod = await import(pathToFileURL(PLAYERS_PATH).href + "?t=" + Date.now());
-const players = mod.PLAYERS.map((p) => ({ ...p }));
-const byKey = new Map(players.map((p) => [norm(p.n) + "|" + p.by, p]));
-let added = 0, merged = 0;
-for (const x of EXTRA_PLAYERS) {
-  const cur = byKey.get(norm(x.n) + "|" + x.by);
-  if (cur) {
-    if (x.nat && !(cur.nat || []).length) cur.nat = [...x.nat];
-    if (x.clubs) cur.clubs = [...new Set([...(cur.clubs || []), ...x.clubs])].sort();
-    if (x.t) cur.t = [...new Set([...(cur.t || []), ...x.t])].sort();
-    if (x.cp) cur.cp = [...(cur.cp || []).filter((c) => !x.cp.some((y) => y[0] === c[0])), ...x.cp].sort((a, b) => a[1] - b[1]);
-    if (x.pos && !cur.pos) cur.pos = x.pos;
-    if (x.sl && !cur.sl) cur.sl = x.sl;
-    merged++;
-  } else {
-    players.push({ n: x.n, ln: deriveLastName(x.n), by: x.by, nat: x.nat || [], clubs: x.clubs || [], t: x.t, sl: x.sl || 0, pos: x.pos, cp: x.cp });
-    added++;
+// Kuratierte Einträge einarbeiten. Rein funktional, damit es ohne Netz testbar bleibt.
+export function applyExtras(players, extras = EXTRA_PLAYERS, wrong = WRONG_CLUBS) {
+  const byKey = new Map(players.map((p) => [norm(p.n) + "|" + p.by, p]));
+  let added = 0, merged = 0;
+  for (const x of extras) {
+    const cur = byKey.get(norm(x.n) + "|" + x.by);
+    if (cur) {
+      if (x.nat && !(cur.nat || []).length) cur.nat = [...x.nat];
+      if (x.clubs) cur.clubs = [...new Set([...(cur.clubs || []), ...x.clubs])].sort();
+      if (x.t) cur.t = [...new Set([...(cur.t || []), ...x.t])].sort();
+      if (x.cp) cur.cp = [...(cur.cp || []).filter((c) => !x.cp.some((y) => y[0] === c[0])), ...x.cp].sort((a, b) => a[1] - b[1]);
+      if (x.pos && !cur.pos) cur.pos = x.pos;
+      if (x.sl && !cur.sl) cur.sl = x.sl;
+      merged++;
+    } else {
+      const rec = { n: x.n, ln: deriveLastName(x.n), by: x.by, nat: x.nat || [], clubs: x.clubs || [], t: x.t, sl: x.sl || 0, pos: x.pos, cp: x.cp };
+      players.push(rec);
+      byKey.set(norm(x.n) + "|" + x.by, rec);
+      added++;
+    }
   }
+  const removed = stripWrongClubs(players, wrong);
+  return { added, merged, removed };
 }
-players.sort((a, b) => a.n.localeCompare(b.n, "en"));
-const header = readFileSync(PLAYERS_PATH, "utf8").split("export const PLAYERS")[0];
-writeFileSync(PLAYERS_PATH, header + "export const PLAYERS = [\n  " + players.map(recToString).join(",\n  ") + "\n];\n");
-stampFixes(); // rein kuratiert — DATA_ASOF bleibt unberührt
-console.log(`Fertig: ${added} neu, ${merged} ergänzt.`);
+
+async function main() {
+  const mod = await import(pathToFileURL(PLAYERS_PATH).href + "?t=" + Date.now());
+  const players = mod.PLAYERS.map((p) => ({ ...p, clubs: [...(p.clubs || [])], nat: [...(p.nat || [])] }));
+  const { added, merged, removed } = applyExtras(players);
+  players.sort((a, b) => a.n.localeCompare(b.n, "en"));
+  const header = readFileSync(PLAYERS_PATH, "utf8").split("export const PLAYERS")[0];
+  writeFileSync(PLAYERS_PATH, header + "export const PLAYERS = [\n  " + players.map(recToString).join(",\n  ") + "\n];\n");
+  stampFixes(); // rein kuratiert — DATA_ASOF bleibt unberührt
+  console.log(`Fertig: ${added} neu, ${merged} ergänzt, ${removed} falsche Vereine entfernt.`);
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1]).href) main();

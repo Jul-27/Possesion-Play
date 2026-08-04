@@ -19,11 +19,19 @@ const UA = "PossessionPlay/1.0 (https://github.com/Jul-27; data enrichment)";
 // Stichwort-Mapping eines englischen P413-Labels auf eine Gruppe.
 export function posBucket(label) {
   const s = String(label).toLowerCase();
-  if (s.includes("goalkeeper")) return "TW";
+  if (s.includes("goalkeeper") || s.includes("goaltender")) return "TW";
+  /* „wing half" ist trotz „wing" eine Mittelfeldposition (WM-System) und muss vor der
+     Sturm-Zeile stehen — sonst wurden historische Spieler zu Stürmern. */
+  if (s.includes("wing half") || s.includes("wing-half")) return "MF";
   // vor "attack" prüfen, sonst landet "attacking midfielder" im Sturm
   if (s.includes("midfield") || s.includes("playmaker")) return "MF";
   if (s.includes("forward") || s.includes("striker") || s.includes("wing") || s.includes("attack")) return "ST";
-  if (s.includes("back") || s.includes("defender") || s.includes("defence") || s.includes("sweeper")) return "ABW";
+  /* „defens" statt „defence" fängt auch die US-Schreibweise (defenseman, defense).
+     stopper/libero/centerhalf sind eigene Wikidata-Einträge ohne diese Wortstämme —
+     allein „stopper" kommt in 14 unserer Vereinskader vor. */
+  if (s.includes("back") || s.includes("defender") || s.includes("defens") || s.includes("defence")
+      || s.includes("sweeper") || s.includes("stopper") || s.includes("libero")
+      || s.includes("centerhalf") || s.includes("centre half") || s.includes("center half")) return "ABW";
   return null;
 }
 

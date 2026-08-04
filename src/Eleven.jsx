@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { norm, suggestPlayers, POS_LABEL } from "./gameData.js";
-import { buildEleven, elevenAccepts } from "./eleven.js";
+import { buildEleven, elevenAccepts, elevenReason } from "./eleven.js";
 import { Avatar, Emblem } from "./Emblems.jsx";
 import Pitch, { Jersey } from "./Pitch.jsx";
 import { loadPlayers } from "./playersStore.js";
@@ -99,9 +99,7 @@ export default function Eleven({ onLeave }) {
 
     const slot = slots[active];
     if (!elevenAccepts(hit, slot)) {
-      const why = hit.pos !== slot.pos
-        ? `${hit.n} ist ${POS_LABEL[hit.pos] || hit.pos}, gesucht ist ${POS_LABEL[slot.pos]}.`
-        : `${hit.n} erfüllt „${slot.def.name}" nicht.`;
+      const why = elevenReason(hit, slot);
       setWrong((w) => w + 1);
       setFeedback({ ok: false, text: why });
       play("err");

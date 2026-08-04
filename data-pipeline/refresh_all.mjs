@@ -15,18 +15,26 @@ import { copyFileSync } from "fs";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLAYERS = join(HERE, "..", "src", "players.js");
 const SNAPSHOT = join(HERE, "..", "src", ".players.before.js");
+/* Jeder Eintrag ist [Skript, Argumente]. Die Reihenfolge ist nicht verhandelbar —
+   siehe die Kommentare je Schritt. */
 const CHAIN = [
-  "wikidata_roster.mjs",        // 1) Spieler/Vereine/sl
-  "wikidata_national.mjs",      // 1b) Nationalteam-Kader (nat auch für Vereinlose)
-  "wikidata_honours.mjs",       // 2) t: 11 Basis-Wettbewerbe (setzt neu)
-  "wikidata_honours_extra.mjs", // 3) t += BDO/EM/CA/EL (additiv, NACH 2!)
-  "wikidata_positions.mjs",     // 4) pos
-  "wikidata_careers.mjs",       // 5) cp
-  "apply_name_overrides.mjs",   // 6) kuratierte Namen/Ausschlüsse
+  ["wikidata_roster.mjs"],        // 1) Spieler/Vereine/sl
+  ["wikidata_national.mjs"],      // 1b) Nationalteam-Kader (nat auch für Vereinlose)
+  ["wikidata_honours.mjs"],       // 2) t: 11 Basis-Wettbewerbe (setzt neu)
+  ["wikidata_honours_extra.mjs"], // 3) t += BDO/EM/CA/EL (additiv, NACH 2!)
+  ["wikidata_positions.mjs"],     // 4) pos über die Kader
+  ["backfill_positions.mjs"],     // 4b) pos für alle, die dort durchfallen (QID-Auflösung)
+  ["wikidata_careers.mjs"],       // 5) cp
+  ["apply_name_overrides.mjs"],   // 6) kuratierte Namen/Ausschlüsse
+  /* 6b) EXTRA_PLAYERS/WRONG_CLUBS NACH den Namenskorrekturen: die Tabellen sind über
+     norm(name)|by verschlüsselt und träfen auf den unkorrigierten Namen ins Leere.
+     Fehlte dieser Schritt bisher — ein Voll-Refresh hat damit jedes Mal still
+     Matthäus, die fünf Salzburger und alle übrigen kuratierten Fakten gelöscht. */
+  ["apply_extra_players.mjs"],
   // 7) Fotos zuletzt: der Bildindex ist über norm(name)|by verschlüsselt und muss
   //    daher die bereits korrigierten Namen sehen, sonst zeigen die Schlüssel ins Leere.
-  "wikidata_player_careers.mjs", // 8) lg (gespielte Ligen) + span (Karriere-Spanne) — auch Nicht-Spielvereine
-  "wikidata_images.mjs",
+  ["wikidata_player_careers.mjs"], // 8) lg (gespielte Ligen) + span (Karriere-Spanne) — auch Nicht-Spielvereine
+  ["wikidata_images.mjs"],
 ];
 
 /* Stand sichern, damit verify_refresh.mjs am Ende Verluste erkennen kann. Wikidata
@@ -35,9 +43,9 @@ const CHAIN = [
 copyFileSync(PLAYERS, SNAPSHOT);
 console.log(`Stand gesichert: ${SNAPSHOT}`);
 
-for (const script of CHAIN) {
-  console.log(`\n════════ ${script} ════════`);
-  const r = spawnSync(process.execPath, [join(HERE, script)], { stdio: "inherit" });
+for (const [script, ...args] of CHAIN) {
+  console.log(`\n════════ ${[script, ...args].join(" ")} ════════`);
+  const r = spawnSync(process.execPath, [join(HERE, script), ...args], { stdio: "inherit" });
   if (r.status !== 0) {
     console.error(`\nAbbruch: ${script} endete mit Exit-Code ${r.status}`);
     process.exit(r.status || 1);
