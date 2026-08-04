@@ -51,3 +51,30 @@ test("die kuratierten Tabellen sind wohlgeformt", () => {
     assert.ok(Array.isArray(v) && v.length, `leere Vereinsliste bei ${k}`);
   }
 });
+
+/* Ein Tippfehler im Vereinsschlüssel würde nichts entfernen und nichts melden — der
+   Eintrag liefe still ins Leere. Deshalb gegen die echten Vereine prüfen. */
+test("die kuratierten Tabellen nennen nur existierende Vereine", async () => {
+  const { CLUBS } = await import("../src/gameData.js");
+  const keys = new Set(CLUBS.map((c) => c.key));
+  for (const x of EXTRA_PLAYERS) {
+    for (const c of x.clubs || []) assert.ok(keys.has(c), `EXTRA_PLAYERS: ${x.n} nennt unbekannten Verein ${c}`);
+    for (const [c] of x.cp || []) assert.ok(keys.has(c), `EXTRA_PLAYERS: ${x.n} hat cp für unbekannten Verein ${c}`);
+  }
+  for (const [k, v] of Object.entries(WRONG_CLUBS)) {
+    for (const c of v) assert.ok(keys.has(c), `WRONG_CLUBS: ${k} nennt unbekannten Verein ${c}`);
+  }
+});
+
+/* Die Tabellen dürfen sich nicht widersprechen: was WRONG_CLUBS entfernt, darf
+   EXTRA_PLAYERS nicht gleichzeitig eintragen — das Ergebnis hinge sonst allein an der
+   Reihenfolge und wäre bei der nächsten Umstellung still weg. */
+test("EXTRA_PLAYERS und WRONG_CLUBS widersprechen sich nicht", async () => {
+  const { norm } = await import("./wikidata_roster.mjs");
+  for (const x of EXTRA_PLAYERS) {
+    const weg = WRONG_CLUBS[norm(x.n) + "|" + x.by];
+    if (!weg) continue;
+    const kollision = (x.clubs || []).filter((c) => weg.includes(c));
+    assert.deepEqual(kollision, [], `${x.n}: ${kollision.join(", ")} wird ergänzt und gleichzeitig entfernt`);
+  }
+});
