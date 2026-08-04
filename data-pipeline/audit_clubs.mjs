@@ -52,17 +52,24 @@ async function sparql(query) {
   throw new Error("SPARQL fehlgeschlagen");
 }
 
+/* p:P54/ps:P54 statt wdt:P54 — ZWINGEND. `wdt:` liefert nur Aussagen mit dem besten
+   Rang; sobald der aktuelle Verein auf „bevorzugt" steht, verschwindet die gesamte
+   Historie. Mit wdt: meldete dieser Lauf Achraf Hakimi als „verliert BVB, INT, RMA",
+   weil Wikidata nur noch PSG zurückgab — 4 Falschmeldungen unter 25 Spielern, allein
+   aus der Abfrage. Der Test hält das fest. */
+export const clubsQuery = (qids) => `SELECT ?p ?by ?c WHERE {
+  VALUES ?p { ${qids.map((q) => "wd:" + q).join(" ")} }
+  ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d .
+  OPTIONAL { ?p p:P54/ps:P54 ?c }
+  BIND(YEAR(?d) AS ?by)
+}`;
+
 // QID -> { by, clubs: Set(Spielvereins-Keys) } für die Kandidaten
 async function fetchClubs(qids) {
   const out = new Map();
   for (let i = 0; i < qids.length; i += CHUNK) {
     const chunk = qids.slice(i, i + CHUNK);
-    const rows = await sparql(`SELECT ?p ?by ?c WHERE {
-      VALUES ?p { ${chunk.map((q) => "wd:" + q).join(" ")} }
-      ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d .
-      OPTIONAL { ?p wdt:P54 ?c }
-      BIND(YEAR(?d) AS ?by)
-    }`);
+    const rows = await sparql(clubsQuery(chunk));
     for (const b of rows) {
       const qid = b.p.value.split("/").pop();
       let e = out.get(qid);

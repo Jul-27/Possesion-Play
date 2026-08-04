@@ -181,6 +181,18 @@ dort tatsächlich; dass Freiburg fehlte, lag allein daran, dass Freiburg damals 
 Spielverein war. `audit_clubs.mjs` überspringt solche Fälle deshalb, und in
 `WRONG_CLUBS` kommt nur, was **positiv widerlegt** ist.
 
+**Messung vom 04.08.2026** (`audit_clubs.mjs --min-sl 40`, 1873 Spieler eindeutig
+auflösbar): **1833 deckungsgleich (97,9 %)**, 40 Spieler mit zusammen 45 Vereinen, die
+Wikidata nicht führt. Die Richtung lässt sich daraus **nicht** ableiten — darunter sind
+zweifelsfrei echte Stationen, die Wikidata verloren hat (De Bruyne bei Chelsea und City,
+Felix Magath bei Bayern/Stuttgart/Werder/Frankfurt/Wolfsburg), und ebenso Kandidaten, die
+nach einem Fehleintrag aussehen. Nichts davon wird automatisch geändert.
+
+Beim Bau des Werkzeugs war `wdt:P54` die naheliegende Abfrage — und falsch: sie liefert
+nur Aussagen mit dem besten Rang, sodass bei gesetztem Vorzugsrang die ganze
+Vereinshistorie fehlt. Das erzeugte 4 Falschmeldungen unter 25 Spielern. Richtig ist
+`p:P54/ps:P54`; ein Test hält es fest.
+
 ## WDQS-Fenster: warum 4 Jahre
 
 Die Honours-Abfragen sind nach Saison-Startjahr gefenstert. Die Fenster waren früher bis
