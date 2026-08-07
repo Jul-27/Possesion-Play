@@ -54,9 +54,14 @@ const qidOf = (uri) => (uri ? uri.split("/").pop() : null);
 
 const PARTICLES = new Set(["van","von","de","del","della","di","da","dos","der","den","ten","ter","la","le"]);
 
-export function norm(s) {
-  return String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
-}
+/* EINE Normalisierung für Pipeline und App. Vorher hatte die Pipeline eine eigene,
+   die nur NFD-Kombizeichen abräumte — ł, ø, ð, æ, þ, ß und đ blieben stehen. Die App
+   räumt sie ab. Ergebnis: die Pipeline hielt „Łukasz Fabiański" und „Lukasz Fabianski"
+   für zwei Personen und legte beide an, während das Spiel beide auf denselben
+   Schlüssel abbildet. So sind 12 Doppel-Datensätze entstanden — mit geteilten Vereinen
+   (Tytoń hatte Ajax nur auf einer der beiden Karten) und ohne Foto, weil der Bildindex
+   mehrdeutige Schlüssel verwirft. */
+export { norm } from "../src/gameData.js";
 
 export function deriveLastName(name) {
   const parts = String(name).trim().split(/\s+/);
