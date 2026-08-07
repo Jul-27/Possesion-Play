@@ -62,3 +62,38 @@ test("isExcluded prüft Name und Geburtsjahr gemeinsam", () => {
   assert.equal(isExcluded({ n: "Jason Statham", by: 1980 }, EX), false);
   assert.equal(isExcluded({ n: "Brian Statham", by: 1967 }, EX), false);
 });
+
+/* Zwei Schreibweisen desselben Spielers entstanden, weil Pipeline und App
+   unterschiedlich normalisierten: die Pipeline ließ ł/ø/ð/æ/þ stehen, die App räumt
+   sie ab. So lagen 12 Spieler doppelt im Datensatz — mit GETEILTEN Vereinen
+   (Przemysław Tytoń hatte Ajax nur auf einer der beiden Karten). */
+test("besserGeschrieben behält die Schreibweise mit Sonderzeichen", async () => {
+  const { besserGeschrieben } = await import("./apply_name_overrides.mjs");
+  assert.equal(besserGeschrieben("Lukasz Fabianski", "Łukasz Fabiański"), "Łukasz Fabiański");
+  assert.equal(besserGeschrieben("Łukasz Fabiański", "Lukasz Fabianski"), "Łukasz Fabiański");
+  assert.equal(besserGeschrieben("Marcin Bulka", "Marcin Bułka"), "Marcin Bułka");
+  assert.equal(besserGeschrieben("Harry Kane", "Harry Kane"), "Harry Kane");
+});
+
+test("besserGeschrieben bleibt bei Gleichstand beim ersten", async () => {
+  const { besserGeschrieben } = await import("./apply_name_overrides.mjs");
+  assert.equal(besserGeschrieben("Filip Jörgensen", "Filip Jørgensen"), "Filip Jörgensen");
+});
+
+test("mergeInto übernimmt die bessere Schreibweise samt Nachnamen", async () => {
+  const { mergeInto } = await import("./apply_name_overrides.mjs");
+  const a = { n: "Lukasz Fabianski", ln: "Fabianski", by: 1985, nat: [], clubs: ["ARS"] };
+  mergeInto(a, { n: "Łukasz Fabiański", ln: "Fabiański", by: 1985, nat: ["POL"], clubs: ["ARS"] });
+  assert.equal(a.n, "Łukasz Fabiański");
+  assert.equal(a.ln, "Fabiański", "der Nachname muss neu abgeleitet werden");
+});
+
+/* Der eigentliche Gewinn der Verschmelzung: die Vereine der beiden Karten. */
+test("mergeInto vereinigt geteilte Vereine und Titel", async () => {
+  const { mergeInto } = await import("./apply_name_overrides.mjs");
+  const a = { n: "Przemyslaw Tyton", ln: "Tyton", by: 1987, nat: [], clubs: ["PSV", "VFB"], t: ["MPL"] };
+  mergeInto(a, { n: "Przemysław Tytoń", ln: "Tytoń", by: 1987, nat: ["POL"], clubs: ["AJA", "PSV", "VFB"], t: ["EL"] });
+  assert.deepEqual(a.clubs, ["AJA", "PSV", "VFB"]);
+  assert.deepEqual(a.t, ["EL", "MPL"]);
+  assert.deepEqual(a.nat, ["POL"], "eine fehlende Nation wird ergänzt");
+});

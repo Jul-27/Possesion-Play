@@ -32,8 +32,20 @@ export function isExcluded(p, list = EXCLUDED_PLAYERS) {
   return list.some((x) => x.by === p.by && (x.n === p.n || (x.aliases || []).includes(p.n)));
 }
 
+/* Bei zwei Schreibweisen desselben Spielers gewinnt die mit den Sonderzeichen.
+   Die Suche im Spiel normalisiert ł/ø/ð/æ/þ ohnehin weg — „Lukasz Fabianski"
+   getippt findet also auch „Łukasz Fabiański". Die korrekte Schreibweise kostet
+   damit nichts, während die alphabetische Reihenfolge sonst immer die ASCII-Variante
+   gewinnen ließe. Bei Gleichstand bleibt es beim ersten. */
+export function besserGeschrieben(a, b) {
+  const sonder = (s) => [...String(s)].filter((c) => c.charCodeAt(0) > 127).length;
+  return sonder(b) > sonder(a) ? b : a;
+}
+
 /** b in a hineinverschmelzen: Mengen vereinigen, fehlende Skalare ergänzen. */
 export function mergeInto(a, b) {
+  const name = besserGeschrieben(a.n, b.n);
+  if (name !== a.n) { a.n = name; a.ln = deriveLastName(name); }
   a.nat = a.nat && a.nat.length ? a.nat : [...(b.nat || [])];
   a.clubs = [...new Set([...(a.clubs || []), ...(b.clubs || [])])].sort();
   const t = [...new Set([...(a.t || []), ...(b.t || [])])].sort();

@@ -89,6 +89,16 @@ export const NAME_OVERRIDES = [
 // Records, die aus dem Datensatz verschwinden. `aliases` fängt Schreibweisen ab,
 // unter denen derselbe Record nach einem Pipeline-Lauf wieder auftauchen kann.
 export const EXCLUDED_PLAYERS = [
+  /* Trainer, die über die Wikipedia-Kadertabelle als Spieler ihres Vereins gelandet
+     sind. Beide sind Ex-Profis (P106 „Fußballspieler"), haben aber für Valencia bzw.
+     Villarreal nie gespielt — sie trainieren sie. wikipedia_squads.mjs filtert das
+     seither über P6087 („Trainer von"); diese beiden Karteileichen sind vom Lauf
+     davor. */
+  { n: "Carlos Corberán", by: 1983, aliases: ["Q27983031"],
+    reason: "Trainer des FC Valencia; als Spieler nie dort (P6087, nicht P54)" },
+  { n: "Marcelino García Toral", by: 1965, aliases: ["Q1339589"],
+    reason: "Trainer des FC Villarreal; als Spieler nie dort (P6087, nicht P54)" },
+
   // Nicht-Fußballer
   { n: "Jason Statham", by: 1967, aliases: ["Q169963"],
     reason: "Schauspieler; P54 zu Manchester United in Wikidata ist falsch, er hat nie Profifußball gespielt" },

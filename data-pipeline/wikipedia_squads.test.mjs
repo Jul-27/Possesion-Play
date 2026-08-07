@@ -88,7 +88,7 @@ test("seitJahr nimmt den Neuzugang der laufenden Saison", () => {
 test("mergeKader ergänzt Verein und Zeitraum bei vorhandenen Spielern", () => {
   const players = [{ n: "Andrej Kramaric", ln: "Kramaric", by: 1991, nat: ["CRO"], clubs: ["LEI"], cp: [["LEI", 2015, 2016]] }];
   const r = mergeKader(players, "TSG", [{ n: "Andrej Kramaric", by: 1991, sl: 54, nat: "CRO", pos: "ST", seit: 2016 }]);
-  assert.deepEqual(r, { neu: 0, vereinErgaenzt: 1, cpErgaenzt: 1, schonDa: 0 });
+  assert.deepEqual(r, { neu: 0, vereinErgaenzt: 1, cpErgaenzt: 1, cpRepariert: 0, schonDa: 0 });
   assert.deepEqual(players[0].clubs, ["LEI", "TSG"]);
   assert.deepEqual(players[0].cp, [["LEI", 2015, 2016], ["TSG", 2016, 0]]);
 });
@@ -99,7 +99,7 @@ test("mergeKader ergänzt Verein und Zeitraum bei vorhandenen Spielern", () => {
 test("mergeKader fasst vorhandene Zeiträume desselben Vereins nicht an", () => {
   const players = [{ n: "Oliver Baumann", ln: "Baumann", by: 1990, nat: ["GER"], clubs: ["TSG"], cp: [["TSG", 2014, 0]] }];
   const r = mergeKader(players, "TSG", [{ n: "Oliver Baumann", by: 1990, sl: 39, nat: "GER", pos: "TW", seit: 2026 }]);
-  assert.deepEqual(r, { neu: 0, vereinErgaenzt: 0, cpErgaenzt: 0, schonDa: 1 });
+  assert.deepEqual(r, { neu: 0, vereinErgaenzt: 0, cpErgaenzt: 0, cpRepariert: 0, schonDa: 1 });
   assert.deepEqual(players[0].cp, [["TSG", 2014, 0]]);
 });
 
@@ -158,4 +158,33 @@ test("kuratierte Ausschlüsse kommen nicht über die Kaderliste zurück", async 
     for (const a of x.aliases || []) assert.equal(istAusgeschlossen(a, x.by, a), true, `Alias nicht ausgeschlossen: ${a}`);
   }
   assert.equal(istAusgeschlossen("Harry Kane", 1993), false);
+});
+
+/* Kadertabellen listen den Trainerstab mit, und fast jeder Trainer ist Ex-Profi —
+   der Berufsfilter allein lässt ihn durch. Beim ersten Lauf landeten so Carlos
+   Corberán als Valencia-Spieler und Marcelino García Toral als Villarreal-Spieler. */
+test("ein Beitrittsjahr kann nie in der Zukunft liegen", () => {
+  // Zeile ohne „im Verein seit“: übrig bleibt nur das Vertragsende 2027.
+  assert.equal(seitJahr([2007, 2027], 2007, 2026), 2026, "Felipe Chávez, FCB");
+  assert.equal(seitJahr([2008, 2027], 2008, 2026), 2026, "Wael Mohya, BMG");
+});
+
+test("mergeKader schreibt kein Beitrittsjahr in der Zukunft", () => {
+  const players = [];
+  mergeKader(players, "FCB", [{ n: "Neu Zugang", by: 2007, sl: 3, nat: null, pos: null, seit: 2027 }], 2026);
+  assert.deepEqual(players[0].cp, [["FCB", 2026, 0]]);
+});
+
+test("mergeKader repariert ein früher geschriebenes Zukunftsjahr", () => {
+  const players = [{ n: "Felipe Chávez", ln: "Chávez", by: 2007, nat: [], clubs: ["FCB"], cp: [["FCB", 2027, 0]] }];
+  const r = mergeKader(players, "FCB", [{ n: "Felipe Chávez", by: 2007, sl: 10, nat: null, pos: null, seit: 2026 }], 2026);
+  assert.equal(r.cpRepariert, 1);
+  assert.deepEqual(players[0].cp, [["FCB", 2026, 0]]);
+});
+
+test("mergeKader lässt einen plausiblen Zeitraum aus der Vergangenheit in Ruhe", () => {
+  const players = [{ n: "Manuel Neuer", ln: "Neuer", by: 1986, nat: ["GER"], clubs: ["FCB"], cp: [["FCB", 2011, 0]] }];
+  const r = mergeKader(players, "FCB", [{ n: "Manuel Neuer", by: 1986, sl: 90, nat: "GER", pos: "TW", seit: 2026 }], 2026);
+  assert.equal(r.cpRepariert, 0);
+  assert.deepEqual(players[0].cp, [["FCB", 2011, 0]]);
 });

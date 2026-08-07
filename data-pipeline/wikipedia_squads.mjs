@@ -98,23 +98,31 @@ export function parseZeilen(html) {
    das kleinste, das nach dem 14. Geburtstag und nicht in der Zukunft liegt.
    Ohne brauchbaren Kandidaten bleibt die Saison des Abschnitts. */
 export function seitJahr(jahre, geburtsjahr, saison) {
-  const kandidaten = jahre.filter((j) => j !== geburtsjahr && j >= geburtsjahr + 14 && j <= saison + 1);
+  /* Obergrenze ist die Saison, NICHT saison+1: ein Beitrittsjahr kann nicht in der
+     Zukunft liegen. Mit saison+1 rutschte bei Spielern ohne „im Verein seit"-Angabe
+     das Vertragsende herein — Felipe Chávez landete dadurch mit „ab 2027" beim FCB. */
+  const kandidaten = jahre.filter((j) => j !== geburtsjahr && j >= geburtsjahr + 14 && j <= saison);
   return kandidaten.length ? Math.min(...kandidaten) : saison;
 }
 
 /** Kader in die Spielerliste einarbeiten. Rein funktional, ohne Netz testbar. */
-export function mergeKader(players, key, kader) {
+export function mergeKader(players, key, kader, jetzt = new Date().getFullYear()) {
   const idx = new Map(players.map((p) => [rosterNorm(p.n) + "|" + p.by, p]));
-  const res = { neu: 0, vereinErgaenzt: 0, cpErgaenzt: 0, schonDa: 0 };
+  const res = { neu: 0, vereinErgaenzt: 0, cpErgaenzt: 0, cpRepariert: 0, schonDa: 0 };
   for (const k of kader) {
+    const seit = Math.min(k.seit, jetzt);
     const cur = idx.get(rosterNorm(k.n) + "|" + k.by);
     if (cur) {
       const hatte = (cur.clubs || []).includes(key);
       if (!hatte) { cur.clubs = [...new Set([...(cur.clubs || []), key])].sort(); res.vereinErgaenzt++; }
       else res.schonDa++;
-      // Vorhandene Zeiträume nie anfassen — Wikidata datiert genauer als eine Kadertabelle.
-      if (!(cur.cp || []).some((c) => c[0] === key)) {
-        cur.cp = [...(cur.cp || []), [key, k.seit, 0]].sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0]));
+      /* Vorhandene Zeiträume nie anfassen — Wikidata datiert genauer als eine
+         Kadertabelle. Einzige Ausnahme: ein Beginn in der Zukunft ist immer falsch
+         und wird überschrieben, damit frühere Läufe sich selbst heilen. */
+      const vorhanden = (cur.cp || []).find((c) => c[0] === key);
+      if (vorhanden && vorhanden[1] > jetzt) { vorhanden[1] = seit; res.cpRepariert++; }
+      else if (!vorhanden) {
+        cur.cp = [...(cur.cp || []), [key, seit, 0]].sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0]));
         res.cpErgaenzt++;
       }
       if (!(cur.nat || []).length && k.nat) cur.nat = [k.nat];
@@ -123,7 +131,7 @@ export function mergeKader(players, key, kader) {
     } else {
       const rec = { n: k.n, ln: deriveLastName(k.n), by: k.by, nat: k.nat ? [k.nat] : [], clubs: [key], sl: k.sl || 0 };
       if (k.pos) rec.pos = k.pos;
-      rec.cp = [[key, k.seit, 0]];
+      rec.cp = [[key, seit, 0]];
       players.push(rec);
       idx.set(rosterNorm(k.n) + "|" + k.by, rec);
       res.neu++;
@@ -206,7 +214,13 @@ async function spielerDaten(qids) {
       const n = korrigierterName(roh, Number(by));
       const nat = (cl.P27 || []).map((x) => GAME_BY_QID[x.mainsnak?.datavalue?.value?.id]).find(Boolean) || null;
       const posQids = (cl.P413 || []).map((x) => x.mainsnak?.datavalue?.value?.id).filter(Boolean);
-      out.set(id, { n, by: Number(by), sl: Object.keys(ent.sitelinks || {}).length, nat, posQids });
+      /* Kadertabellen listen den Trainerstab mit. Fast jeder Trainer ist Ex-Profi und
+         hat daher P106 „Fußballspieler" — der Berufsfilter allein reicht also nicht.
+         P6087 („Trainer von") auf genau diesen Verein trennt sauber: gemessen an
+         Corberán (Valencia) und Marcelino (Villarreal) trifft es zu, bei Kramarić und
+         Undav nicht. Beide Trainer waren sonst als Spieler ihres Vereins gelandet. */
+      const trainerVon = new Set((cl.P6087 || []).map((x) => x.mainsnak?.datavalue?.value?.id).filter(Boolean));
+      out.set(id, { n, by: Number(by), sl: Object.keys(ent.sitelinks || {}).length, nat, posQids, trainerVon });
     }
   });
   return out;
@@ -268,11 +282,13 @@ async function main() {
       // Kaderzeile sind Land, Verein oder Position.
       const kader = [];
       const gesehen = new Set();
+      const trainer = [];
       for (const z of zeilen) {
         for (const t of z.titel) {
           const q = qidVon.get(t);
           const d = q && daten.get(q);
           if (!d || gesehen.has(q)) continue;
+          if (d.trainerVon?.has(CLUB_QID[key])) { gesehen.add(q); trainer.push(d.n); continue; }
           gesehen.add(q);
           kader.push({ ...d, pos: pickBucket(new Set(d.posQids.map((x) => posMap.get(x)).filter(Boolean))), seit: seitJahr(z.jahre, d.by, saison) });
           break;
@@ -293,7 +309,7 @@ async function main() {
         }
       }
       for (const f of Object.keys(summe)) summe[f] += r[f];
-      console.log(`${key.padEnd(5)}${seite.slice(0, 24).padEnd(25)}${String(kader.length).padStart(5)}${String(r.schonDa).padStart(10)}${String(r.vereinErgaenzt).padStart(12)}${String(r.neu).padStart(13)}`);
+      console.log(`${key.padEnd(5)}${seite.slice(0, 24).padEnd(25)}${String(kader.length).padStart(5)}${String(r.schonDa).padStart(10)}${String(r.vereinErgaenzt).padStart(12)}${String(r.neu).padStart(13)}${trainer.length ? "   Trainerstab übersprungen: " + trainer.join(", ") : ""}`);
     } catch (e) {
       uebersprungen.push(`${key} (${seite}): ${e.message}`);
     }
