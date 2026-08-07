@@ -97,3 +97,29 @@ test("mergeInto vereinigt geteilte Vereine und Titel", async () => {
   assert.deepEqual(a.t, ["EL", "MPL"]);
   assert.deepEqual(a.nat, ["POL"], "eine fehlende Nation wird ergänzt");
 });
+
+/* lg und span kamen erst mit den Liga-/Ära-Feldern dazu und fehlten in mergeInto.
+   Beim Verschmelzen von Kostas Mitroglou gingen dadurch vier Ligen und die gesamte
+   Karriere-Spanne verloren — sichtbar geworden erst über verify_refresh.mjs. */
+test("mergeInto vereinigt auch Ligen und Karriere-Spanne", async () => {
+  const { mergeInto } = await import("./apply_name_overrides.mjs");
+  const a = { n: "Konstantinos Mitroglou", ln: "Mitroglou", by: 1988, nat: [], clubs: ["OM"] };
+  mergeInto(a, { n: "Kostas Mitroglou", ln: "Mitroglou", by: 1988, nat: ["GRE"], clubs: ["PSV"], lg: ["L1", "NL", "PL", "PT"], span: [2014, 2021] });
+  assert.deepEqual(a.lg, ["L1", "NL", "PL", "PT"]);
+  assert.deepEqual(a.span, [2014, 2021]);
+});
+
+test("mergeInto nimmt die weiteste Spanne beider Karten", async () => {
+  const { mergeInto } = await import("./apply_name_overrides.mjs");
+  const a = { n: "A", ln: "A", by: 1990, nat: [], clubs: [], lg: ["BL"], span: [2010, 2018] };
+  mergeInto(a, { n: "A", ln: "A", by: 1990, nat: [], clubs: [], lg: ["PL"], span: [2008, 2015] });
+  assert.deepEqual(a.lg, ["BL", "PL"]);
+  assert.deepEqual(a.span, [2008, 2018]);
+});
+
+test("mergeInto behandelt eine offene Spanne als spätestes Ende", async () => {
+  const { mergeInto } = await import("./apply_name_overrides.mjs");
+  const a = { n: "A", ln: "A", by: 1990, nat: [], clubs: [], span: [2012, 2020] };
+  mergeInto(a, { n: "A", ln: "A", by: 1990, nat: [], clubs: [], span: [2015, 0] });
+  assert.deepEqual(a.span, [2012, 0], "0 heißt „läuft noch“ und schlägt jedes Jahr");
+});
