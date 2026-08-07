@@ -499,3 +499,40 @@ body::after {
 .lbName { flex: 1; font-weight: 700; font-size: 14px; overflow-wrap: anywhere; }
 .lbDetail { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); white-space: nowrap; }
 .lbScore { font-family: 'Anton', sans-serif; font-size: 18px; color: var(--gold); min-width: 34px; text-align: right; }
+
+/* ── Transferkarussell ─────────────────────────────────────────────────────── */
+.carLevels { display: grid; gap: 8px; margin-top: 12px; }
+.carLevel {
+  display: flex; flex-direction: column; gap: 2px; text-align: left;
+  padding: 11px 14px; border-radius: 12px; cursor: pointer;
+  background: rgba(255, 255, 255, .04); border: 1px solid rgba(255, 255, 255, .10); color: inherit;
+}
+.carLevel:hover { background: rgba(255, 255, 255, .07); }
+.carLevel.active { border-color: var(--acc, #2DD4BF); background: rgba(45, 212, 191, .12); }
+.carLevel span { font-size: 12px; opacity: .65; }
+
+.carScore { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 14px 0 10px; }
+.carSide {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 78px;
+  padding: 6px 10px; border-radius: 12px; border: 1px solid transparent;
+}
+/* Wer am Zug ist, muss auf einen Blick erkennbar sein — sonst tippt man ins Leere. */
+.carSide.am-zug { border-color: var(--acc, #2DD4BF); background: rgba(45, 212, 191, .10); }
+.carWho { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; opacity: .7; }
+.carHearts { font-size: 14px; letter-spacing: 1px; }
+.carMiddle { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+
+.carChain { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.carStep {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px 5px 5px;
+  border-radius: 999px; font-size: 13px; background: rgba(255, 255, 255, .05);
+  border: 1px solid rgba(255, 255, 255, .08);
+}
+.carStep.club { padding-left: 8px; }
+/* Vereine und Spieler unterscheidbar halten — die Kette wird schnell lang. */
+.carStep.club { background: rgba(255, 255, 255, .09); }
+.carStep.mein { border-color: rgba(45, 212, 191, .45); }
+.carStep.bot { border-color: rgba(251, 113, 133, .40); }
+.carStep.cur { box-shadow: 0 0 0 2px rgba(255, 255, 255, .14); }
+.carEm { width: 22px; height: 22px; display: inline-flex; }
+.carEm svg, .carEm img { width: 100%; height: 100%; }

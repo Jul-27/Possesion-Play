@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { bar, buildShare, shareCareer, shareOdd, shareChain, shareEleven, shareSolo } from "./share.js";
+import { bar, buildShare, shareCarousel, shareCareer, shareOdd, shareChain, shareEleven, shareSolo } from "./share.js";
 
 // buildShare liest window.location — im Test genügt ein Minimal-Stub.
 globalThis.window = { location: { origin: "https://possesion-play.vercel.app", pathname: "/" } };
@@ -57,4 +57,16 @@ test("Teilen-Text enthält keine personenbezogenen Daten", () => {
     assert.ok(!/[A-Za-zÄÖÜäöü]+@/.test(t), "keine Mailadresse");
     assert.ok(!/pp:/.test(t), "keine Speicherschlüssel");
   }
+});
+
+test("shareCarousel zeigt Leben und Bot-Stufe", () => {
+  const t = shareCarousel(true, 2, 0, "Schwer");
+  assert.match(t, /🎠 Transferkarussell · gewonnen 2:0/);
+  assert.match(t, /❤️❤️🖤 gegen 🖤🖤🖤/);
+  assert.match(t, /Bot: Schwer/);
+  assert.match(t, /\?solo=carousel$/m, "der Link führt direkt in den Modus");
+});
+
+test("shareCarousel behauptet bei einer Niederlage keinen Sieg", () => {
+  assert.match(shareCarousel(false, 0, 2, "Mittel"), /verloren 0:2/);
 });
