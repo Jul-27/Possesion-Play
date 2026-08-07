@@ -56,14 +56,22 @@ export const EXTRA_PLAYERS = [
    EXTRA_PLAYERS: das ergänzt, das hier nimmt weg. Schlüssel ist norm(name)|jahr —
    norm() entfernt Diakritika, „Röhl" wird also zu „rohl".
 
-   Derzeit leer, und das ist Absicht. Hier stand kurzzeitig Merlin Röhl mit Everton,
+   Ein Eintrag kommt nur hinein, wenn ein Verein POSITIV WIDERLEGT ist — nicht, wenn
+   eine Quelle bloß schweigt. Hier stand nämlich kurzzeitig Merlin Röhl mit Everton,
    weil sein Wikidata-Eintrag gar keinen Verein führt. Genau dieser Schluss ist falsch:
-   ein leerer Eintrag belegt nicht, dass unser Wert falsch ist — er belegt nur, dass
-   Wikidata nichts weiß. Röhl spielt tatsächlich bei Everton (Owner-bestätigt); dass
-   Freiburg fehlte, lag allein daran, dass Freiburg bis dahin kein Spielverein war.
-   Ein Eintrag kommt hier also nur hinein, wenn ein Verein positiv widerlegt ist —
-   nicht, wenn eine Quelle bloß schweigt. */
+   ein leerer Eintrag belegt nicht, dass unser Wert falsch ist. Röhl spielt tatsächlich
+   bei Everton; dass Freiburg fehlte, lag allein daran, dass Freiburg damals kein
+   Spielverein war.
+
+   Die folgenden sechs stammen aus der Durchsicht der Audit-Liste vom 04.08.2026
+   (45 Zuordnungen, die Wikidata nicht führt) und sind vom Owner als falsch bestätigt.
+   Die übrigen 39 aus derselben Liste bleiben bewusst unangetastet — darunter De Bruynes
+   Chelsea-/City-Jahre und Magaths fünf Bundesliga-Stationen, die Wikidata verloren hat. */
 export const WRONG_CLUBS = {
+  "jay-jay okocha|1973":     ["MUN"],
+  "mason greenwood|2001":    ["ARS", "PSG"],
+  "nico schlotterbeck|1999": ["RBL", "SVW"],
+  "nelson valdez|1983":      ["RMA"],
 };
 
 // Entfernt die Vereine aus clubs[] und die zugehörigen cp-Einträge.
