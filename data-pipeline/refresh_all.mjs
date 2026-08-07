@@ -31,6 +31,11 @@ const CHAIN = [
      Fehlte dieser Schritt bisher — ein Voll-Refresh hat damit jedes Mal still
      Matthäus, die fünf Salzburger und alle übrigen kuratierten Fakten gelöscht. */
   ["apply_extra_players.mjs"],
+  /* 6c) Aktuelle Kader aus der deutschen Wikipedia. Wikidata hinkt bei Transfers stark
+     hinterher — bei Hoffenheim fehlten 19 von 31 Kaderspielern, bei Salzburg 24 von 33.
+     Läuft NACH den Namenskorrekturen (gleicher Schlüssel norm(name)|by) und VOR
+     wikidata_player_careers, damit lg/span die neuen cp-Einträge sehen. */
+  ["wikipedia_squads.mjs"],
   // 7) Fotos zuletzt: der Bildindex ist über norm(name)|by verschlüsselt und muss
   //    daher die bereits korrigierten Namen sehen, sonst zeigen die Schlüssel ins Leere.
   ["wikidata_player_careers.mjs"], // 8) lg (gespielte Ligen) + span (Karriere-Spanne) — auch Nicht-Spielvereine

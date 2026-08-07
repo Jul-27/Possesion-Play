@@ -24,6 +24,7 @@ Kaggle (kein lokales Setup, kein Admin-Recht nötig).
 | `backfill_positions.mjs` | Füllt `pos` bei allen, die `wikidata_positions.mjs` nicht erreicht: löst die QID über Name + Geburtsjahr auf und liest `P413` direkt, statt über Vereins-Kader zu gehen. Ein Treffer zählt nur bei exakt passendem Geburtsjahr **und** Beruf Fußballspieler. |
 | `position_overrides.mjs` | Kuratierte Positionen für Spieler ohne `P413`. Wie `HONOUR_OVERRIDES`: nur Belegtes, nichts Geratenes. |
 | `audit_clubs.mjs` | **Diagnose, schreibt nichts.** Meldet Spieler, bei denen wir einen Verein führen, den Wikidata nicht kennt. Treffer sind Verdacht, kein Befund — siehe „Datenqualität". |
+| `wikipedia_squads.mjs` | Ergänzt die **aktuellen Kader** aus der deutschen Wikipedia: `node data-pipeline/wikipedia_squads.mjs [KEY …] [--probe]`. Wikipedia liefert dabei nur die Vereinszugehörigkeit und das Jahr aus „im Verein seit"; alle Personendaten kommen weiter aus Wikidata. Siehe „Aktuelle Kader". |
 
 Das Notebook ist die browserbasierte Zusammenführung der beiden `.py`-Skripte.
 Die Skripte selbst sind als Referenz / für lokale Läufe enthalten.
@@ -192,6 +193,50 @@ Beim Bau des Werkzeugs war `wdt:P54` die naheliegende Abfrage — und falsch: si
 nur Aussagen mit dem besten Rang, sodass bei gesetztem Vorzugsrang die ganze
 Vereinshistorie fehlt. Das erzeugte 4 Falschmeldungen unter 25 Spielern. Richtig ist
 `p:P54/ps:P54`; ein Test hält es fest.
+
+## Aktuelle Kader: warum Wikidata dafür nicht reicht
+
+Wikidata hinkt bei Transfers hinterher, und zwar sehr ungleichmäßig. Gemessen am
+04.08.2026 gegen die Kaderlisten der deutschen Wikipedia:
+
+| | Kader | bei uns mit Station |
+|---|--:|--:|
+| Liverpool, Arsenal, Tottenham, Newcastle, Everton, Villa, Napoli, Lazio | je 19–27 | **100 %** |
+| TSG Hoffenheim | 31 | 9 |
+| FC Schalke 04 | 29 | 6 |
+| Hamburger SV | 26 | 6 |
+| FC Red Bull Salzburg | 33 | 2 |
+
+Bei den 19 fehlenden Hoffenheimern führte **Wikidata die Station bei keinem einzigen**.
+Fisnik Asllani und Leon Avdullahu haben dort überhaupt keinen Verein (`P54` leer), Tim
+Lemperle nur Köln. Die Roster-Pipeline ist der Quelle also treu — die Quelle ist lückenhaft.
+
+`wikipedia_squads.mjs` schließt das. Entscheidend ist die **Aufgabenteilung**:
+
+- **Wikipedia** liefert ausschließlich die Behauptung „gehört zum Kader" plus das Jahr
+  aus der Spalte „im Verein seit".
+- **Wikidata** liefert weiterhin Name, Geburtsjahr, Nation, Position und Bekanntheit,
+  aufgelöst über die QID des verlinkten Artikels.
+
+Der Abgleich läuft über die Artikel-Verlinkung (`pageprops.wikibase_item`), nicht über
+Namensähnlichkeit — deshalb gibt es keine Verwechslung zwischen Fisnik und Kristjan
+Asllani, beide Jahrgang 2002.
+
+Zwei Fallen, die beim Bau zugeschnappt sind:
+
+1. **Der Abschnitt.** Beim VfB heißt der Kader der *zweiten* Mannschaft schlicht
+   „Kader in der Saison 2026/27" — am Titel nicht vom Profikader zu unterscheiden.
+   Erkennbar ist er nur an der Elternüberschrift „Zweite Mannschaft". Die Auswahl prüft
+   deshalb die ganze Überschriften-Hierarchie; eine frühere, titelbasierte Fassung hat
+   bei Stuttgart die Reserve importiert und Leverkusen („Mannschaftskader") und PSV
+   („Eredivisie-Kader") ganz übersehen. Zusätzlich gilt eine Plausibilitätsgrenze von
+   10–45 Spielern: reißt ein Verein sie, wird er ausgelassen und gemeldet.
+2. **Die kuratierten Namen.** Der erste Lauf legte „Calvin Ramsey" neben den bereits
+   korrigierten „Calvin Ramsay" — `NAME_OVERRIDES` und `EXCLUDED_PLAYERS` müssen auch
+   hier gelten, genau wie in `wikidata_images.mjs`.
+
+Vorhandene Zeiträume werden nie überschrieben: Wikidata datiert genauer als eine
+Kadertabelle, und sonst überschriebe jeder Jahreslauf echte Anfangsjahre.
 
 ## WDQS-Fenster: warum 4 Jahre
 
