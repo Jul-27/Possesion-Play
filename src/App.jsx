@@ -8,6 +8,8 @@ import Solo from "./Solo.jsx";
 import Career from "./Career.jsx";
 import OddOne from "./OddOne.jsx";
 import Chain from "./Chain.jsx";
+import Carousel from "./Carousel.jsx";
+import CarouselDuel from "./CarouselDuel.jsx";
 import Eleven from "./Eleven.jsx";
 import Stats from "./Stats.jsx";
 import Leaderboard from "./Leaderboard.jsx";
@@ -50,6 +52,7 @@ function GameRouter({ code, clientId, onLeave }) {
   const kind = board && !Array.isArray(board) ? board.kind : "hex";
   if (kind === "grid") return <Grid code={code} clientId={clientId} onLeave={onLeave} />;
   if (kind === "guess") return <Guess code={code} clientId={clientId} onLeave={onLeave} />;
+  if (kind === "carousel") return <CarouselDuel code={code} clientId={clientId} onLeave={onLeave} />;
   return <Game code={code} clientId={clientId} onLeave={onLeave} />;
 }
 
@@ -100,6 +103,7 @@ export default function App() {
   if (solo === "career") return <Career onLeave={leave} />;
   if (solo === "odd") return <OddOne onLeave={leave} />;
   if (solo === "chain") return <Chain onLeave={leave} />;
+  if (solo === "carousel") return <Carousel onLeave={leave} />;
   if (solo === "eleven") return <Eleven onLeave={leave} />;
   return code
     ? <GameRouter code={code} clientId={clientId} onLeave={leave} />

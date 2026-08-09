@@ -45,6 +45,15 @@ export const shareChain = (len, best, isRecord) => buildShare({
   lines: [isRecord ? "🏆 neuer Rekord!" : `Rekord ${best}`],
 });
 
+/* Transferkarussell: die verbliebenen Leben sind die Kennzahl — sie zeigen, wie knapp
+   es war, und ein 3:0 liest sich anders als ein 1:0. */
+export const shareCarousel = (gewonnen, meine, gegner, stufe) => buildShare({
+  solo: "carousel",
+  title: `🎠 Transferkarussell · ${gewonnen ? "gewonnen" : "verloren"} ${meine}:${gegner}`,
+  lines: [`${"❤️".repeat(meine)}${"🖤".repeat(3 - meine)} gegen ${"❤️".repeat(gegner)}${"🖤".repeat(3 - gegner)}`,
+          stufe ? `Bot: ${stufe}` : null],
+});
+
 export const shareEleven = (num, wrong, formation) => buildShare({
   solo: "eleven",
   title: `👕 Elf des Tages #${num} komplett${formation ? ` · ${formation}` : ""}`,

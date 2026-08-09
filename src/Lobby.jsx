@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase, getClientId, getSavedName, saveName } from "./supabaseClient.js";
 import { buildBoardSerial, buildGridSerial, buildGuessSerial, genCode, START_SECONDS } from "./gameData.js";
+import { initCarousel, CAROUSEL_SECONDS } from "./carousel.js";
 import { loadPlayers } from "./playersStore.js";
 import { dailyDateStr, dailyNumber } from "./dailyLogic.js";
 import DataStamp from "./DataStamp.jsx";
@@ -26,6 +27,11 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
       let board, last_move;
       if (mode === "grid") { board = buildGridSerial(await loadPlayers()); last_move = { picksAll: {} }; }
       else if (mode === "guess") { board = buildGuessSerial(await loadPlayers()); last_move = { log: [], winner: null }; }
+      else if (mode === "carousel") {
+        // Der ganze Spielstand steckt in last_move.car; die Frist startet erst beim Beitritt.
+        board = { kind: "carousel" };
+        last_move = { car: initCarousel(0), frist: 0, ende: null };
+      }
       else { board = buildBoardSerial(); last_move = null; }
       const { error } = await supabase.from("games").insert({
         code,
@@ -69,6 +75,12 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
         .from("games")
         .update({ guest_id: me, status: "playing", names: { ...row.names, 2: myName },
           clocks: { ...(row.clocks || { 1: START_SECONDS, 2: START_SECONDS, timeout: null }), started: new Date().toISOString() },
+          /* Das Karussell zählt pro Zug, nicht pro Partie: die Frist des ersten Zuges
+             beginnt erst mit dem Beitritt — sonst liefe sie ab, während der Ersteller
+             noch auf einen Gegner wartet. */
+          ...(row.board?.kind === "carousel"
+            ? { last_move: { ...(row.last_move || {}), frist: Date.now() + CAROUSEL_SECONDS * 1000 } }
+            : {}),
           updated_at: new Date().toISOString() })
         .eq("code", code)
         .is("guest_id", null)
@@ -104,6 +116,11 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
           <span className="soloTop"><span className="soloIcon">🧩</span><span className={`tileBadge ${challengeBadge("odd").tone}`}>{challengeBadge("odd").text}</span></span>
           <b>Wer passt nicht?</b>
           <small>Drei gehören zusammen, einer nicht</small>
+        </button>
+        <button type="button" className="soloTile" onClick={() => onSolo("carousel")}>
+          <span className="soloTop"><span className="soloIcon">🎠</span></span>
+          <b>Transferkarussell</b>
+          <small>Spieler und Verein im Wechsel, gegen den Bot</small>
         </button>
         <button type="button" className="soloTile" onClick={() => onSolo("chain")}>
           <span className="soloTop"><span className="soloIcon">⛓️</span><span className={`tileBadge ${challengeBadge("chain").tone}`}>{challengeBadge("chain").text}</span></span>
@@ -155,6 +172,7 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
           <button type="button" className={`btn ${mode === "hex" ? "primary" : "ghost"}`} style={{ flex: 1 }} onClick={() => setMode("hex")}>Hex-Duell</button>
           <button type="button" className={`btn ${mode === "grid" ? "primary" : "ghost"}`} style={{ flex: 1 }} onClick={() => setMode("grid")}>Raster-Duell</button>
           <button type="button" className={`btn ${mode === "guess" ? "primary" : "ghost"}`} style={{ flex: 1 }} onClick={() => setMode("guess")}>Errate den Star</button>
+          <button type="button" className={`btn ${mode === "carousel" ? "primary" : "ghost"}`} style={{ flex: 1 }} onClick={() => setMode("carousel")}>Transferkarussell</button>
         </div>
 
         <button className="btn primary block" style={{ marginTop: 14 }} disabled={busy} onClick={createGame}>
