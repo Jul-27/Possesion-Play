@@ -56,6 +56,17 @@ export function mergeInto(a, b) {
   const seen = new Set();
   const uniq = cp.filter((c) => { const k = c.join("|"); if (seen.has(k)) return false; seen.add(k); return true; });
   if (uniq.length) a.cp = uniq.sort((x, y) => x[1] - y[1]);
+  /* lg und span kamen später dazu (PR #45) und fehlten hier — beim Verschmelzen von
+     Kostas Mitroglou gingen dadurch vier Ligen und die ganze Karriere-Spanne verloren,
+     insgesamt bei 10 Spielern. Beide sind für die Liga- und Ära-Hexfelder zuständig. */
+  const lg = [...new Set([...(a.lg || []), ...(b.lg || [])])].sort();
+  if (lg.length) a.lg = lg;
+  const spans = [a.span, b.span].filter((s) => s && s.length === 2);
+  if (spans.length) {
+    // 0 heißt „läuft noch" und schlägt jedes Enddatum.
+    const ende = spans.some((s) => s[1] === 0) ? 0 : Math.max(...spans.map((s) => s[1]));
+    a.span = [Math.min(...spans.map((s) => s[0])), ende];
+  }
   return a;
 }
 
