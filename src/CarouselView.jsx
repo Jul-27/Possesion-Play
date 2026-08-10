@@ -1,12 +1,11 @@
 import { useRef } from "react";
-import { CLUBS, lookupDef } from "./gameData.js";
+import { lookupDef } from "./gameData.js";
 import { CAROUSEL_LIVES, CAROUSEL_SECONDS } from "./carousel.js";
 import { Avatar, Emblem } from "./Emblems.jsx";
 
 /* Gemeinsame Darstellung für Solo und Duell. Beide Modi zeigen dasselbe Karussell —
    nur die Gegenseite ist einmal ein Bot und einmal ein Mensch. */
 
-export const clubName = (key) => CLUBS.find((c) => c.key === key)?.name || key;
 const herzen = (n) => "❤️".repeat(Math.max(0, n)) + "🖤".repeat(Math.max(0, CAROUSEL_LIVES - n));
 
 /** Leben, Runde, Uhr — der Kopf über der Kette. */
@@ -36,7 +35,7 @@ export function CarScore({ lives, owner, round, left, chainLen, names, over }) {
 }
 
 /** Die Kette selbst: Spieler mit Foto, Vereine mit Wappen, farbig nach Urheber. */
-export function CarChain({ moves, players, me = 0, leer }) {
+export function CarChain({ moves, players, idx, me = 0, leer }) {
   if (!moves.length) return <div className="qlogEmpty">{leer}</div>;
   return (
     <div className="carChain">
@@ -44,7 +43,7 @@ export function CarChain({ moves, players, me = 0, leer }) {
         <div key={i} className={`carStep ${m.kind} ${m.by === me ? "mein" : "bot"} ${i === moves.length - 1 ? "cur" : ""}`}>
           {m.kind === "player"
             ? <><Avatar player={players.find((p) => p.n === m.value)} size={30} /><span>{m.value}</span></>
-            : <><span className="carEm"><Emblem def={lookupDef("club", m.value)} /></span><span>{clubName(m.value)}</span></>}
+            : <>{wappen(idx, m.value)}<span>{m.value}</span></>}
         </div>
       ))}
     </div>
@@ -53,9 +52,9 @@ export function CarChain({ moves, players, me = 0, leer }) {
 
 /* Eingabe mit Vorschlägen. Vereine werden getippt, nicht aus einer Liste geklickt —
    bei 47 Vereinen wäre eine vollständige Liste ein Spickzettel. */
-export function CarInput({ kind, value, onChange, onSubmit, vorschlaege, sugOpen, setSugOpen, sugActive, setSugActive }) {
+export function CarInput({ kind, idx, value, onChange, onSubmit, vorschlaege, sugOpen, setSugOpen, sugActive, setSugActive }) {
   const ref = useRef(null);
-  const waehle = (v) => { onChange(kind === "club" ? v.name : v.n); setSugOpen(false); setSugActive(-1); ref.current?.focus(); };
+  const waehle = (v) => { onChange(kind === "club" ? v : v.n); setSugOpen(false); setSugActive(-1); ref.current?.focus(); };
   function onKey(e) {
     if (sugOpen && vorschlaege.length) {
       if (e.key === "ArrowDown") { e.preventDefault(); setSugActive(Math.min(sugActive + 1, vorschlaege.length - 1)); return; }
@@ -75,10 +74,10 @@ export function CarInput({ kind, value, onChange, onSubmit, vorschlaege, sugOpen
         {sugOpen && vorschlaege.length > 0 && (
           <div className="sug">
             {vorschlaege.map((v, i) => (
-              <div key={kind === "club" ? v.key : v.n} className={`sugItem ${i === sugActive ? "active" : ""}`}
+              <div key={kind === "club" ? v : v.n} className={`sugItem ${i === sugActive ? "active" : ""}`}
                 onMouseDown={(e) => { e.preventDefault(); waehle(v); }}>
                 {kind === "club"
-                  ? <span className="sugWho"><span className="carEm"><Emblem def={v} /></span>{v.name}</span>
+                  ? <span className="sugWho">{wappen(idx, v)}{v}</span>
                   : <><span className="sugWho"><Avatar player={v} size={30} />{v.n}</span>
                       <span className="sugMeta">{[v.pos, new Date().getFullYear() - v.by].filter(Boolean).join(" · ")}</span></>}
               </div>
@@ -95,5 +94,12 @@ export function CarInput({ kind, value, onChange, onSubmit, vorschlaege, sugOpen
 export function CarPrompt({ kind, chainLen, aktuellerSpieler, letzterVerein }) {
   if (kind === "club") return <>Bei welchem Verein war <b>{aktuellerSpieler?.n}</b>?</>;
   if (chainLen === 0) return <>Nenne einen Spieler mit <b>mindestens zwei Vereinen</b></>;
-  return <>Wer hat bei <b>{clubName(letzterVerein)}</b> gespielt?</>;
+  return <>Wer hat bei <b>{letzterVerein}</b> gespielt?</>;
+}
+
+/* Wappen nur für die 47 Spielvereine — die übrigen Tausend haben keins im Repo und
+   bekommen ein schlichtes Namensfeld statt eines Platzhalterbilds. */
+function wappen(idx, name) {
+  const key = idx?.keyOf?.(name);
+  return key ? <span className="carEm"><Emblem def={lookupDef("club", key)} /></span> : null;
 }

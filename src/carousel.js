@@ -39,156 +39,80 @@ export function moveOwner(i, starter = 0) {
   return Math.floor((i - 1) / 2) % 2 === 0 ? 1 - starter : starter;
 }
 
-/** Unverbrannte Vereine eines Spielers — die Auswahl des Vereins-Nenners. */
-export function freeClubs(player, burnedClubs) {
-  return (player?.clubs || []).filter((c) => !burnedClubs.has(c));
+/** Unverbrannte Stationen eines Spielers — die Auswahl des Vereins-Nenners. */
+export function freeClubs(idx, player, burnedClubs) {
+  return idx.clubsOf(player).filter((c) => !burnedClubs.has(c));
 }
 
 /* Darf dieser Spieler genannt werden? `burnedClubs` enthält den aktuellen Verein
    bereits — die Prüfung auf einen freien Verein ist damit genau Regel 2. */
-export function isPlayerLegal(player, club, burnedClubs, burnedPlayers) {
+export function isPlayerLegal(idx, player, club, burnedClubs, burnedPlayers) {
   if (!player || !club) return false;
-  if (!(player.clubs || []).includes(club)) return false;
+  if (!idx.clubsOf(player).includes(club)) return false;
   if (burnedPlayers.has(player.n)) return false;
-  return freeClubs(player, burnedClubs).length > 0;
+  return freeClubs(idx, player, burnedClubs).length > 0;
 }
 
-/** Alle erlaubten Antworten auf einen Verein, optional auf bekannte Spieler begrenzt. */
-export function legalPlayers(players, club, burnedClubs, burnedPlayers, minSl = 0) {
+/* Alle erlaubten Antworten auf einen Verein. Läuft über die Rückrichtung des Index
+   statt über alle 31.565 Spieler — sonst wäre jeder Bot-Zug eine Vollsuche. */
+export function legalPlayers(idx, club, burnedClubs, burnedPlayers, minSl = 0) {
   const out = [];
-  for (const p of players) {
+  for (const p of idx.playersOf(club)) {
     if ((p.sl || 0) < minSl) continue;
-    if (isPlayerLegal(p, club, burnedClubs, burnedPlayers)) out.push(p);
+    if (isPlayerLegal(idx, p, club, burnedClubs, burnedPlayers)) out.push(p);
   }
   return out;
 }
 
-/* Eröffnung: mindestens zwei Vereine, damit die Kette nicht sofort im Kreis läuft,
+/* Eröffnung: mindestens zwei Stationen, damit die Kette nicht sofort im Kreis läuft,
    und bekannt genug, dass der Gegner überhaupt etwas damit anfangen kann. */
 export const START_SL_MIN = 45;
-export function startCandidates(players, minSl = START_SL_MIN) {
-  return players.filter((p) => (p.clubs || []).length >= 2 && (p.sl || 0) >= minSl);
+export function startCandidates(idx, players, minSl = START_SL_MIN) {
+  return players.filter((p) => (p.sl || 0) >= minSl && idx.clubsOf(p).length >= 2);
 }
-export function pickStart(players, rnd = Math.random, minSl = START_SL_MIN) {
-  const pool = startCandidates(players, minSl);
+export function pickStart(idx, players, rnd = Math.random, minSl = START_SL_MIN) {
+  const pool = startCandidates(idx, players, minSl);
   return pool.length ? pool[Math.floor(rnd() * pool.length)] : null;
 }
 
 /* Bot-Vereinswahl. Er spielt nicht optimal, sondern nachvollziehbar: auf „schwer"
    wählt er den Verein, der dem Gegner die wenigsten Antworten lässt, sonst zufällig.
    Ein perfekt spielender Bot wäre unschlagbar und kein Übungspartner. */
-export function botClubMove(players, player, burnedClubs, burnedPlayers, rnd = Math.random, level = "mittel") {
-  const frei = freeClubs(player, burnedClubs);
+export function botClubMove(idx, player, burnedClubs, burnedPlayers, rnd = Math.random, level = "mittel") {
+  const frei = freeClubs(idx, player, burnedClubs);
   if (!frei.length) return null;
   if (level !== "schwer" || frei.length === 1) return frei[Math.floor(rnd() * frei.length)];
   let beste = frei[0], wenigste = Infinity;
   for (const c of frei) {
     const naechste = new Set(burnedClubs); naechste.add(c);
-    const n = legalPlayers(players, c, naechste, burnedPlayers).length;
+    const n = legalPlayers(idx, c, naechste, burnedPlayers).length;
     if (n < wenigste) { wenigste = n; beste = c; }
   }
   return beste;
 }
 
 /* Bot-Spielerwahl. Innerhalb seines Wissens bevorzugt er auf „schwer" Spieler mit
-   wenigen freien Vereinen — das ist der Zug, der den Gegner in die Enge treibt. */
-export function botPlayerMove(players, club, burnedClubs, burnedPlayers, rnd = Math.random, level = "mittel") {
+   wenigen freien Stationen — das ist der Zug, der den Gegner in die Enge treibt. */
+export function botPlayerMove(idx, club, burnedClubs, burnedPlayers, rnd = Math.random, level = "mittel") {
   const { minSl } = botLevel(level);
-  const kandidaten = legalPlayers(players, club, burnedClubs, burnedPlayers, minSl);
+  const kandidaten = legalPlayers(idx, club, burnedClubs, burnedPlayers, minSl);
   if (!kandidaten.length) return null;
   if (level !== "schwer") return kandidaten[Math.floor(rnd() * kandidaten.length)];
-  const eng = Math.min(...kandidaten.map((p) => freeClubs(p, burnedClubs).length));
-  const beste = kandidaten.filter((p) => freeClubs(p, burnedClubs).length === eng);
+  const eng = Math.min(...kandidaten.map((p) => freeClubs(idx, p, burnedClubs).length));
+  const beste = kandidaten.filter((p) => freeClubs(idx, p, burnedClubs).length === eng);
   return beste[Math.floor(rnd() * beste.length)];
 }
 
 /** Was wäre möglich gewesen? Für die Auflösung nach einem verlorenen Leben. */
-export function carouselHint(players, kind, current, burnedClubs, burnedPlayers) {
+export function carouselHint(idx, kind, current, burnedClubs, burnedPlayers) {
   if (kind === "club") {
-    const frei = freeClubs(current, burnedClubs);
+    const frei = freeClubs(idx, current, burnedClubs);
     return frei.length ? { club: frei[0] } : null;
   }
   // bekannteste erlaubte Antwort — die hilft am meisten beim Lernen
-  const kandidaten = legalPlayers(players, current, burnedClubs, burnedPlayers);
+  const kandidaten = legalPlayers(idx, current, burnedClubs, burnedPlayers);
   if (!kandidaten.length) return null;
   return { player: kandidaten.reduce((a, b) => ((b.sl || 0) > (a.sl || 0) ? b : a)) };
-}
-
-/* ── Vereinseingabe ───────────────────────────────────────────────────────────
-   Der Verein wird getippt, nicht aus einer Liste geklickt: bei 47 Vereinen wäre eine
-   vollständige Auswahlliste ein Spickzettel, mit dem man sich durchprobieren könnte.
-   Erkannt werden der volle Name, das Kürzel und gängige Kurzformen. */
-const KURZFORMEN = {
-  FCB: ["bayern", "fc bayern", "bayern munchen", "bayern muenchen"],
-  BVB: ["dortmund", "borussia dortmund"],
-  BMG: ["gladbach", "monchengladbach", "moenchengladbach", "borussia monchengladbach"],
-  RBL: ["leipzig", "rb leipzig"],
-  B04: ["leverkusen", "bayer leverkusen", "bayer 04"],
-  SGE: ["frankfurt", "eintracht", "eintracht frankfurt"],
-  VFB: ["stuttgart", "vfb stuttgart"],
-  WOB: ["wolfsburg", "vfl wolfsburg"],
-  SVW: ["werder", "bremen", "werder bremen"],
-  S04: ["schalke", "schalke 04", "fc schalke"],
-  HSV: ["hamburg", "hamburger sv", "hsv"],
-  M05: ["mainz", "mainz 05", "fsv mainz"],
-  SCF: ["freiburg", "sc freiburg"],
-  TSG: ["hoffenheim", "tsg hoffenheim", "1899 hoffenheim"],
-  MCI: ["man city", "manchester city", "city"],
-  MUN: ["man united", "manchester united", "united", "man utd"],
-  LIV: ["liverpool", "fc liverpool"],
-  CHE: ["chelsea", "fc chelsea"],
-  ARS: ["arsenal", "fc arsenal"],
-  TOT: ["tottenham", "spurs"],
-  NEW: ["newcastle", "newcastle united"],
-  EVE: ["everton", "fc everton"],
-  AVL: ["aston villa", "villa"],
-  BAR: ["barcelona", "barca", "fc barcelona"],
-  RMA: ["real", "real madrid"],
-  ATM: ["atletico", "atletico madrid", "atleti"],
-  SEV: ["sevilla", "fc sevilla"],
-  VAL: ["valencia", "fc valencia"],
-  VIL: ["villarreal", "fc villarreal"],
-  JUV: ["juventus", "juve", "juventus turin"],
-  MIL: ["milan", "ac milan", "ac mailand"],
-  INT: ["inter", "inter mailand", "internazionale"],
-  NAP: ["napoli", "neapel", "ssc neapel"],
-  ROM: ["roma", "as rom", "as roma"],
-  LAZ: ["lazio", "lazio rom"],
-  PSG: ["psg", "paris", "paris saint-germain", "paris sg"],
-  ASM: ["monaco", "as monaco"],
-  OM: ["marseille", "olympique marseille", "om"],
-  OL: ["lyon", "olympique lyon", "ol"],
-  LIL: ["lille", "osc lille"],
-  POR: ["porto", "fc porto"],
-  SLB: ["benfica", "benfica lissabon"],
-  SCP: ["sporting", "sporting lissabon", "sporting cp"],
-  AJA: ["ajax", "ajax amsterdam"],
-  PSV: ["psv", "psv eindhoven", "eindhoven"],
-  FEY: ["feyenoord", "feyenoord rotterdam"],
-  RBS: ["salzburg", "red bull salzburg", "rb salzburg"],
-};
-
-/** Getippten Text auf einen Vereinsschlüssel abbilden — null, wenn nichts passt. */
-export function matchClub(input, clubs, norm) {
-  const q = norm(String(input || "").trim());
-  if (!q) return null;
-  for (const c of clubs) {
-    if (norm(c.name) === q || norm(c.key) === q || norm(c.label) === q) return c.key;
-    if ((KURZFORMEN[c.key] || []).some((k) => norm(k) === q)) return c.key;
-  }
-  return null;
-}
-
-/** Vorschläge beim Tippen: Präfix auf Name, Kürzel oder Kurzform. */
-export function suggestClubs(input, clubs, norm, limit = 6) {
-  const q = norm(String(input || "").trim());
-  if (q.length < 1) return [];
-  const treffer = clubs.filter((c) => {
-    if (norm(c.name).startsWith(q) || norm(c.key).startsWith(q)) return true;
-    if (norm(c.name).includes(" " + q)) return true;
-    return (KURZFORMEN[c.key] || []).some((k) => norm(k).startsWith(q));
-  });
-  return treffer.slice(0, limit);
 }
 
 /* ── Zustandsmaschine ──────────────────────────────────────────────────────────

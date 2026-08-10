@@ -23,6 +23,7 @@ Kaggle (kein lokales Setup, kein Admin-Recht nötig).
 | `apply_title.mjs` | Holt **einen** Wettbewerbstitel gezielt nach, mit feinen Fenstern: `node data-pipeline/apply_title.mjs MBL --ab 1903`. Additiv. Löst `apply_msa.mjs` ab (gleiche Logik, aber mit der P831-Brücke). Für Reparaturen, wenn ein einzelner Wettbewerb im Gesamtlauf gescheitert ist. |
 | `backfill_positions.mjs` | Füllt `pos` bei allen, die `wikidata_positions.mjs` nicht erreicht: löst die QID über Name + Geburtsjahr auf und liest `P413` direkt, statt über Vereins-Kader zu gehen. Ein Treffer zählt nur bei exakt passendem Geburtsjahr **und** Beruf Fußballspieler. |
 | `position_overrides.mjs` | Kuratierte Positionen für Spieler ohne `P413`. Wie `HONOUR_OVERRIDES`: nur Belegtes, nichts Geratenes. |
+| `wikidata_career_clubs.mjs` | Holt die **vollständige** Vereinsliste je Spieler nach `src/careerClubs.js` — die Grundlage für „Transferkarussell". Siehe „Zwei Vereins-Ebenen". |
 | `audit_clubs.mjs` | **Diagnose, schreibt nichts.** Meldet Spieler, bei denen wir einen Verein führen, den Wikidata nicht kennt. Treffer sind Verdacht, kein Befund — siehe „Datenqualität". |
 | `wikipedia_squads.mjs` | Ergänzt die **aktuellen Kader** aus der deutschen Wikipedia: `node data-pipeline/wikipedia_squads.mjs [KEY …] [--probe]`. Wikipedia liefert dabei nur die Vereinszugehörigkeit und das Jahr aus „im Verein seit"; alle Personendaten kommen weiter aus Wikidata. Siehe „Aktuelle Kader". |
 
@@ -193,6 +194,44 @@ Beim Bau des Werkzeugs war `wdt:P54` die naheliegende Abfrage — und falsch: si
 nur Aussagen mit dem besten Rang, sodass bei gesetztem Vorzugsrang die ganze
 Vereinshistorie fehlt. Das erzeugte 4 Falschmeldungen unter 25 Spielern. Richtig ist
 `p:P54/ps:P54`; ein Test hält es fest.
+
+## Zwei Vereins-Ebenen — und warum
+
+`clubs[]` in `players.js` kennt nur die **47 Spielvereine**. Das ist Absicht: sie tragen
+die Hexfelder, brauchen Wappen und ein Kürzel, also muss die Menge klein und kuratiert
+bleiben.
+
+Für „Transferkarussell" ist genau das falsch. Der Reiz des Modus besteht darin, dem
+Gegner einen schwierigen Verein zuzuwerfen — und Gündoğan ohne Nürnberg und
+Galatasaray oder Klose ohne Kaiserslautern nimmt dem Spiel die Tiefe. Gemessen:
+Wikidata führt **Ø 8,3 Vereine je Spieler**, wir 1,9.
+
+Deshalb gibt es eine zweite Ebene daneben, nicht statt:
+
+| | `players.js` → `clubs[]` | `careerClubs.js` |
+|---|---|---|
+| Umfang | 47 kuratierte Vereine | **8158 Vereine**, Ø 5,2 je Spieler |
+| Genutzt von | Hex, Raster, Guess, Kette, Elf, Karriere-Pfad | nur Transferkarussell |
+| Wappen | ja | nein — schlichtes Namensfeld |
+| Geladen | mit den Spielerdaten | **erst beim Start des Modus** (0,62 MB gzip) |
+
+`createCareerIndex()` in `src/careerIndex.js` führt beide zusammen und liefert beide
+Richtungen: Stationen eines Spielers und Spieler eines Vereins. Die zweite ist der
+Grund für den Index — ohne ihn wäre jeder Bot-Zug eine Suche über 31.565 Spieler.
+Aufbau dauert 53 ms.
+
+Drei Fallen beim Abruf, alle gemessen:
+
+1. **`charset=utf-8` im POST-Header ist Pflicht.** Ohne die Angabe liest WDQS den Body
+   nicht als UTF-8, und jeder Name mit Sonderzeichen findet nichts: „İlkay Gündoğan"
+   lieferte 0 statt 13 Zeilen. Bei einem Fußball-Datensatz wäre das lautlos der größere
+   Teil aller Spieler gewesen.
+2. **Nicht nach Geburtsjahrgang abfragen** — das läuft zuverlässig in den WDQS-Timeout.
+   Der Weg über den Label-Index (Namen direkt in `VALUES`) schafft 400 Namen in ~25 s.
+   Per GET scheitert das ab ~250 Namen an HTTP 431, deshalb POST.
+3. **Zweitmannschaften brauchen zwei Prüfungen.** Der Typ „Zweitmannschaft" (Q2412834)
+   erwischt Real Madrid Castilla und Juventus Next Gen, aber *nicht* Borussia Dortmund II
+   — das trägt nur „Fußballmannschaft". Deshalb zusätzlich ein enges Namensmuster.
 
 ## Aktuelle Kader: warum Wikidata dafür nicht reicht
 

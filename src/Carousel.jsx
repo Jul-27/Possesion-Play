@@ -1,13 +1,15 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { norm, suggestPlayers, CLUBS } from "./gameData.js";
+import { norm, suggestPlayers } from "./gameData.js";
 import {
   CAROUSEL_SECONDS, CAROUSEL_LIVES, BOT_LEVELS, botLevel,
   isPlayerLegal, pickStart,
-  botClubMove, botPlayerMove, carouselHint, matchClub, suggestClubs,
+  botClubMove, botPlayerMove, carouselHint,
   initCarousel, addMove, loseLife, burnedOf, currentKind, currentOwner,
 } from "./carousel.js";
-import { CarScore, CarChain, CarInput, CarPrompt, clubName } from "./CarouselView.jsx";
+import { CarScore, CarChain, CarInput, CarPrompt } from "./CarouselView.jsx";
 import { loadPlayers } from "./playersStore.js";
+import { loadCareerClubs } from "./careerClubsStore.js";
+import { createCareerIndex } from "./careerIndex.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
 import DataStamp from "./DataStamp.jsx";
@@ -38,7 +40,15 @@ export default function Carousel({ onLeave }) {
   const [muted, setMuted] = useState(isMuted());
   const [showRules, setShowRules] = useState(false);
 
-  useEffect(() => { loadPlayers().then(setPlayers); }, []);
+  const [idx, setIdx] = useState(null);
+  /* Spieler und Karrierevereine zusammen laden — der Index braucht beides, und ohne
+     ihn kennt das Karussell nur die 47 Spielvereine. */
+  useEffect(() => {
+    Promise.all([loadPlayers(), loadCareerClubs()]).then(([ps, cc]) => {
+      setPlayers(ps);
+      setIdx(createCareerIndex(ps, cc.clubs, cc.byKey));
+    });
+  }, []);
 
   const kind = currentKind(state);
   const owner = currentOwner(state);
@@ -58,17 +68,17 @@ export default function Carousel({ onLeave }) {
     return suggestPlayers(players, eingabe, 8).filter((p) => !burnedPlayers.has(p.n));
   }, [players, eingabe, kind, burnedPlayers]);
   const vereinsVorschlaege = useMemo(
-    () => (kind === "club" ? suggestClubs(eingabe, CLUBS, norm) : []), [eingabe, kind]);
+    () => (kind === "club" && idx ? idx.suggest(eingabe) : []), [eingabe, kind, idx]);
 
   /* Ein Leben abziehen. Die Auflösung zeigt, was möglich gewesen wäre — daran lernt
      man mehr als an der bloßen Meldung „falsch". */
   const verliere = useCallback((wer, grund) => {
     const ziel = kind === "club" ? aktuellerSpieler : letzter?.value;
-    const hint = players && ziel ? carouselHint(players, kind, ziel, burnedClubs, burnedPlayers) : null;
+    const hint = idx && ziel ? carouselHint(idx, kind, ziel, burnedClubs, burnedPlayers) : null;
     setRundenEnde({ reason: grund, loser: wer, hint, kind });
     setState((s) => loseLife(s, wer, grund));
     play(wer === ICH ? "err" : "ok");
-  }, [kind, aktuellerSpieler, letzter, players, burnedClubs, burnedPlayers]);
+  }, [kind, aktuellerSpieler, letzter, idx, burnedClubs, burnedPlayers]);
 
   // Uhr: 30 s je Zug, sie läuft für beide Seiten
   useEffect(() => {
@@ -83,26 +93,26 @@ export default function Carousel({ onLeave }) {
 
   // Bot am Zug
   useEffect(() => {
-    if (!gestartet || !players || state.over || rundenEnde || owner !== BOT) return;
+    if (!gestartet || !idx || state.over || rundenEnde || owner !== BOT) return;
     setBotDenkt(true);
     const denkzeit = 900 + Math.random() * 1600;
     const t = setTimeout(() => {
       setBotDenkt(false);
       if (kind === "club") {
-        const c = botClubMove(players, aktuellerSpieler, burnedClubs, burnedPlayers, Math.random, level);
+        const c = botClubMove(idx, aktuellerSpieler, burnedClubs, burnedPlayers, Math.random, level);
         if (!c) return verliere(BOT, "stuck");
         setState((s) => addMove(s, "club", c));
       } else {
         const ziel = state.moves.length === 0 ? null : letzter.value;
-        const p = ziel ? botPlayerMove(players, ziel, burnedClubs, burnedPlayers, Math.random, level)
-                       : pickStart(players, Math.random);
+        const p = ziel ? botPlayerMove(idx, ziel, burnedClubs, burnedPlayers, Math.random, level)
+                       : pickStart(idx, players, Math.random);
         if (!p) return verliere(BOT, "stuck");
         setState((s) => addMove(s, "player", p.n));
       }
       play("click");
     }, denkzeit);
     return () => clearTimeout(t);
-  }, [gestartet, players, state.moves.length, state.round, owner, kind, rundenEnde, state.over]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [gestartet, idx, state.moves.length, state.round, owner, kind, rundenEnde, state.over]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function starte(stufe = level) {
     store.set("pp:carouselLevel", stufe);
@@ -122,14 +132,14 @@ export default function Carousel({ onLeave }) {
     if (!text) return;
 
     if (kind === "club") {
-      const key = matchClub(text, CLUBS, norm);
-      if (!key) return setFeedback({ ok: false, text: "Diesen Verein kenne ich nicht." });
-      if (!(aktuellerSpieler?.clubs || []).includes(key)) {
+      const name = idx.match(text);
+      if (!name) return setFeedback({ ok: false, text: "Diesen Verein kenne ich nicht." });
+      if (!idx.clubsOf(aktuellerSpieler).includes(name)) {
         play("err");
         return verliere(ICH, "wrong");
       }
-      if (burnedClubs.has(key)) return setFeedback({ ok: false, text: `${clubName(key)} ist in dieser Runde schon durch.` });
-      setState((s) => addMove(s, "club", key));
+      if (burnedClubs.has(name)) return setFeedback({ ok: false, text: `${name} ist in dieser Runde schon durch.` });
+      setState((s) => addMove(s, "club", name));
       setEingabe(""); setSugOpen(false); setFeedback(null); play("ok");
       return;
     }
@@ -141,14 +151,14 @@ export default function Carousel({ onLeave }) {
 
     if (state.moves.length === 0) {
       // Eröffnung: mindestens zwei Vereine
-      if ((hit.clubs || []).length < 2) {
+      if (idx.clubsOf(hit).length < 2) {
         return setFeedback({ ok: false, text: `${hit.n} hat nur einen Verein — zum Eröffnen brauchst du zwei.` });
       }
     } else {
       const ziel = letzter.value;
-      if (!(hit.clubs || []).includes(ziel)) { play("err"); return verliere(ICH, "wrong"); }
-      if (!isPlayerLegal(hit, ziel, burnedClubs, burnedPlayers)) {
-        return setFeedback({ ok: false, text: `${hit.n} hat außer ${clubName(ziel)} keinen freien Verein — such jemanden, der die Kette weiterträgt.` });
+      if (!idx.clubsOf(hit).includes(ziel)) { play("err"); return verliere(ICH, "wrong"); }
+      if (!isPlayerLegal(idx, hit, ziel, burnedClubs, burnedPlayers)) {
+        return setFeedback({ ok: false, text: `${hit.n} hat außer ${ziel} keinen freien Verein — such jemanden, der die Kette weiterträgt.` });
       }
     }
     setState((s) => addMove(s, "player", hit.n));
@@ -184,7 +194,7 @@ export default function Carousel({ onLeave }) {
         </div>
       </div>
 
-      {!players ? <div className="qlogEmpty">Lade Spielerdaten…</div> : !gestartet ? (
+      {!players || !idx ? <div className="qlogEmpty">Lade Spielerdaten…</div> : !gestartet ? (
         <div className="panel" style={{ marginTop: 18 }}>
           <div className="prompt">Wie stark soll der Bot sein?</div>
           <p className="ruleP">Die Stufe legt fest, <b>wie viele Spieler der Bot kennt</b> — nicht, wie schlau er zieht. Du darfst immer jeden Spieler aus den Daten nennen.</p>
@@ -208,7 +218,7 @@ export default function Carousel({ onLeave }) {
             round={state.over ? state.round - 1 : state.round}
             left={left} chainLen={state.moves.length} names={["Du", "Bot"]} over={!!state.over} />
 
-          <CarChain moves={state.moves} players={players} me={ICH}
+          <CarChain moves={state.moves} players={players} idx={idx} me={ICH}
             leer="Eröffne mit einem Spieler, der bei mindestens zwei Vereinen war." />
 
           {!state.over && !rundenEnde && (
@@ -221,7 +231,7 @@ export default function Carousel({ onLeave }) {
               </div>
               {amZug && (
                 <>
-                  <CarInput kind={kind} value={eingabe}
+                  <CarInput kind={kind} idx={idx} value={eingabe}
                     onChange={(v) => { setEingabe(v); setFeedback(null); }} onSubmit={absenden}
                     vorschlaege={kind === "club" ? vereinsVorschlaege : spielerVorschlaege}
                     sugOpen={sugOpen} setSugOpen={setSugOpen} sugActive={sugActive} setSugActive={setSugActive} />
@@ -235,9 +245,9 @@ export default function Carousel({ onLeave }) {
           {rundenEnde && !state.over && (
             <div className="panel">
               <h2 style={{ marginTop: 0 }}>{rundenEnde.loser === ICH ? "💔 Leben verloren" : "🎯 Punkt für dich"}</h2>
-              <p>{roundText(rundenEnde, clubName)}</p>
+              <p>{roundText(rundenEnde)}</p>
               {rundenEnde.hint && (
-                <p className="ruleP">Möglich gewesen wäre <b>{rundenEnde.hint.player?.n || clubName(rundenEnde.hint.club)}</b>.</p>
+                <p className="ruleP">Möglich gewesen wäre <b>{rundenEnde.hint.player?.n || rundenEnde.hint.club}</b>.</p>
               )}
               {/* state ist hier bereits der Stand NACH loseLife — starter ist also schon
                   gedreht und darf nicht noch einmal invertiert werden. */}
@@ -282,7 +292,7 @@ export default function Carousel({ onLeave }) {
   );
 }
 
-export function roundText(ende, name) {
+export function roundText(ende) {
   const wer = ende.loser === ICH ? "Du hast" : "Der Bot hat";
   if (ende.reason === "time") return `${wer} die 30 Sekunden gerissen.`;
   if (ende.reason === "wrong") return ende.kind === "club" ? `${wer} einen Verein genannt, bei dem der Spieler nie war.` : `${wer} einen Spieler genannt, der nie bei diesem Verein war.`;

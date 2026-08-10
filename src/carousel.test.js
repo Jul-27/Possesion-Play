@@ -5,9 +5,19 @@ import {
   botClubMove, botPlayerMove, carouselHint, initCarousel, addMove, loseLife, burnedOf,
   currentKind, currentOwner, CAROUSEL_LIVES, BOT_LEVELS, botLevel,
 } from "./carousel.js";
+import { createCareerIndex } from "./careerIndex.js";
 
-const P = (n, clubs, sl = 50) => ({ n, ln: n, by: 1990, nat: [], clubs, sl });
+const P = (n, by, sl = 50) => ({ n, ln: n.split(" ").pop(), by, nat: [], clubs: [], sl });
 const S = (...a) => new Set(a);
+
+/* Kleiner Index aus [Spieler, Vereinsnamen…]. Die Vereine sind frei erfundene Namen —
+   der Index unterscheidet nicht zwischen den 47 Spielvereinen und dem langen Rest. */
+function idxAus(paare) {
+  const clubs = [...new Set(paare.flatMap(([, ...c]) => c))];
+  const byKey = {};
+  for (const [p, ...c] of paare) byKey[`${p.n.toLowerCase()}|${p.by}`] = c.map((x) => clubs.indexOf(x));
+  return createCareerIndex(paare.map(([p]) => p), clubs, byKey);
+}
 
 test("die Kette wechselt zwischen Spieler und Verein", () => {
   assert.deepEqual([0, 1, 2, 3, 4].map(moveKind), ["player", "club", "player", "club", "player"]);
@@ -15,14 +25,11 @@ test("die Kette wechselt zwischen Spieler und Verein", () => {
 
 /* Das Muster A · B · B · A · A · B · B … ist der Kern der Fairness: nach dem
    Eröffnungszug übernimmt jeder abwechselnd ein ganzes Paar aus Verein und Spieler.
-   Wer Vereine nennt, hat 2–5 Möglichkeiten, wer Spieler nennt, im Schnitt 700 —
-   dieselbe Rolle eine ganze Runde lang wäre einseitig. */
+   Wer Vereine nennt, hat wenige Möglichkeiten, wer Spieler nennt, sehr viele. */
 test("nach dem Eröffnungszug übernimmt jeder ein ganzes Zugpaar", () => {
   assert.deepEqual([0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => moveOwner(i, 0)), [0, 1, 1, 0, 0, 1, 1, 0, 0]);
 });
 
-/* Der eigentliche Fairness-Nachweis: egal wo die Runde endet und wer eröffnet hat,
-   keine Seite hat mehr als einen Zug einer Art mehr gemacht als die andere. */
 test("beide Rollen verteilen sich zu jedem Zeitpunkt gleichmäßig", () => {
   for (const starter of [0, 1]) {
     for (const laenge of [4, 7, 12, 25, 40, 93]) {
@@ -41,69 +48,79 @@ test("mit umgekehrter Eröffnung spiegelt sich das Muster", () => {
 });
 
 test("freeClubs blendet verbrannte Vereine aus", () => {
-  assert.deepEqual(freeClubs(P("X", ["FCB", "BVB", "S04"]), S("BVB")), ["FCB", "S04"]);
-  assert.deepEqual(freeClubs(P("X", ["FCB"]), S("FCB")), []);
+  const p = P("Test Eins", 1990);
+  const idx = idxAus([[p, "Alpha", "Beta", "Gamma"]]);
+  assert.deepEqual(freeClubs(idx, p, S("Beta")), ["Alpha", "Gamma"]);
+  assert.deepEqual(freeClubs(idx, p, S("Alpha", "Beta", "Gamma")), []);
 });
 
-/* REGEL 2, die wichtigste: ohne sie gewinnt der Spieler-Nenner nach drei Zügen.
-   25.720 der 31.565 Spieler haben nur einen Verein — wer so einen nennt, lässt dem
-   Gegner keinen Zug. Ein genannter Spieler muss also einen freien Verein übrig lassen. */
-test("ein Spieler ohne freien Verein darf nicht genannt werden", () => {
-  const sackgasse = P("Nur Bayern", ["FCB"]);
-  assert.equal(isPlayerLegal(sackgasse, "FCB", S("FCB"), S()), false, "würde den Gegner sofort ersticken");
-  const weiter = P("Zwei Vereine", ["FCB", "BVB"]);
-  assert.equal(isPlayerLegal(weiter, "FCB", S("FCB"), S()), true);
+/* REGEL 2, die wichtigste: ohne sie gewinnt der Spieler-Nenner nach drei Zügen —
+   wer einen Spieler mit nur einer Station nennt, lässt dem Gegner keinen Zug. */
+test("ein Spieler ohne freie Station darf nicht genannt werden", () => {
+  const sack = P("Nur Einer", 1990), weiter = P("Hat Zwei", 1991);
+  const idx = idxAus([[sack, "Alpha"], [weiter, "Alpha", "Beta"]]);
+  assert.equal(isPlayerLegal(idx, sack, "Alpha", S("Alpha"), S()), false, "würde den Gegner ersticken");
+  assert.equal(isPlayerLegal(idx, weiter, "Alpha", S("Alpha"), S()), true);
 });
 
-test("ein Spieler muss beim genannten Verein gespielt haben", () => {
-  assert.equal(isPlayerLegal(P("X", ["BVB", "S04"]), "FCB", S("FCB"), S()), false);
+test("ein Spieler muss bei dem genannten Verein gespielt haben", () => {
+  const p = P("Test Eins", 1990);
+  const idx = idxAus([[p, "Beta", "Gamma"]]);
+  assert.equal(isPlayerLegal(idx, p, "Alpha", S("Alpha"), S()), false);
 });
 
 test("verbrannte Spieler sind gesperrt", () => {
-  const p = P("Doppelt", ["FCB", "BVB"]);
-  assert.equal(isPlayerLegal(p, "FCB", S("FCB"), S("Doppelt")), false);
+  const p = P("Test Eins", 1990);
+  const idx = idxAus([[p, "Alpha", "Beta"]]);
+  assert.equal(isPlayerLegal(idx, p, "Alpha", S("Alpha"), S("Test Eins")), false);
 });
 
 test("legalPlayers achtet auf die Bekanntheitsgrenze des Bots", () => {
-  const list = [P("Star", ["FCB", "BVB"], 80), P("Unbekannt", ["FCB", "S04"], 5)];
-  assert.deepEqual(legalPlayers(list, "FCB", S("FCB"), S(), 50).map((p) => p.n), ["Star"]);
-  assert.equal(legalPlayers(list, "FCB", S("FCB"), S(), 0).length, 2, "ohne Grenze zählen beide");
+  const star = P("Bekannt Eins", 1990, 80), klein = P("Klein Zwei", 1991, 5);
+  const idx = idxAus([[star, "Alpha", "Beta"], [klein, "Alpha", "Gamma"]]);
+  assert.deepEqual(legalPlayers(idx, "Alpha", S("Alpha"), S(), 50).map((p) => p.n), ["Bekannt Eins"]);
+  assert.equal(legalPlayers(idx, "Alpha", S("Alpha"), S(), 0).length, 2, "ohne Grenze zählen beide");
 });
 
-test("Eröffnungsspieler brauchen zwei Vereine und Bekanntheit", () => {
-  const list = [P("Einer", ["FCB"], 90), P("Zwei", ["FCB", "BVB"], 90), P("Unbekannt", ["FCB", "BVB"], 3)];
-  assert.deepEqual(startCandidates(list, 45).map((p) => p.n), ["Zwei"]);
-  assert.equal(pickStart(list, () => 0, 45).n, "Zwei");
-  assert.equal(pickStart([P("Einer", ["FCB"], 90)], () => 0, 45), null, "ohne Kandidat kommt null");
+test("Eröffnungsspieler brauchen zwei Stationen und Bekanntheit", () => {
+  const einer = P("Einer Hat", 1990, 90), zwei = P("Zwei Hat", 1991, 90), unbek = P("Unbekannt Ist", 1992, 3);
+  const idx = idxAus([[einer, "Alpha"], [zwei, "Alpha", "Beta"], [unbek, "Alpha", "Gamma"]]);
+  const alle = [einer, zwei, unbek];
+  assert.deepEqual(startCandidates(idx, alle, 45).map((p) => p.n), ["Zwei Hat"]);
+  assert.equal(pickStart(idx, alle, () => 0, 45).n, "Zwei Hat");
+  assert.equal(pickStart(idx, [einer], () => 0, 45), null, "ohne Kandidat kommt null");
 });
 
 test("der Bot nennt nur unverbrannte Vereine", () => {
-  const p = P("X", ["FCB", "BVB"]);
-  assert.equal(botClubMove([], p, S("FCB"), S(), () => 0, "mittel"), "BVB");
-  assert.equal(botClubMove([], p, S("FCB", "BVB"), S(), () => 0, "mittel"), null, "keine Option = null");
+  const p = P("Test Eins", 1990);
+  const idx = idxAus([[p, "Alpha", "Beta"]]);
+  assert.equal(botClubMove(idx, p, S("Alpha"), S(), () => 0, "mittel"), "Beta");
+  assert.equal(botClubMove(idx, p, S("Alpha", "Beta"), S(), () => 0, "mittel"), null, "keine Option = null");
 });
 
 /* Auf „schwer" wählt der Bot den Verein, der dem Gegner die wenigsten Antworten
-   lässt. Auf den leichteren Stufen bleibt er zufällig — ein optimal spielender Bot
-   wäre unschlagbar und damit als Übungspartner wertlos. */
+   lässt. Sonst bleibt er zufällig — ein optimaler Bot wäre kein Übungspartner. */
 test("der schwere Bot wählt den Verein mit den wenigsten Antworten", () => {
-  const ziel = P("Ziel", ["ENG", "KLEIN"]);
-  const list = [ziel,
-    P("A1", ["ENG", "BVB"]), P("A2", ["ENG", "S04"]), P("A3", ["ENG", "FCB"]),
-    P("K1", ["KLEIN", "BVB"])];
-  assert.equal(botClubMove(list, ziel, S(), S("Ziel"), () => 0, "schwer"), "KLEIN");
+  const ziel = P("Ziel Spieler", 1990);
+  const idx = idxAus([
+    [ziel, "Gross", "Klein"],
+    [P("A Eins", 1991), "Gross", "Beta"], [P("A Zwei", 1992), "Gross", "Gamma"],
+    [P("A Drei", 1993), "Gross", "Delta"], [P("K Eins", 1994), "Klein", "Beta"],
+  ]);
+  assert.equal(botClubMove(idx, ziel, S(), S("Ziel Spieler"), () => 0, "schwer"), "Klein");
 });
 
 test("der Bot nennt nur erlaubte Spieler", () => {
-  const list = [P("Sackgasse", ["FCB"], 90), P("Gut", ["FCB", "BVB"], 90)];
-  const zug = botPlayerMove(list, "FCB", S("FCB"), S(), () => 0, "mittel");
-  assert.equal(zug.n, "Gut", "die Sackgasse ist auch für den Bot verboten");
+  const sack = P("Sackgasse Ist", 1990, 90), gut = P("Gut Ist", 1991, 90);
+  const idx = idxAus([[sack, "Alpha"], [gut, "Alpha", "Beta"]]);
+  assert.equal(botPlayerMove(idx, "Alpha", S("Alpha"), S(), () => 0, "mittel").n, "Gut Ist");
 });
 
 test("der Bot gibt null zurück, wenn er nichts weiß — dann verliert er ein Leben", () => {
-  const list = [P("Unbekannt", ["FCB", "BVB"], 3)];
-  assert.equal(botPlayerMove(list, "FCB", S("FCB"), S(), () => 0, "leicht"), null);
-  assert.ok(botPlayerMove(list, "FCB", S("FCB"), S(), () => 0, "schwer"), "der schwere Bot kennt ihn");
+  const unbek = P("Unbekannt Ist", 1990, 3);
+  const idx = idxAus([[unbek, "Alpha", "Beta"]]);
+  assert.equal(botPlayerMove(idx, "Alpha", S("Alpha"), S(), () => 0, "leicht"), null);
+  assert.ok(botPlayerMove(idx, "Alpha", S("Alpha"), S(), () => 0, "schwer"), "der schwere Bot kennt ihn");
 });
 
 test("die Bot-Stufen sind nach Wissen gestaffelt", () => {
@@ -113,19 +130,20 @@ test("die Bot-Stufen sind nach Wissen gestaffelt", () => {
 });
 
 test("carouselHint nennt bei Spielern den bekanntesten Ausweg", () => {
-  const list = [P("Klein", ["FCB", "BVB"], 10), P("Groß", ["FCB", "S04"], 90)];
-  assert.equal(carouselHint(list, "player", "FCB", S("FCB"), S()).player.n, "Groß");
-  assert.equal(carouselHint(list, "club", P("X", ["FCB", "BVB"]), S("FCB"), S()).club, "BVB");
-  assert.equal(carouselHint(list, "player", "FCB", S("FCB"), S("Klein", "Groß")), null);
+  const klein = P("Klein Ist", 1990, 10), gross = P("Gross Ist", 1991, 90);
+  const idx = idxAus([[klein, "Alpha", "Beta"], [gross, "Alpha", "Gamma"]]);
+  assert.equal(carouselHint(idx, "player", "Alpha", S("Alpha"), S()).player.n, "Gross Ist");
+  assert.equal(carouselHint(idx, "club", klein, S("Alpha"), S()).club, "Beta");
+  assert.equal(carouselHint(idx, "player", "Alpha", S("Alpha"), S("Klein Ist", "Gross Ist")), null);
 });
 
 test("burnedOf trennt Vereine und Spieler", () => {
   let s = initCarousel(0);
   s = addMove(s, "player", "Messi");
-  s = addMove(s, "club", "BAR");
+  s = addMove(s, "club", "FC Barcelona");
   s = addMove(s, "player", "Xavi");
   const { clubs, players } = burnedOf(s);
-  assert.deepEqual([...clubs], ["BAR"]);
+  assert.deepEqual([...clubs], ["FC Barcelona"]);
   assert.deepEqual([...players], ["Messi", "Xavi"]);
 });
 
@@ -136,7 +154,7 @@ test("currentKind und currentOwner folgen der Zugnummer", () => {
   s = addMove(s, "player", "Messi");
   assert.equal(currentKind(s), "club");
   assert.equal(currentOwner(s), 1, "der Gegner nennt den Verein");
-  s = addMove(s, "club", "BAR");
+  s = addMove(s, "club", "FC Barcelona");
   assert.equal(currentOwner(s), 1, "und danach auch gleich den nächsten Spieler");
 });
 
@@ -144,21 +162,20 @@ test("currentKind und currentOwner folgen der Zugnummer", () => {
 test("ein verlorenes Leben beendet die Runde und dreht die Eröffnung", () => {
   let s = initCarousel(0);
   s = addMove(s, "player", "Messi");
-  s = addMove(s, "club", "BAR");
+  s = addMove(s, "club", "FC Barcelona");
   s = loseLife(s, 1, "time");
   assert.deepEqual(s.lives, [CAROUSEL_LIVES, CAROUSEL_LIVES - 1]);
   assert.equal(s.starter, 1, "jetzt eröffnet der andere");
   assert.equal(s.round, 2);
   assert.deepEqual(s.moves, [], "die Kette startet neu");
   assert.equal(s.over, null);
-  assert.equal(s.lastRound.reason, "time");
   assert.equal(s.lastRound.laenge, 2, "die gespielte Kette bleibt für die Auflösung erhalten");
 });
 
 test("verbrannte Vereine gelten nur innerhalb einer Runde", () => {
   let s = initCarousel(0);
   s = addMove(s, "player", "Messi");
-  s = addMove(s, "club", "BAR");
+  s = addMove(s, "club", "FC Barcelona");
   s = loseLife(s, 1, "wrong");
   assert.equal(burnedOf(s).clubs.size, 0, "die neue Runde beginnt mit leerem Brett");
 });
@@ -178,51 +195,4 @@ test("die Eröffnung wechselt über mehrere Runden hin und her", () => {
   const folge = [s.starter];
   for (let i = 0; i < 4; i++) { s = loseLife(s, i % 2, "time"); folge.push(s.starter); }
   assert.deepEqual(folge, [0, 1, 0, 1, 0]);
-});
-
-import { CLUBS, norm } from "./gameData.js";
-import { matchClub, suggestClubs } from "./carousel.js";
-
-test("matchClub erkennt vollen Namen, Kürzel und Kurzform", () => {
-  for (const eingabe of ["FC Bayern München", "FCB", "Bayern", "bayern münchen"]) {
-    assert.equal(matchClub(eingabe, CLUBS, norm), "FCB", `„${eingabe}" sollte Bayern treffen`);
-  }
-  assert.equal(matchClub("Barca", CLUBS, norm), "BAR");
-  assert.equal(matchClub("Spurs", CLUBS, norm), "TOT");
-  assert.equal(matchClub("Salzburg", CLUBS, norm), "RBS");
-});
-
-test("matchClub ist unempfindlich gegen Umlaute und Groß-/Kleinschreibung", () => {
-  assert.equal(matchClub("MONCHENGLADBACH", CLUBS, norm), "BMG");
-  assert.equal(matchClub("Mönchengladbach", CLUBS, norm), "BMG");
-  assert.equal(matchClub("atletico madrid", CLUBS, norm), "ATM");
-});
-
-test("matchClub lehnt Unbekanntes ab, statt irgendetwas zu treffen", () => {
-  for (const x of ["", "   ", "Hansa Rostock", "Bayern2"]) {
-    assert.equal(matchClub(x, CLUBS, norm), null, `„${x}" darf nicht treffen`);
-  }
-});
-
-/* Jeder Verein muss über mindestens eine Eingabe erreichbar sein — sonst kann man
-   ihn im Spiel nicht nennen, obwohl er auf dem Feld steht. */
-test("jeder Spielverein ist über seinen Namen und sein Kürzel erreichbar", () => {
-  for (const c of CLUBS) {
-    assert.equal(matchClub(c.name, CLUBS, norm), c.key, `Name greift nicht: ${c.name}`);
-    assert.equal(matchClub(c.key, CLUBS, norm), c.key, `Kürzel greift nicht: ${c.key}`);
-  }
-});
-
-test("jede Kurzform zeigt auf genau ihren Verein", () => {
-  for (const c of CLUBS) {
-    const treffer = CLUBS.filter((x) => matchClub(c.name, CLUBS, norm) === x.key);
-    assert.equal(treffer.length, 1, `mehrdeutig: ${c.name}`);
-  }
-});
-
-test("suggestClubs schlägt beim Tippen vor", () => {
-  const s = suggestClubs("bay", CLUBS, norm).map((c) => c.key);
-  assert.ok(s.includes("FCB") && s.includes("B04"), `Bayern und Bayer erwartet, kam ${s}`);
-  assert.equal(suggestClubs("", CLUBS, norm).length, 0, "leere Eingabe schlägt nichts vor");
-  assert.ok(suggestClubs("man", CLUBS, norm).length >= 2, "Manchester City und United");
 });
