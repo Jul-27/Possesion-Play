@@ -1,12 +1,14 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "./supabaseClient.js";
-import { norm, suggestPlayers, CLUBS } from "./gameData.js";
+import { norm, suggestPlayers } from "./gameData.js";
 import {
-  CAROUSEL_SECONDS, CAROUSEL_LIVES, isPlayerLegal, matchClub, suggestClubs, carouselHint,
+  CAROUSEL_SECONDS, CAROUSEL_LIVES, isPlayerLegal, carouselHint,
   initCarousel, addMove, loseLife, burnedOf, currentKind, currentOwner,
 } from "./carousel.js";
-import { CarScore, CarChain, CarInput, CarPrompt, clubName } from "./CarouselView.jsx";
+import { CarScore, CarChain, CarInput, CarPrompt } from "./CarouselView.jsx";
 import { loadPlayers } from "./playersStore.js";
+import { loadCareerClubs } from "./careerClubsStore.js";
+import { createCareerIndex } from "./careerIndex.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import { useLeaveEndsGame } from "./usePresence.js";
 import Confetti from "./Confetti.jsx";
@@ -32,7 +34,13 @@ export default function CarouselDuel({ code, clientId, onLeave }) {
   const [copied, setCopied] = useState(false);
   const schreibt = useRef(false);
 
-  useEffect(() => { loadPlayers().then(setPlayers); }, []);
+  const [idx, setIdx] = useState(null);
+  useEffect(() => {
+    Promise.all([loadPlayers(), loadCareerClubs()]).then(([ps, cc]) => {
+      setPlayers(ps);
+      setIdx(createCareerIndex(ps, cc.clubs, cc.byKey));
+    });
+  }, []);
 
   useEffect(() => {
     let aktiv = true;
@@ -87,10 +95,10 @@ export default function CarouselDuel({ code, clientId, onLeave }) {
   const rest = Math.max(0, Math.ceil((frist - jetzt) / 1000));
 
   const vorschlaege = useMemo(() => {
-    if (!players) return [];
-    if (kind === "club") return suggestClubs(eingabe, CLUBS, norm);
+    if (!players || !idx) return [];
+    if (kind === "club") return idx.suggest(eingabe);
     return suggestPlayers(players, eingabe, 8).filter((p) => !burnedPlayers.has(p.n));
-  }, [players, eingabe, kind, burnedPlayers]);
+  }, [players, idx, eingabe, kind, burnedPlayers]);
 
   useLeaveEndsGame({
     code, myPlayer, status, lastMove: row?.last_move,
@@ -121,7 +129,7 @@ export default function CarouselDuel({ code, clientId, onLeave }) {
 
   function lebenAbziehen(wer, grund) {
     const ziel = kind === "club" ? aktuellerSpieler : letzter?.value;
-    const hint = players && ziel ? carouselHint(players, kind, ziel, burnedClubs, burnedPlayers) : null;
+    const hint = idx && ziel ? carouselHint(idx, kind, ziel, burnedClubs, burnedPlayers) : null;
     const next = loseLife(state, wer, grund);
     return schreibe({
       turn: currentOwner(next) + 1,
@@ -151,12 +159,12 @@ export default function CarouselDuel({ code, clientId, onLeave }) {
     if (!text) return;
 
     if (kind === "club") {
-      const key = matchClub(text, CLUBS, norm);
-      if (!key) return setFeedback({ ok: false, text: "Diesen Verein kenne ich nicht." });
-      if (!(aktuellerSpieler?.clubs || []).includes(key)) { play("err"); setEingabe(""); return lebenAbziehen(ich, "wrong"); }
-      if (burnedClubs.has(key)) return setFeedback({ ok: false, text: `${clubName(key)} ist in dieser Runde schon durch.` });
+      const name = idx.match(text);
+      if (!name) return setFeedback({ ok: false, text: "Diesen Verein kenne ich nicht." });
+      if (!idx.clubsOf(aktuellerSpieler).includes(name)) { play("err"); setEingabe(""); return lebenAbziehen(ich, "wrong"); }
+      if (burnedClubs.has(name)) return setFeedback({ ok: false, text: `${name} ist in dieser Runde schon durch.` });
       setEingabe(""); setFeedback(null); play("ok");
-      return zugSchreiben(addMove(state, "club", key));
+      return zugSchreiben(addMove(state, "club", name));
     }
 
     const q = norm(text);
@@ -164,12 +172,12 @@ export default function CarouselDuel({ code, clientId, onLeave }) {
     if (!hit) return setFeedback({ ok: false, text: "Diesen Spieler kenne ich nicht." });
     if (burnedPlayers.has(hit.n)) return setFeedback({ ok: false, text: `${hit.n} war in dieser Runde schon dran.` });
     if (state.moves.length === 0) {
-      if ((hit.clubs || []).length < 2) return setFeedback({ ok: false, text: `${hit.n} hat nur einen Verein — zum Eröffnen brauchst du zwei.` });
+      if (idx.clubsOf(hit).length < 2) return setFeedback({ ok: false, text: `${hit.n} hat nur einen Verein — zum Eröffnen brauchst du zwei.` });
     } else {
       const ziel = letzter.value;
-      if (!(hit.clubs || []).includes(ziel)) { play("err"); setEingabe(""); return lebenAbziehen(ich, "wrong"); }
-      if (!isPlayerLegal(hit, ziel, burnedClubs, burnedPlayers)) {
-        return setFeedback({ ok: false, text: `${hit.n} hat außer ${clubName(ziel)} keinen freien Verein — such jemanden, der die Kette weiterträgt.` });
+      if (!idx.clubsOf(hit).includes(ziel)) { play("err"); setEingabe(""); return lebenAbziehen(ich, "wrong"); }
+      if (!isPlayerLegal(idx, hit, ziel, burnedClubs, burnedPlayers)) {
+        return setFeedback({ ok: false, text: `${hit.n} hat außer ${ziel} keinen freien Verein — such jemanden, der die Kette weiterträgt.` });
       }
     }
     setEingabe(""); setFeedback(null); play("ok");
@@ -181,7 +189,7 @@ export default function CarouselDuel({ code, clientId, onLeave }) {
   }
 
   if (loadErr) return <div className="ppRoot"><div className="panel">{loadErr}</div></div>;
-  if (!row || !players) return <div className="ppRoot"><div className="qlogEmpty">Lade Spiel…</div></div>;
+  if (!row || !players || !idx) return <div className="ppRoot"><div className="qlogEmpty">Lade Spiel…</div></div>;
 
   const sitzNamen = [names[1], names[2]];
   const gewinner = state.over ? state.over.winner : (row.last_move?.winner ? row.last_move.winner - 1 : null);
@@ -216,7 +224,7 @@ export default function CarouselDuel({ code, clientId, onLeave }) {
           <CarScore lives={state.lives} owner={owner} round={state.over ? state.round - 1 : state.round}
             left={rest} chainLen={state.moves.length} names={sitzNamen} over={!!state.over} />
 
-          <CarChain moves={state.moves} players={players} me={ich}
+          <CarChain moves={state.moves} players={players} idx={idx} me={ich}
             leer={owner === ich ? "Eröffne mit einem Spieler, der bei mindestens zwei Vereinen war."
                                 : `${sitzNamen[owner]} eröffnet…`} />
 
@@ -229,7 +237,7 @@ export default function CarouselDuel({ code, clientId, onLeave }) {
               </div>
               {amZug && (
                 <>
-                  <CarInput kind={kind} value={eingabe} onChange={(v) => { setEingabe(v); setFeedback(null); }}
+                  <CarInput kind={kind} idx={idx} value={eingabe} onChange={(v) => { setEingabe(v); setFeedback(null); }}
                     onSubmit={absenden} vorschlaege={vorschlaege}
                     sugOpen={sugOpen} setSugOpen={setSugOpen} sugActive={sugActive} setSugActive={setSugActive} />
                   {feedback && <div className={`fb ${feedback.ok ? "ok" : "err"}`} style={{ marginTop: 10 }}>{feedback.text}</div>}
@@ -243,7 +251,7 @@ export default function CarouselDuel({ code, clientId, onLeave }) {
             <div className="panel">
               <h2 style={{ marginTop: 0 }}>{rundenEnde.loser === ich ? "💔 Leben verloren" : `🎯 Punkt für ${sitzNamen[1 - rundenEnde.loser]}`}</h2>
               <p>{duellText(rundenEnde, sitzNamen)}</p>
-              {rundenEnde.hint && <p className="ruleP">Möglich gewesen wäre <b>{clubName(rundenEnde.hint)}</b>.</p>}
+              {rundenEnde.hint && <p className="ruleP">Möglich gewesen wäre <b>{rundenEnde.hint}</b>.</p>}
               <p className="ruleP">Runde {state.round}: <b>{sitzNamen[state.starter]}</b> eröffnet — die Reihenfolge wechselt nach jedem verlorenen Leben.</p>
               <div className="closeline">
                 <button className="btn primary" style={{ flex: 1, padding: "12px" }} onClick={weiter}>Weiter</button>

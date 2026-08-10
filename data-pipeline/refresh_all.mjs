@@ -36,6 +36,10 @@ const CHAIN = [
      Läuft NACH den Namenskorrekturen (gleicher Schlüssel norm(name)|by) und VOR
      wikidata_player_careers, damit lg/span die neuen cp-Einträge sehen. */
   ["wikipedia_squads.mjs"],
+  /* 6d) Vollständige Vereinsstationen für „Transferkarussell". NACH allen Namens-
+     korrekturen, weil der Schlüssel norm(name)|by ist. Dauert ~40 min (Label-Batches
+     gegen WDQS) und schreibt src/careerClubs.js, nicht players.js. */
+  ["wikidata_career_clubs.mjs"],
   // 7) Fotos zuletzt: der Bildindex ist über norm(name)|by verschlüsselt und muss
   //    daher die bereits korrigierten Namen sehen, sonst zeigen die Schlüssel ins Leere.
   ["wikidata_player_careers.mjs"], // 8) lg (gespielte Ligen) + span (Karriere-Spanne) — auch Nicht-Spielvereine
