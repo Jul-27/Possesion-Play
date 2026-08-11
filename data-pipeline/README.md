@@ -23,6 +23,7 @@ Kaggle (kein lokales Setup, kein Admin-Recht nötig).
 | `apply_title.mjs` | Holt **einen** Wettbewerbstitel gezielt nach, mit feinen Fenstern: `node data-pipeline/apply_title.mjs MBL --ab 1903`. Additiv. Löst `apply_msa.mjs` ab (gleiche Logik, aber mit der P831-Brücke). Für Reparaturen, wenn ein einzelner Wettbewerb im Gesamtlauf gescheitert ist. |
 | `backfill_positions.mjs` | Füllt `pos` bei allen, die `wikidata_positions.mjs` nicht erreicht: löst die QID über Name + Geburtsjahr auf und liest `P413` direkt, statt über Vereins-Kader zu gehen. Ein Treffer zählt nur bei exakt passendem Geburtsjahr **und** Beruf Fußballspieler. |
 | `position_overrides.mjs` | Kuratierte Positionen für Spieler ohne `P413`. Wie `HONOUR_OVERRIDES`: nur Belegtes, nichts Geratenes. |
+| `wikidata_career_path.mjs` | Holt **datierte** Karrierestationen für die ratbaren Spieler (sl≥40) nach `src/careerPathClubs.js` — die Grundlage für „Karriere-Pfad". |
 | `wikidata_career_clubs.mjs` | Holt die **vollständige** Vereinsliste je Spieler nach `src/careerClubs.js` — die Grundlage für „Transferkarussell". Siehe „Zwei Vereins-Ebenen". |
 | `audit_clubs.mjs` | **Diagnose, schreibt nichts.** Meldet Spieler, bei denen wir einen Verein führen, den Wikidata nicht kennt. Treffer sind Verdacht, kein Befund — siehe „Datenqualität". |
 | `wikipedia_squads.mjs` | Ergänzt die **aktuellen Kader** aus der deutschen Wikipedia: `node data-pipeline/wikipedia_squads.mjs [KEY …] [--probe]`. Wikipedia liefert dabei nur die Vereinszugehörigkeit und das Jahr aus „im Verein seit"; alle Personendaten kommen weiter aus Wikidata. Siehe „Aktuelle Kader". |
@@ -211,7 +212,7 @@ Deshalb gibt es eine zweite Ebene daneben, nicht statt:
 | | `players.js` → `clubs[]` | `careerClubs.js` |
 |---|---|---|
 | Umfang | 47 kuratierte Vereine | **8434 Vereine**, Ø 5,4 je Spieler |
-| Genutzt von | Hex, Raster, Guess, Kette, Elf, Karriere-Pfad | nur Transferkarussell |
+| Genutzt von | Hex, Raster, Guess, Kette, Elf | nur Transferkarussell |
 | Wappen | ja | nein — schlichtes Namensfeld |
 | Geladen | mit den Spielerdaten | **erst beim Start des Modus** (0,65 MB gzip) |
 
@@ -284,6 +285,27 @@ Zwei Fallen, die beim Bau zugeschnappt sind:
 
 Vorhandene Zeiträume werden nie überschrieben: Wikidata datiert genauer als eine
 Kadertabelle, und sonst überschriebe jeder Jahreslauf echte Anfangsjahre.
+
+### Und warum es dafür noch eine dritte Datei gibt
+
+Der Karriere-Pfad deckt Stationen **chronologisch** auf, braucht also Jahreszahlen —
+`careerClubs.js` führt nur Namen. Die Jahre dort mitzuführen verdreifachte die Datei
+für einen Modus, der sie gar nicht braucht. Umgekehrt braucht der Karriere-Pfad nur
+die ratbaren Spieler, er filtert ohnehin auf sl≥40.
+
+`careerPathClubs.js` deckt genau diesen Ausschnitt ab: **2005 Spieler, 1696 Vereine,
+Ø 6,6 datierte Stationen** — 90 KB gzip, ebenfalls faul geladen. Der Rätselpool wächst
+damit von **701 auf 1869** Spieler, und Gündoğans Pfad beginnt bei Nürnberg statt erst
+bei Dortmund.
+
+Zwei Eigenheiten der Abfrage: sie liest das **Statement** (`p:P54` statt `wdt:P54`),
+weil nur daran die Qualifikatoren `P580`/`P582` mit den Jahren hängen. Und ein
+Startjahr ist Pflicht — ohne es lässt sich die Station nicht einsortieren, und die
+Reihenfolge ist der Kern des Modus. Datierungen vor dem 14. Geburtstag fliegen raus,
+sonst begänne mancher Pfad im Jugendbereich.
+
+Fällt für einen Spieler nichts an, greift weiter das `cp`-Feld mit den 47 Vereinen —
+er verschwindet also nicht aus dem Rätselpool.
 
 ## WDQS-Fenster: warum 4 Jahre
 

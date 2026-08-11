@@ -40,6 +40,10 @@ const CHAIN = [
      korrekturen, weil der Schlüssel norm(name)|by ist. Dauert ~40 min (Label-Batches
      gegen WDQS) und schreibt src/careerClubs.js, nicht players.js. */
   ["wikidata_career_clubs.mjs"],
+  /* 6e) Datierte Stationen für den Karriere-Pfad. Eigene, kleine Datei: der Modus
+     braucht Jahreszahlen, das Karussell nicht — die Jahre dort mitzuführen
+     verdreifachte dessen Nachlade-Brocken. Nur sl>=40, also ~3 Minuten. */
+  ["wikidata_career_path.mjs"],
   // 7) Fotos zuletzt: der Bildindex ist über norm(name)|by verschlüsselt und muss
   //    daher die bereits korrigierten Namen sehen, sonst zeigen die Schlüssel ins Leere.
   ["wikidata_player_careers.mjs"], // 8) lg (gespielte Ligen) + span (Karriere-Spanne) — auch Nicht-Spielvereine
