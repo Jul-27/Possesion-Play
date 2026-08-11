@@ -6,6 +6,7 @@
  *   node data-pipeline/wikidata_career_clubs.mjs            # alle Spieler
  *   node data-pipeline/wikidata_career_clubs.mjs --min-sl 40
  *   node data-pipeline/wikidata_career_clubs.mjs --probe    # nichts schreiben
+ *   node data-pipeline/wikidata_career_clubs.mjs --kein-nachlauf
  *
  * WARUM: `clubs[]` in players.js kennt nur die 47 Spielvereine — die tragen die
  * Hexfelder und brauchen Wappen, also bleibt die Menge klein. Für das
@@ -25,7 +26,7 @@ import { norm, CLUBS } from "../src/gameData.js";
 
 const UA = "PossessionPlay/1.0 (https://github.com/Jul-27; data enrichment)";
 const OUT = new URL("../src/careerClubs.js", import.meta.url);
-const BATCH = 400;
+const BATCH = 300;   // mit Aliassen kommen ~2,5× so viele Zeilen zurück
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /* Typen, die keine Profivereine sind. Nationalmannschaften erwischt der
@@ -42,8 +43,13 @@ const KEIN_VEREIN_TYP = {
 export function istZweitteam(name) {
   const s = String(name || "");
   if (/\s(II|III|IV|B|C)$/.test(s)) return true;
+  /* „Johor Darul Ta'zim II FC" trägt die Ziffer in der Mitte. Willem II Tilburg ist
+     dagegen ein echter Verein und muss bleiben — daher die Ausnahme. */
+  if (/\s(II|III)\s/.test(s) && !/willem/i.test(s)) return true;
   if (/\bU-?\s?\d{2}\b/i.test(s)) return true;
-  if (/(jugend|youth|academy|akademie|reserve|amateure|amateurs|next gen|futuro|castilla|juvenil|primavera)\b/i.test(s)) return true;
+  /* Castilla und Mestalla heißen die Zweitmannschaften von Real und Valencia; sie
+     tragen weder Ziffer noch den Typ „Zweitmannschaft" in Wikidata. */
+  if (/(jugend|youth|academy|akademie|reserve|amateure|amateurs|next gen|futuro|castilla|mestalla|juvenil|primavera)\b/i.test(s)) return true;
   return false;
 }
 
@@ -71,11 +77,94 @@ async function sparql(query) {
 
 const esc = (s) => String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 
-/* Eine Namensportion abfragen. Der MINUS-Block wirft Nationalteams, Zweit- und
-   Frauenmannschaften schon serverseitig raus — das spart rund ein Viertel der Zeilen. */
+async function api(params) {
+  const url = "https://www.wikidata.org/w/api.php?format=json&" + new URLSearchParams(params);
+  for (let a = 0; a < 4; a++) {
+    let res;
+    try { res = await fetch(url, { headers: { "User-Agent": UA } }); } catch { await sleep(4000); continue; }
+    if (res.status === 429 || res.status >= 500) { await sleep(10000); continue; }
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.json();
+  }
+  throw new Error("Wikidata-API fehlgeschlagen");
+}
+
+/* Nachlauf für alles, was der Label-Weg nicht trifft. Manche Namen stehen in Wikidata
+   ganz anders („Adriano" heißt dort „Adriano Leite Ribeiro"), da hilft weder Label noch
+   Alias. Diese Spieler bekommen ihre QID über die Suche und danach ihre Vereine über
+   eine QID-Abfrage — genau, aber mit rund 0,8 s je Spieler auch langsam. */
+async function nachlaufUeberQid(offen, indexNachSchluessel, proSpieler) {
+  const qidVon = new Map();
+  const alle = new Set();
+  for (let i = 0; i < offen.length; i++) {
+    const p = offen[i];
+    try {
+      const s = await api({ action: "wbsearchentities", search: p.n, language: "de", uselang: "de", type: "item", limit: 3 });
+      const ids = (s.search || []).map((x) => x.id);
+      if (ids.length) { qidVon.set(norm(p.n) + "|" + p.by, ids); ids.forEach((x) => alle.add(x)); }
+    } catch { /* eine gescheiterte Suche darf den Lauf nicht kippen */ }
+    if ((i + 1) % 500 === 0) console.log(`  Nachlauf-Suche ${i + 1}/${offen.length} …`);
+    await sleep(110);
+  }
+  // Vereine der Kandidaten-QIDs in einem Rutsch
+  const proQid = new Map();
+  const ids = [...alle];
+  for (let i = 0; i < ids.length; i += 300) {
+    const chunk = ids.slice(i, i + 300);
+    /* Jede Portion einzeln absichern. Der Nachlauf ist eine Zugabe — ein WDQS-Ausfall
+       darin darf nicht die Stunde Arbeit aus dem Hauptdurchlauf mitreißen. Genau das
+       ist einmal passiert: Portion 2100 von 3605 scheiterte, und der Lauf brach ab,
+       bevor irgendetwas geschrieben war. */
+    let rows;
+    try {
+      rows = await sparql(`SELECT ?p ?by ?cLabel WHERE {
+      VALUES ?p { ${chunk.map((q) => "wd:" + q).join(" ")} }
+      ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d ; p:P54/ps:P54 ?c .
+      MINUS { ?c wdt:P31 ?t1 . ?t1 wdt:P279* wd:${KEIN_VEREIN_TYP.national} }
+      MINUS { ?c wdt:P31 wd:${KEIN_VEREIN_TYP.zweit} }
+      MINUS { ?c wdt:P31 wd:${KEIN_VEREIN_TYP.frauen} }
+      BIND(YEAR(?d) AS ?by)
+      SERVICE wikibase:label { bd:serviceParam wikibase:language "de,en". } }`);
+    } catch (e) { console.log(`  Nachlauf-Portion ${i} übersprungen: ${e.message}`); continue; }
+    for (const b of rows) {
+      const qid = b.p.value.split("/").pop();
+      const club = b.cLabel?.value;
+      if (!club || /^Q\d+$/.test(club) || istZweitteam(club)) continue;
+      const e = proQid.get(qid) || proQid.set(qid, { by: Number(b.by.value), clubs: new Set() }).get(qid);
+      e.clubs.add(club);
+    }
+    console.log(`  Nachlauf-Vereine ${Math.min(i + 300, ids.length)}/${ids.length} …`);
+    await sleep(1200);
+  }
+  // Nur bei exakt passendem Geburtsjahr übernehmen — lieber nichts als der Falsche.
+  let gefunden = 0;
+  for (const [k, kandidaten] of qidVon) {
+    const p = indexNachSchluessel.get(k);
+    for (const q of kandidaten) {
+      const e = proQid.get(q);
+      if (!e || e.by !== p.by || !e.clubs.size) continue;
+      const set = proSpieler.get(k) || proSpieler.set(k, new Set()).get(k);
+      for (const c of e.clubs) set.add(c);
+      gefunden++;
+      break;
+    }
+  }
+  return gefunden;
+}
+
+/* Eine Namensportion abfragen.
+
+   `rdfs:label|skos:altLabel` ist entscheidend: unsere Namen sind teils diakritikfrei
+   („Marko Arnautovic"), Wikidatas Label trägt die Zeichen („Marko Arnautović"), und
+   rdfs:label vergleicht exakt. Ohne die Aliasse fehlten 5251 Spielern (17 %) sämtliche
+   Karrierestationen — darunter Arnautović ohne Stoke City, Hakimi, Adriano, Golovin.
+   Das Geburtsjahr filtert die Fehlgriffe, die ein geteilter Alias mitbringen kann.
+
+   Der MINUS-Block wirft Nationalteams, Zweit- und Frauenmannschaften schon
+   serverseitig raus — das spart rund ein Viertel der Zeilen. */
 const abfrage = (namen) => `SELECT ?pLabel ?by ?c ?cLabel WHERE {
   VALUES ?l { ${namen.flatMap((n) => [`"${esc(n)}"@de`, `"${esc(n)}"@en`]).join(" ")} }
-  ?p rdfs:label ?l ; wdt:P106 wd:Q937857 ; wdt:P569 ?d ; p:P54/ps:P54 ?c .
+  ?p rdfs:label|skos:altLabel ?l ; wdt:P106 wd:Q937857 ; wdt:P569 ?d ; p:P54/ps:P54 ?c .
   MINUS { ?c wdt:P31 ?t1 . ?t1 wdt:P279* wd:${KEIN_VEREIN_TYP.national} }
   MINUS { ?c wdt:P31 wd:${KEIN_VEREIN_TYP.zweit} }
   MINUS { ?c wdt:P31 wd:${KEIN_VEREIN_TYP.frauen} }
@@ -150,6 +239,17 @@ async function main() {
     }
     console.log(`  ${String(Math.min(i + BATCH, namen.length)).padStart(6)}/${namen.length} · ${rows.length} Zeilen · ${proSpieler.size} Spieler mit Stationen`);
     await sleep(1200);
+  }
+
+  /* Wer über Label und Alias nicht gefunden wurde, bekommt eine zweite Chance über
+     die QID. Vorher fehlten 5251 Spielern (17 %) sämtliche Stationen. */
+  const nurSpielvereine = ziel.filter((p) => !proSpieler.has(norm(p.n) + "|" + p.by));
+  if (!process.argv.includes("--kein-nachlauf") && nurSpielvereine.length) {
+    console.log(`\nNachlauf über QID für ${nurSpielvereine.length} Spieler ohne Treffer …`);
+    try {
+      const n = await nachlaufUeberQid(nurSpielvereine, indexNachSchluessel, proSpieler);
+      console.log(`  davon ${n} nachträglich gefunden`);
+    } catch (e) { console.log(`  Nachlauf abgebrochen (${e.message}) — der Hauptdurchlauf bleibt erhalten.`); }
   }
 
   /* Die 47 Spielvereine immer mitführen: sie sind kuratiert und teils reicher als
