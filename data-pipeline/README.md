@@ -210,10 +210,10 @@ Deshalb gibt es eine zweite Ebene daneben, nicht statt:
 
 | | `players.js` → `clubs[]` | `careerClubs.js` |
 |---|---|---|
-| Umfang | 47 kuratierte Vereine | **8158 Vereine**, Ø 5,2 je Spieler |
+| Umfang | 47 kuratierte Vereine | **8434 Vereine**, Ø 5,4 je Spieler |
 | Genutzt von | Hex, Raster, Guess, Kette, Elf, Karriere-Pfad | nur Transferkarussell |
 | Wappen | ja | nein — schlichtes Namensfeld |
-| Geladen | mit den Spielerdaten | **erst beim Start des Modus** (0,62 MB gzip) |
+| Geladen | mit den Spielerdaten | **erst beim Start des Modus** (0,65 MB gzip) |
 
 `createCareerIndex()` in `src/careerIndex.js` führt beide zusammen und liefert beide
 Richtungen: Stationen eines Spielers und Spieler eines Vereins. Die zweite ist der
@@ -231,7 +231,15 @@ Drei Fallen beim Abruf, alle gemessen:
    Per GET scheitert das ab ~250 Namen an HTTP 431, deshalb POST.
 3. **Zweitmannschaften brauchen zwei Prüfungen.** Der Typ „Zweitmannschaft" (Q2412834)
    erwischt Real Madrid Castilla und Juventus Next Gen, aber *nicht* Borussia Dortmund II
-   — das trägt nur „Fußballmannschaft". Deshalb zusätzlich ein enges Namensmuster.
+   — das trägt nur „Fußballmannschaft". Deshalb zusätzlich ein enges Namensmuster. Eng,
+   weil Willem II Tilburg, Athletic Bilbao und Bishop Auckland echte Vereine sind.
+4. **`rdfs:label` allein trifft zu wenig.** Unsere Namen sind teils diakritikfrei
+   („Marko Arnautovic"), Wikidata trägt die Zeichen („Marko Arnautović") — und
+   `rdfs:label` vergleicht exakt. Ohne `skos:altLabel` fehlten **5251 Spielern (17 %)**
+   sämtliche Stationen, darunter Arnautović ohne Stoke City, Hakimi, Adriano, Golovin.
+   Wen auch der Alias nicht findet (Wikidata führt „Adriano" als „Adriano Leite
+   Ribeiro"), holt ein zweiter Lauf über die QID — der fand nochmals 1681 Spieler.
+   Zusammen sank die Lücke auf 4000, fast durchweg unbekannte Spieler.
 
 ## Aktuelle Kader: warum Wikidata dafür nicht reicht
 
