@@ -3,6 +3,7 @@ import { Emblem, Avatar } from "./Emblems.jsx";
 import { norm, suggestPlayers, lookupDef } from "./gameData.js";
 import { careerStations, pickCareerIndex } from "./careerPath.js";
 import { loadPlayers } from "./playersStore.js";
+import { loadCareerPath } from "./careerPathStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
 import DataStamp from "./DataStamp.jsx";
@@ -35,13 +36,21 @@ export default function Career({ onLeave }) {
   const [showRules, setShowRules] = useState(false);
   const inputRef = useRef(null);
 
-  useEffect(() => { loadPlayers().then(setPlayers); }, []);
+  const [dated, setDated] = useState(undefined);   // undefined = lädt noch
+  /* Beide zusammen laden und erst danach ziehen: der Kandidatenpool hängt an den
+     Stationen, und mit den vollen Karrieren sind es 1801 statt 701. Zöge man vorher,
+     bekäme die Tagesaufgabe je nach Ladezeitpunkt einen anderen Spieler. */
   useEffect(() => {
-    if (players && idx < 0) setIdx(pickCareerIndex(players, isDaily ? dailyRnd("career") : Math.random));
-  }, [players, idx, isDaily]);
+    Promise.all([loadPlayers(), loadCareerPath()]).then(([ps, d]) => { setDated(d); setPlayers(ps); });
+  }, []);
+  useEffect(() => {
+    if (players && dated !== undefined && idx < 0) {
+      setIdx(pickCareerIndex(players, isDaily ? dailyRnd("career") : Math.random, dated));
+    }
+  }, [players, dated, idx, isDaily]);
 
   const target = players && idx >= 0 ? players[idx] : null;
-  const stations = useMemo(() => (target ? careerStations(target) : []), [target]);
+  const stations = useMemo(() => (target ? careerStations(target, dated) : []), [target, dated]);
   const allShown = revealed >= stations.length;
   const suggestions = useMemo(() => (players ? suggestPlayers(players, nameInput, 8) : []), [players, nameInput]);
 
@@ -92,7 +101,7 @@ export default function Career({ onLeave }) {
   function giveUp() { if (!done) { setRevealed(stations.length); finish(false); } }
 
   function newRound() {
-    setIdx(players ? pickCareerIndex(players) : -1);
+    setIdx(players ? pickCareerIndex(players, Math.random, dated) : -1);
     setRevealed(1); setWrong(0); setDone(false); setWon(false);
     setNameInput(""); setChosen(null); setSugOpen(false); setFeedback(null);
   }
@@ -132,12 +141,12 @@ export default function Career({ onLeave }) {
       {!players || !target ? <div className="qlogEmpty">Lade Spielerdaten…</div> : (
         <div className="careerList">
           {shown.map((s, i) => {
-            const def = lookupDef("club", s.club);
+            const def = s.club ? lookupDef("club", s.club) : null;
             return (
-              <div key={i + s.club + s.from} className="careerRow">
+              <div key={i + s.name + s.from} className="careerRow">
                 <span className="careerStep">{i + 1}</span>
                 <span className="careerEmblem">{def ? <Emblem def={def} /> : null}</span>
-                <span className="careerClub">{def ? def.name : s.club}</span>
+                <span className="careerClub">{s.name}</span>
                 <span className="careerYears">{s.from}–{s.to === 0 ? "heute" : s.to}</span>
               </div>
             );
