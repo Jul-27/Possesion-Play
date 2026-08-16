@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   moveKind, moveOwner, freeClubs, isPlayerLegal, legalPlayers, startCandidates, pickStart,
   botClubMove, botPlayerMove, carouselHint, initCarousel, addMove, loseLife, burnedOf,
-  currentKind, currentOwner, CAROUSEL_LIVES, BOT_LEVELS, botLevel,
+  currentKind, currentOwner, CAROUSEL_LIVES, BOT_LEVELS, botLevel, rematchState,
 } from "./carousel.js";
 import { createCareerIndex } from "./careerIndex.js";
 
@@ -195,4 +195,21 @@ test("die Eröffnung wechselt über mehrere Runden hin und her", () => {
   const folge = [s.starter];
   for (let i = 0; i < 4; i++) { s = loseLife(s, i % 2, "time"); folge.push(s.starter); }
   assert.deepEqual(folge, [0, 1, 0, 1, 0]);
+});
+
+test("die Revanche startet leer und führt die wechselnde Eröffnung fort", () => {
+  let s = initCarousel(0);
+  for (let i = 0; i < 3; i++) s = loseLife(s, 1, "time");
+  assert.deepEqual(s.over, { loser: 1, winner: 0 }, "Ausgangslage: Partie entschieden");
+  const neu = rematchState(s);
+  assert.deepEqual(neu.lives, [CAROUSEL_LIVES, CAROUSEL_LIVES], "beide starten wieder mit vollen Leben");
+  assert.deepEqual(neu.moves, []);
+  assert.equal(neu.round, 1);
+  assert.equal(neu.over, null);
+  assert.equal(neu.starter, 1, "nicht wieder derselbe Eröffner wie in der letzten Runde");
+  assert.equal(neu.starter, s.starter, "die Reihenfolge läuft über die Partie hinaus weiter");
+});
+
+test("die Revanche funktioniert auch ohne verwertbaren Vorzustand", () => {
+  assert.equal(rematchState(null).starter, 0, "z. B. nach einem Abbruch vor dem ersten Zug");
 });

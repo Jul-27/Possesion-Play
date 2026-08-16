@@ -123,6 +123,14 @@ export function initCarousel(starter = 0) {
   return { starter, round: 1, lives: [CAROUSEL_LIVES, CAROUSEL_LIVES], moves: [], over: null };
 }
 
+/* Revanche im selben Spielcode. Die Eröffnung wechselt auch über die Partie hinaus:
+   nach dem letzten verlorenen Leben zeigt state.starter bereits auf den, der als
+   Nächstes eröffnen würde — genau der eröffnet die neue Partie. Sonst hätte, wer die
+   Partie verliert, in der Revanche wieder dieselbe Rolle wie zuletzt. */
+export function rematchState(state) {
+  return initCarousel(state?.starter ?? 0);
+}
+
 /** Aktueller Zugindex innerhalb der Runde. */
 export const moveIndex = (state) => state.moves.length;
 export const currentKind = (state) => moveKind(moveIndex(state));
