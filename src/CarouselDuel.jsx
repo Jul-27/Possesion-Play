@@ -3,7 +3,7 @@ import { supabase } from "./supabaseClient.js";
 import { norm, suggestPlayers } from "./gameData.js";
 import {
   CAROUSEL_SECONDS, CAROUSEL_LIVES, isPlayerLegal, carouselHint,
-  initCarousel, addMove, loseLife, burnedOf, currentKind, currentOwner,
+  initCarousel, addMove, loseLife, burnedOf, currentKind, currentOwner, rematchState,
 } from "./carousel.js";
 import { CarScore, CarChain, CarInput, CarPrompt } from "./CarouselView.jsx";
 import { loadPlayers } from "./playersStore.js";
@@ -188,11 +188,35 @@ export default function CarouselDuel({ code, clientId, onLeave }) {
     schreibe({ last_move: { ...(row.last_move || {}), ende: null, frist: neueFrist() } });
   }
 
+  /* Revanche: neue Partie im selben Code, ohne Umweg über die Lobby. Ein Klick genügt,
+     die Gegenseite zieht über Realtime mit — wie „Neues Spiel" in den anderen Duellen.
+
+     Zwei Feinheiten:
+     · last_move wird ERSETZT statt ergänzt — winner, forfeit und die leftBy-Marker aus
+       der alten Partie müssen weg, sonst gilt sie sofort wieder als entschieden.
+     · .eq("status", "finished") ist der Wettlaufschutz. Klicken beide gleichzeitig,
+       verpufft der zweite Schreibvorgang, statt eine schon begonnene Partie samt
+       erstem Zug wieder auf null zu setzen. */
+  async function nochmal() {
+    if (myPlayer === 0) return;
+    const frisch = rematchState(state);
+    await supabase.from("games").update({
+      turn: currentOwner(frisch) + 1,
+      status: "playing",
+      last_move: { car: frisch, frist: neueFrist(), ende: null },
+      updated_at: new Date().toISOString(),
+    }).eq("code", code).eq("status", "finished");
+  }
+
   if (loadErr) return <div className="ppRoot"><div className="panel">{loadErr}</div></div>;
   if (!row || !players || !idx) return <div className="ppRoot"><div className="qlogEmpty">Lade Spiel…</div></div>;
 
   const sitzNamen = [names[1], names[2]];
   const gewinner = state.over ? state.over.winner : (row.last_move?.winner ? row.last_move.winner - 1 : null);
+  /* Nach einem Abgang ist niemand mehr da, der die Revanche annehmen könnte — dann
+     führt der Knopf nur in eine Partie gegen ein leeres Tab. */
+  const aufgegeben = row.last_move?.forfeit || 0;
+  const revanche = !aufgegeben && myPlayer !== 0;
 
   return (
     <div className="ppRoot">
@@ -228,7 +252,9 @@ export default function CarouselDuel({ code, clientId, onLeave }) {
             leer={owner === ich ? "Eröffne mit einem Spieler, der bei mindestens zwei Vereinen war."
                                 : `${sitzNamen[owner]} eröffnet…`} />
 
-          {!state.over && !rundenEnde && (
+          {/* status prüfen, nicht nur state.over: beim Abgang des Gegners endet die Partie
+              ohne verlorenes Leben — sonst stünde „X ist am Zug…" neben dem Abpfiff. */}
+          {!state.over && !rundenEnde && status !== "finished" && (
             <div className="panel">
               <div className="prompt">
                 {amZug
@@ -263,8 +289,14 @@ export default function CarouselDuel({ code, clientId, onLeave }) {
             <div className="panel dailyEnd">
               {gewinner === ich && <Confetti />}
               <h2 style={{ marginTop: 0 }}>{gewinner === ich ? "🏆 Gewonnen!" : `🎠 ${sitzNamen[gewinner] || "Der Gegner"} gewinnt`}</h2>
-              <p>Endstand {state.lives[0]} zu {state.lives[1]} Leben nach {Math.max(1, state.round - 1)} Runden.</p>
+              <p>{aufgegeben
+                ? `🚪 ${names[aufgegeben]} hat das Spiel verlassen.`
+                : `Endstand ${state.lives[0]} zu ${state.lives[1]} Leben nach ${Math.max(1, state.round - 1)} Runden.`}</p>
+              {revanche && <p className="ruleP">Neue Partie im selben Code — <b>{sitzNamen[rematchState(state).starter]}</b> eröffnet.</p>}
               <div className="closeline">
+                {revanche && (
+                  <button className="btn primary" style={{ flex: 1, padding: "12px" }} onClick={nochmal}>Nochmal spielen</button>
+                )}
                 <button className="btn ghost" style={{ flex: 1, padding: "12px" }} onClick={onLeave}>Zur Lobby</button>
               </div>
             </div>
