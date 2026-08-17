@@ -135,8 +135,8 @@ export default function Heatmap({ onLeave }) {
 
       {/* Legende ÜBER dem Brett: darunter lag sie auf dem Handy unter der Falz und war
           genau dann unsichtbar, wenn man sie zum Deuten der Farben gebraucht hätte. */}
-      <div className="heatLegend" title="Wie oft ein Feld getroffen wurde">
-        <span className="heatLegendLab">Treffer</span>
+      <div className="heatLegend" title="Wie viele Felder ein Zug auf einmal erobert hat (+1 je nachgeheiztem Feld)">
+        <span className="heatLegendLab">Hitze</span>
         {Array.from({ length: HEAT_MAX }, (_, i) => i + 1).map((stufe) => {
           const p = heatPaint(stufe);
           return (
@@ -157,10 +157,12 @@ export default function Heatmap({ onLeave }) {
             türkis abgesetzt — die Hitzerampe ist gelb, eine goldene Mitte hätte
             ausgesehen wie ein besonders heißes Feld. */}
         <div className="hexScore" style={{ left: `${mitte.left}%`, top: `${mitte.top}%` }}>
-          <span className="hexScoreLabel">Score</span>
-          {/* key = score: der Wechsel montiert die Zahl neu und startet damit die
-              Pop-Animation — sonst änderte sich der Stand lautlos. */}
-          <b key={score} className="hexScoreVal">{score}</b>
+          <div className="hexScoreInner">
+            <span className="hexScoreLabel">Score</span>
+            {/* key = score: der Wechsel montiert die Zahl neu und startet damit die
+                Pop-Animation — sonst änderte sich der Stand lautlos. */}
+            <b key={score} className="hexScoreVal">{score}</b>
+          </div>
         </div>
       </div>
 
@@ -238,8 +240,9 @@ export default function Heatmap({ onLeave }) {
             <p className="ruleP"><b>Spieler nennen.</b> Passt er zur Kategorie, ist das Feld erobert.</p>
             <p className="ruleP"><b>Größere Züge bauen.</b> Ein gültiger Spieler prüft auch alle angrenzenden Felder. Jedes, das ebenfalls passt, fällt im selben Zug mit.</p>
             <p className="ruleP"><b>Combos bringen mehr.</b> Neue Felder zählen als Combo: 1 Feld = 1 Punkt, 2 = 3, 3 = 6, 4 = 10 — und so weiter. Sieben Felder auf einmal sind 28 Punkte, sieben einzeln nur sieben.</p>
-            <p className="ruleP"><b>Erobertes nachheizen.</b> Schon eroberte Nachbarn zählen weiter, wenn dein Spieler zu ihnen passt: +1 Punkt je Feld, und das Feld wird heißer.</p>
-            <p className="ruleP"><b>Heatmap füllen.</b> Das Spiel endet, wenn alle {HEAT_CELLS.length} Felder erobert sind. Die <b>Heat Density</b> ist die durchschnittliche Hitze deines Bretts — 1,00 heißt „jedes Feld genau einmal getroffen".</p>
+            <p className="ruleP"><b>Erobertes nachheizen.</b> Schon eroberte Nachbarn zählen weiter, wenn dein Spieler zu ihnen passt: +1 Punkt je Feld, und das Feld steigt eine Hitzestufe.</p>
+            <p className="ruleP"><b>Die Farbe zeigt die Zuggröße.</b> Alle Felder eines Zuges werden gleich heiß eingefärbt — hellgelb bei einem Feld, dann gelb, orange, hellrot, rot und schwarz ab sechs Feldern auf einmal.</p>
+            <p className="ruleP"><b>Heatmap füllen.</b> Das Spiel endet, wenn alle {HEAT_CELLS.length} Felder erobert sind. Die <b>Heat Density</b> ist der Schnitt aller Hitzestufen: 1,00 heißt „lauter Alleingänge", alles darüber steht für größere Züge.</p>
             <p className="ruleP">Fehlversuche kosten keine Punkte, werden aber gezählt. Spieler dürfen mehrfach genannt werden.</p>
             <DataStamp />
             <div className="closeline"><button className="btn primary" style={{ flex: 1, padding: "11px" }} onClick={() => setShowRules(false)}>Los geht's</button></div>

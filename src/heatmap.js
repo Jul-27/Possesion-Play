@@ -9,9 +9,13 @@
    2. REHEAT. Trifft der Spieler auch schon eroberte Nachbarn, gibt das +1 je Feld
       und macht das Feld heißer. Weil nur FREIE Felder anwählbar sind, lässt sich
       damit nicht farmen — jeder Zug muss mindestens eine neue Zelle bringen.
-   3. HITZE. Jeder Treffer auf einem Feld zählt: Eroberung = 1, jeder Reheat +1.
-      Die Heat Density ist der Schnitt über alle 30 Felder; 1,0 heißt „jedes Feld
-      genau einmal getroffen", alles darüber ist verdiente Hitze.
+   3. HITZE = GRÖSSE DES ZUGES. Alle Felder eines Zuges bekommen die Zahl der in
+      DIESEM Zug eroberten Felder als Stufe: „Portugal" mit André Silva reißt auch
+      „RB Leipzig" und „Bundesliga" mit, also stehen alle drei auf Stufe 3. Ein
+      Alleingang („Copa-del-Rey-Sieger" mit Cristiano Ronaldo, der zu keinem
+      Nachbarn passt) bleibt Stufe 1. Ein späterer Reheat hebt ein Feld um eine
+      weitere Stufe — er macht das Brett laut Regelwerk ja „hotter".
+      Die Heat Density ist der Schnitt dieser Stufen über alle 30 Felder.
 
    Die Mittelzelle (Index 15) trägt die Punkteanzeige und ist kein Spielfeld. Sie
    überbrückt auch keine Nachbarschaft — die sechs Felder ringsum haben schlicht
@@ -54,10 +58,13 @@ export function heatMove(board, heat, hex, player) {
   return { neu, reheat, punkte: comboPoints(neu.length) + reheat.length };
 }
 
-/** Hitzekarte nach einem Zug: jedes getroffene Feld +1. */
+/* Hitzekarte nach einem Zug. Die neu eroberten Felder teilen sich die Stufe „so viele
+   Felder hat dieser Zug gebracht" — ein Vierer-Zug färbt alle vier gleich heiß, nicht
+   nur das angeklickte. Bereits erobertes steigt um eine Stufe. */
 export function applyHeat(heat, zug) {
   const next = { ...heat };
-  for (const i of [...zug.neu, ...zug.reheat]) next[i] = (next[i] || 0) + 1;
+  for (const i of zug.neu) next[i] = zug.neu.length;
+  for (const i of zug.reheat) next[i] = (next[i] || 0) + 1;
   return next;
 }
 
@@ -66,23 +73,25 @@ export const heatDone = (heat) => heatFilled(heat) === HEAT_CELLS.length;
 export const heatDensity = (heat) =>
   HEAT_CELLS.reduce((a, i) => a + (heat[i] || 0), 0) / HEAT_CELLS.length;
 
-/* Farbrampe: EIN Farbton, der mit jedem Treffer dunkler wird — helles Gelb beim
-   ersten, tiefes Bernsteinbraun ab dem fünften. Ein Wechsel des Farbtons (türkis →
-   rot) las sich nicht als Steigerung, sondern als vier verschiedene Zustände.
+/* Farbrampe hellgelb → gelb → orange → hellrot → rot → schwarz. Sechs Stufen, weil
+   ein Zug höchstens das gewählte Feld plus sechs Nachbarn bringt; alles ab sechs
+   Feldern ist gleich schwarz.
 
-   Weil ein dunkles Feld auf dem dunklen Brett zu verschwinden droht, trägt jede
-   Stufe eine eigene, HELLERE Kante — sie hält die Kachel sichtbar und macht die
-   heißesten Felder eher deutlicher als schwächer. Aus demselben Grund kippt die
-   Schriftfarbe ab Stufe 3 von dunkel auf hell.
+   Die Helligkeit fällt über die ganze Rampe monoton (Test hält das fest) — nur so
+   liest sich die Folge als Steigerung und nicht als sechs bunte Zustände. Deshalb
+   ist Orange bewusst das hellere #FB923C: das kräftigere #F97316 wäre dunkler als
+   das nachfolgende Hellrot gewesen und hätte die Reihenfolge umgedreht.
 
-   Ein Feld kann höchstens 1 + 6 Treffer sammeln; ab Stufe 5 deckelt die Rampe. */
-export const HEAT_MAX = 5;
+   Jede Stufe trägt eine HELLERE Kante, sonst verschwände die schwarze Kachel auf
+   dem dunklen Brett. Die Schrift kippt ab Stufe 5 von dunkel auf hell. */
+export const HEAT_MAX = 6;
 const RAMPE = [
-  { c1: "#FDE68A", c2: "#FACC15", kante: "#FEF3C7", txt: "#422006" }, // 1 — frisch erobert
-  { c1: "#FBBF24", c2: "#D97706", kante: "#FDE68A", txt: "#422006" }, // 2
-  { c1: "#D97706", c2: "#92400E", kante: "#F59E0B", txt: "#FFF7ED" }, // 3
-  { c1: "#92400E", c2: "#5C280A", kante: "#C2610C", txt: "#FFF7ED" }, // 4
-  { c1: "#5C280A", c2: "#2A1004", kante: "#8A4A16", txt: "#FFD9A8" }, // 5+ durchgeglüht
+  { c1: "#FEF08A", c2: "#FDE047", kante: "#FEF9C3", txt: "#422006" }, // 1 hellgelb
+  { c1: "#FACC15", c2: "#EAB308", kante: "#FDE68A", txt: "#422006" }, // 2 gelb
+  { c1: "#FB923C", c2: "#F97316", kante: "#FED7AA", txt: "#431407" }, // 3 orange
+  { c1: "#F87171", c2: "#EF4444", kante: "#FCA5A5", txt: "#450A0A" }, // 4 hellrot
+  { c1: "#DC2626", c2: "#991B1B", kante: "#F87171", txt: "#FFF1F2" }, // 5 rot
+  { c1: "#292524", c2: "#0C0A09", kante: "#78716C", txt: "#FAFAF9" }, // 6+ schwarz
 ];
 
 /** Malvorschrift für eine Zelle — `null` heißt „unerobert, Standardfarbe". */
@@ -100,15 +109,19 @@ export function heatPaint(level = 0) {
 }
 
 /* Zum Teilen: die Hitzekarte als Emoji-Raster in Brettform (4-5-4-5-4-5-4). Das
-   Bild transportiert mehr als die Zahl — man sieht sofort, wo es heiß wurde. */
-const RAMPE_EMOJI = ["⬜", "🟩", "🟨", "🟧", "🟥", "🔥"];
+   Bild transportiert mehr als die Zahl — man sieht sofort, wo es heiß wurde.
+
+   Emoji kennen nur EIN Gelb und EIN Rot, die sechs Stufen lassen sich also nicht
+   eins zu eins abbilden: 1/2 teilen sich das Gelb, 4/5 das Rot. Die Mitte ist 🔲
+   und nicht mehr ⬛ — schwarz ist jetzt die heißeste Stufe. */
+const RAMPE_EMOJI = ["⬜", "🟨", "🟨", "🟧", "🟥", "🟥", "⬛"];
 export function heatShareGrid(heat) {
   const zeilen = [];
   let i = 0;
   for (let r = 0; r < 7; r++) {
     const zeile = [];
     for (let c = 0; c < (r % 2 === 1 ? 5 : 4); c++, i++) {
-      zeile.push(i === HEAT_CENTER ? "⬛" : RAMPE_EMOJI[Math.min(heat[i] || 0, HEAT_MAX)]);
+      zeile.push(i === HEAT_CENTER ? "🔲" : RAMPE_EMOJI[Math.min(heat[i] || 0, HEAT_MAX)]);
     }
     zeilen.push((r % 2 === 0 ? " " : "") + zeile.join(""));
   }
