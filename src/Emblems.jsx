@@ -87,10 +87,15 @@ export function Avatar({ player, size = 34 }) {
   );
 }
 
-export function Cell({ cell, owner, selected, adjHint, justClaimed, clickable, onClick }) {
+/* `paint` überschreibt die Besitzerfarben mit einer eigenen Vorschrift
+   ({bg, border, txt, shadow, glow}). „Heatmap" färbt darüber nach Hitze statt nach
+   Spieler; die Regel dafür bleibt in heatmap.js, hier steht nur das Malen. */
+export function Cell({ cell, owner, paint, selected, adjHint, justClaimed, clickable, onClick }) {
   const def = cell.def;
   let bg, border, txt, shadow;
-  if (owner) {
+  if (paint) {
+    ({ bg, border, txt, shadow } = paint);
+  } else if (owner) {
     const pc = P[owner];
     bg = `linear-gradient(150deg, ${pc.c1}, ${pc.c2})`; border = `1px solid ${pc.c1}`; txt = "#fff";
     shadow = `0 0 18px ${pc.glow}, inset 0 1px 0 rgba(255,255,255,.25)`;
@@ -106,7 +111,8 @@ export function Cell({ cell, owner, selected, adjHint, justClaimed, clickable, o
       className={`hex ${justClaimed ? "claimed" : ""}`}
       style={{
         left: `${cell.left}%`, top: `${cell.top}%`, background: bg, border, color: txt, boxShadow: shadow,
-        ...(owner ? { filter: `drop-shadow(0 3px 5px rgba(0,0,0,.5)) drop-shadow(0 0 8px ${P[owner].glow})` } : {}),
+        ...(paint?.glow ? { filter: `drop-shadow(0 3px 5px rgba(0,0,0,.5)) drop-shadow(0 0 8px ${paint.glow})` } : {}),
+        ...(!paint && owner ? { filter: `drop-shadow(0 3px 5px rgba(0,0,0,.5)) drop-shadow(0 0 8px ${P[owner].glow})` } : {}),
         cursor: clickable ? "pointer" : "default",
         outline: selected ? "3px solid #FACC15" : adjHint ? "2px dashed rgba(250,204,21,.6)" : "none",
         outlineOffset: "2px", zIndex: selected ? 5 : 1,

@@ -10,7 +10,7 @@
    selbst bleibt unangetastet. */
 import { dailyDateStr, dailyNumber, updateStreak } from "./dailyLogic.js";
 
-export const CHALLENGE_MODES = ["career", "odd", "chain", "hex"];
+export const CHALLENGE_MODES = ["career", "odd", "chain", "hex", "heat"];
 
 function hashStr(s) {
   let h = 1779033703 ^ s.length;

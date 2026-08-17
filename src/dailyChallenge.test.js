@@ -69,10 +69,10 @@ test("Modi haben getrennte Serien", () => {
   recordChallenge("career", true, "2026-07-25");
   assert.equal(challengeStats("career").streak, 1);
   assert.equal(challengeStats("chain"), null, "andere Modi bleiben unberührt");
-  assert.deepEqual(CHALLENGE_MODES, ["career", "odd", "chain", "hex"]);
+  assert.deepEqual(CHALLENGE_MODES, ["career", "odd", "chain", "hex", "heat"]);
 });
 
-test("Echtdaten: dieselbe Tagesaufgabe für alle — über alle vier Generatoren", async () => {
+test("Echtdaten: dieselbe Tagesaufgabe für alle — über alle Generatoren", async () => {
   const { PLAYERS } = await import("./players.js");
   const { pickCareerIndex } = await import("./careerPath.js");
   const { buildOddRound } = await import("./oddOneOut.js");
@@ -89,6 +89,14 @@ test("Echtdaten: dieselbe Tagesaufgabe für alle — über alle vier Generatoren
   const ser = (r) => JSON.stringify(buildBoardSerial(r));
   assert.equal(ser(dailyRnd("hex", D)), ser(dailyRnd("hex", D)));
   assert.equal(JSON.parse(ser(dailyRnd("hex", D))).length, 31, "Board behält 31 Felder");
+
+  const { buildHeatSerial, HEAT_CENTER } = await import("./heatmap.js");
+  const heat = (r) => JSON.stringify(buildHeatSerial(r));
+  assert.equal(heat(dailyRnd("heat", D)), heat(dailyRnd("heat", D)));
+  const felder = JSON.parse(heat(dailyRnd("heat", D)));
+  assert.equal(felder.filter(Boolean).length, 30, "Heatmap spielt auf 30 Feldern");
+  assert.equal(felder[HEAT_CENTER], null, "die Mitte trägt die Punkteanzeige");
+  assert.notEqual(heat(dailyRnd("heat", D)), ser(dailyRnd("hex", D)), "eigener Seed je Modus");
 });
 
 test("Echtdaten: andere Tage ergeben andere Aufgaben", async () => {
