@@ -10,6 +10,7 @@ import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
 import DataStamp from "./DataStamp.jsx";
 import { useLeaveEndsGame } from "./usePresence.js";
+import ReportButton from "./ReportButton.jsx";
 
 export default function Game({ code, clientId, onLeave }) {
   const [row, setRow] = useState(null);
@@ -263,6 +264,7 @@ export default function Game({ code, clientId, onLeave }) {
         <div className="iconrow">
           <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
           <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
+          <ReportButton mode="hex-duell" gameCode={code} />
           <button className="iconbtn" title="Verlassen" onClick={onLeave}>⏏</button>
         </div>
       </div>

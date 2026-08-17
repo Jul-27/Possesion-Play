@@ -246,6 +246,22 @@ body::after {
   background: rgba(3,9,7,.6); border-radius: 14px; border: 1px dashed rgba(244,201,93,.4);
   text-shadow: 0 0 24px rgba(244,201,93,.5);
 }
+/* „Fehler melden" — Dialog mit zwei Suchfeldern. Die Trefferliste steht im Fluss
+   statt als absolutes Dropdown: .modal hat overflow:hidden, ein überstehendes
+   Dropdown wäre am Fensterrand abgeschnitten. */
+.repModal { max-height: 88vh; overflow-y: auto; }
+.repFeld { margin-top: 14px; }
+.repLabel { display: block; font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.repClear { padding: 0 14px; font-size: 15px; }
+.repList { margin-top: 8px; border: 1px solid var(--brd); border-radius: 12px; overflow: hidden auto;
+  max-height: 208px; background: rgba(6,14,11,.6); }
+.repList .sugItem { cursor: pointer; }
+.repClub { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.repClub .emblem { width: 22px; flex: none; }
+.repGewaehlt { margin-top: 8px; font-size: 13.5px; font-weight: 700; color: #c7f7ec; }
+.repLeer { margin-top: 8px; font-size: 13px; color: var(--muted); }
+
 .closeline { display: flex; gap: 10px; margin-top: 18px; }
 .ruleP { font-size: 14px; line-height: 1.65; color: #cbe0d6; margin: 10px 0; } .ruleP b { color: #fff; }
 

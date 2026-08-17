@@ -11,6 +11,7 @@ import DataStamp from "./DataStamp.jsx";
 import ShareButton from "./ShareButton.jsx";
 import { shareEleven } from "./share.js";
 import { submit as lbSubmit } from "./leaderboard.js";
+import ReportButton from "./ReportButton.jsx";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -129,6 +130,7 @@ export default function Eleven({ onLeave }) {
         <div className="iconrow">
           <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
           <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
+          <ReportButton mode="eleven" />
           <button className="iconbtn" title="Zur Lobby" onClick={onLeave}>⏏</button>
         </div>
       </div>

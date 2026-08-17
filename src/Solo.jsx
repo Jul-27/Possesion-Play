@@ -13,6 +13,7 @@ import { shareSolo } from "./share.js";
 import { SOLO_STATS_KEY, updateSoloStats, soloStatsLine } from "./soloStats.js";
 import { dailyRnd, challengeState, recordChallenge, challengeStats } from "./dailyChallenge.js";
 import { submit as lbSubmit } from "./leaderboard.js";
+import ReportButton from "./ReportButton.jsx";
 
 // Hex-Training: volles Duell-Board, aber solo, ohne Uhr und ohne Zugverlust.
 /* Hex-Training war der einzige Modus ohne jeden gespeicherten Fortschritt — gelöste
@@ -126,6 +127,7 @@ export default function Solo({ onLeave }) {
         <div className="iconrow">
           <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
           <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
+          <ReportButton mode="hex" />
           <button className="iconbtn" title="Zur Lobby" onClick={onLeave}>⏏</button>
         </div>
       </div>
