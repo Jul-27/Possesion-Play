@@ -3,7 +3,7 @@ import { Cell } from "./Emblems.jsx";
 import { P, cname, norm, suggestPlayers, hydrateBoard, BOARDH, POSITIONS } from "./gameData.js";
 import {
   HEAT_CENTER, HEAT_CELLS, HEAT_ADJ, buildHeatSerial, heatMove, applyHeat,
-  heatFilled, heatDone, heatDensity, heatPaint, heatMoveText, heatShareGrid,
+  heatFilled, heatDone, heatDensity, heatPaint, heatMoveText, heatShareGrid, HEAT_MAX,
 } from "./heatmap.js";
 import { loadPlayers } from "./playersStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
@@ -133,17 +133,34 @@ export default function Heatmap({ onLeave }) {
         <span className={`dailyCount ${misses ? "spent" : ""}`}>Fehlversuche {misses}</span>
       </div>
 
+      {/* Legende ÜBER dem Brett: darunter lag sie auf dem Handy unter der Falz und war
+          genau dann unsichtbar, wenn man sie zum Deuten der Farben gebraucht hätte. */}
+      <div className="heatLegend" title="Wie oft ein Feld getroffen wurde">
+        <span className="heatLegendLab">Treffer</span>
+        {Array.from({ length: HEAT_MAX }, (_, i) => i + 1).map((stufe) => {
+          const p = heatPaint(stufe);
+          return (
+            <span key={stufe} className="heatLegendDot" style={{ background: p.bg, color: p.txt, border: p.border }}>
+              {stufe === HEAT_MAX ? `${HEAT_MAX}+` : stufe}
+            </span>
+          );
+        })}
+      </div>
+
       <div className="board" style={{ aspectRatio: `5 / ${BOARDH.toFixed(3)}` }}>
         {HEAT_CELLS.map((i) => (
           <Cell key={`${i}-${serial[i].t}-${serial[i].k}`} cell={board[i]} paint={heatPaint(heat[i])}
             selected={selected === i} adjHint={adjSet.has(i)} justClaimed={lastClaimed.includes(i)}
             clickable={!done && !heat[i]} onClick={() => pickHex(i)} />
         ))}
-        {/* Punkteanzeige in der Mittelzelle — sie ist kein Spielfeld, sondern das Loch
-            im Brett, durch das man den Spielstand sieht. */}
+        {/* Punkteanzeige in der Mittelzelle: eigene Kachel, kein Spielfeld. Absichtlich
+            türkis abgesetzt — die Hitzerampe ist gelb, eine goldene Mitte hätte
+            ausgesehen wie ein besonders heißes Feld. */}
         <div className="hexScore" style={{ left: `${mitte.left}%`, top: `${mitte.top}%` }}>
           <span className="hexScoreLabel">Score</span>
-          <b className="hexScoreVal">{score}</b>
+          {/* key = score: der Wechsel montiert die Zahl neu und startet damit die
+              Pop-Animation — sonst änderte sich der Stand lautlos. */}
+          <b key={score} className="hexScoreVal">{score}</b>
         </div>
       </div>
 
