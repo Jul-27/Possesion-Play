@@ -127,6 +127,11 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
           <b>Fußball-Kette</b>
           <small>Spieler verketten, gegen die Uhr</small>
         </button>
+        <button type="button" className="soloTile" onClick={() => onSolo("heat")}>
+          <span className="soloTop"><span className="soloIcon">🔥</span><span className={`tileBadge ${challengeBadge("heat").tone}`}>{challengeBadge("heat").text}</span></span>
+          <b>Heatmap</b>
+          <small>Board füllen, Combos und Hitze sammeln</small>
+        </button>
         <button type="button" className="soloTile" onClick={() => onSolo("hex")}>
           <span className="soloTop"><span className="soloIcon">🎯</span><span className={`tileBadge ${challengeBadge("hex").tone}`}>{challengeBadge("hex").text}</span></span>
           <b>Hex-Training</b>

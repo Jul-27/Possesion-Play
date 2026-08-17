@@ -60,6 +60,15 @@ export const shareEleven = (num, wrong, formation) => buildShare({
   lines: [wrong ? misses(wrong) : "✨ ohne Fehlversuch"],
 });
 
+/* Heatmap: die Punktzahl ist die Kennzahl, die Dichte sagt, WIE sie zustande kam —
+   70 Punkte mit Dichte 1,0 sind große Combos, mit 1,6 viel nachgeheizt. Die
+   Emoji-Zeile zeigt die Hitzeverteilung der 30 Felder als Rampe. */
+export const shareHeat = (score, density, ramp = "") => buildShare({
+  solo: "heat",
+  title: `🔥 Heatmap · ${score} Punkte`,
+  lines: [ramp || null, `Heat Density ${density.toFixed(2)}`],
+});
+
 export const shareSolo = (moves, wrong) => buildShare({
   solo: "hex",
   title: `🎯 Hex-Training · Board in ${moves === 1 ? "1 Zug" : `${moves} Zügen`} gelöst`,

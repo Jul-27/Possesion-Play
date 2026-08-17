@@ -10,6 +10,7 @@ export const MODES = {
   chain:  { name: "Fußball-Kette", icon: "⛓️", label: (s, d) => `${d?.length ?? s} Spieler` },
   hex:    { name: "Hex-Training", icon: "🎯", label: (s, d) => `${d?.moves ?? "?"} Züge` },
   eleven: { name: "Elf des Tages", icon: "👕", label: (s, d) => (d?.wrong ? `${d.wrong} Fehlversuche` : "ohne Fehler") },
+  heat:   { name: "Heatmap", icon: "🔥", label: (s, d) => `Dichte ${(d?.density ?? 0).toFixed(2)}` },
 };
 
 export function scoreFor(mode, result = {}) {
@@ -20,6 +21,8 @@ export function scoreFor(mode, result = {}) {
     case "chain":  return Math.max(0, result.length || 0);
     case "hex":    return Math.max(1, 100 - result.moves * 2 - result.misses * 3);
     case "eleven": return result.solved ? Math.max(1, 100 - result.wrong * 5) : 0;
+    // Heatmap wertet selbst schon in Punkten, hoch ist besser — nichts umzurechnen.
+    case "heat":   return Math.max(0, Math.round(result.score || 0));
     default:       return 0;
   }
 }

@@ -334,8 +334,11 @@ const DEF_BY_KEY = {
 };
 export const lookupDef = (type, key) => DEF_BY_KEY[type]?.[key];
 
-// kompakte, serialisierbare Form: pro Feld nur { t: type, k: key }
-export function buildBoardSerial(rnd = Math.random) {
+/* kompakte, serialisierbare Form: pro Feld nur { t: type, k: key }
+   `n` ist die Zahl der zu ziehenden Felder — 31 für das volle Brett, 30 für
+   „Heatmap", wo die Mittelzelle die Punkteanzeige trägt. Nur die Vereinsfüllung
+   hängt daran, die Mischung aus Specials/Ligen/Titeln/Nationen bleibt gleich. */
+export function buildBoardSerial(rnd = Math.random, n = 31) {
   const nLeague = 1 + Math.floor(rnd() * 3); // 1–3
   const nHonour = 2 + Math.floor(rnd() * 3); // 2–4
   const leagues = pick(LEAGUES, nLeague, rnd);
@@ -344,14 +347,16 @@ export function buildBoardSerial(rnd = Math.random) {
   const blClubs = pick(CLUBS.filter((c) => c.lg === "BL"), 4, rnd);
   const nNat = 3 + Math.floor(rnd() * 2); // 3–4 Nationen
   const nations = pick(NATIONS, nNat, rnd);
-  const rest = pick(CLUBS.filter((c) => !blClubs.includes(c)), 31 - 3 - 4 - nNat - nLeague - nHonour, rnd);
+  const rest = pick(CLUBS.filter((c) => !blClubs.includes(c)), n - 3 - 4 - nNat - nLeague - nHonour, rnd);
   const chosen = shuffle([...specials, ...blClubs, ...nations, ...rest, ...leagues, ...honours], rnd);
   return chosen.map((d) => ({ t: d.type, k: d.key }));
 }
 
-// serialisiertes Board -> volle Zellen mit Position + aufgelöstem def
+/* serialisiertes Board -> volle Zellen mit Position + aufgelöstem def.
+   Ein leerer Platz (null) ist erlaubt und bleibt eine Zelle ohne def — „Heatmap"
+   setzt dort die Punkteanzeige hin, ohne die Geometrie anzufassen. */
 export function hydrateBoard(serial) {
-  return POSITIONS.map((p, i) => ({ ...p, def: lookupDef(serial[i].t, serial[i].k) }));
+  return POSITIONS.map((p, i) => ({ ...p, def: serial[i] ? lookupDef(serial[i].t, serial[i].k) : null }));
 }
 
 // Stärkste Einzelzüge auf einem leeren Board: gewähltes Feld + passende Nachbarn
