@@ -19,3 +19,6 @@ yarn-error.log*
 .vscode/
 .idea/
 src/.players.before.js
+
+# Export der Fehlermeldungen — Arbeitsdatei, wird bei Bedarf neu erzeugt
+data-pipeline/player-club-reports.json

@@ -11,6 +11,7 @@ import ShareButton from "./ShareButton.jsx";
 import { shareCareer } from "./share.js";
 import { dailyRnd, challengeState, recordChallenge, challengeStats } from "./dailyChallenge.js";
 import { submit as lbSubmit } from "./leaderboard.js";
+import ReportButton from "./ReportButton.jsx";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -127,6 +128,7 @@ export default function Career({ onLeave }) {
         <div className="iconrow">
           <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
           <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
+          <ReportButton mode="career" />
           <button className="iconbtn" title="Zur Lobby" onClick={onLeave}>⏏</button>
         </div>
       </div>

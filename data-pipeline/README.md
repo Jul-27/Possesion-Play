@@ -331,3 +331,29 @@ Sie meldet, wenn Spieler verschwinden oder **ein bekannter Spieler mehrere Werte
 verliert** — das typische Vandalismus-Muster. Wikidata wird aktiv manipuliert; in diesem
 Projekt sind bereits De Bruynes Vereinszeiten, Nianzous Bayern-Zeit und mehrere Spielernamen
 betroffen gewesen. Ohne diese Prüfung gingen solche Verluste still live.
+
+## Fehlermeldungen aus dem Spiel
+
+Spieler melden über 🚩 in jedem Spielmodus fehlende Spieler→Verein-Zuordnungen. Die
+Meldungen landen in Supabase (`pc_reports`, für den öffentlichen Schlüssel gesperrt).
+
+```
+npm run reports:export            # -> data-pipeline/player-club-reports.json
+npm run reports:export -- --print # nur anzeigen
+```
+
+Braucht `PP_REPORTS_SECRET` in `.env`. Die Datei liefert zu jeder anwendbaren Meldung
+einen fertigen `extraPlayersEntry` — der geht direkt in `EXTRA_PLAYERS` in
+`apply_extra_players.mjs`, danach `node data-pipeline/apply_extra_players.mjs`.
+
+Nicht anwendbare Meldungen sind mit `grund` markiert:
+* **Karriereverein** — `EXTRA_PLAYERS.clubs` kennt nur die 47 Spielvereine.
+* **Spieler nicht in players.js** — Name oder Geburtsjahr prüfen.
+* **bereits bekannt** — der Verein steht schon beim Spieler, also ein Regelproblem.
+
+Erledigte Meldungen abhaken (sie fallen dann aus dem Export):
+
+```sql
+update pc_reports set status = 'erledigt' where player_key = 'fabio vieira|2000';
+update pc_reports set status = 'abgelehnt' where id = '…';   -- geprüft und falsch
+```

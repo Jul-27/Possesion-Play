@@ -13,6 +13,7 @@ import { play, isMuted, toggleMute } from "./sound.js";
 import { useLeaveEndsGame } from "./usePresence.js";
 import Confetti from "./Confetti.jsx";
 import DataStamp from "./DataStamp.jsx";
+import ReportButton from "./ReportButton.jsx";
 
 /* Transferkarussell als Duell. Der gesamte Spielstand liegt in last_move.car und ist
    dieselbe Struktur wie im Solo-Modus — die Regeln stehen einmal in carousel.js.
@@ -228,6 +229,7 @@ export default function CarouselDuel({ code, clientId, onLeave }) {
         <div className="iconrow">
           <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
           <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
+          <ReportButton mode="carousel-duell" gameCode={code} />
           <button className="iconbtn" title="Zur Lobby" onClick={onLeave}>⏏</button>
         </div>
       </div>

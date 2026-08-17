@@ -13,6 +13,7 @@ import ShareButton from "./ShareButton.jsx";
 import { shareHeat } from "./share.js";
 import { dailyRnd, challengeState, recordChallenge, challengeStats } from "./dailyChallenge.js";
 import { submit as lbSubmit } from "./leaderboard.js";
+import ReportButton from "./ReportButton.jsx";
 
 /* 🔥 Heatmap — Solo-Modus auf dem bekannten Brett, aber mit Wertung statt Eroberung.
    Alle Regeln stehen in heatmap.js; hier steht nur, wie sie sichtbar werden. */
@@ -120,6 +121,7 @@ export default function Heatmap({ onLeave }) {
         <div className="iconrow">
           <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
           <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
+          <ReportButton mode="heat" />
           <button className="iconbtn" title="Zur Lobby" onClick={onLeave}>⏏</button>
         </div>
       </div>

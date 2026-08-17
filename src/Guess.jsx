@@ -11,6 +11,7 @@ import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
 import DataStamp from "./DataStamp.jsx";
 import { useLeaveEndsGame } from "./usePresence.js";
+import ReportButton from "./ReportButton.jsx";
 
 const sigOf = (dim, val) =>
   dim === "born" ? `born:${val.cmp}:${val.year}` :
@@ -268,6 +269,7 @@ export default function Guess({ code, clientId, onLeave }) {
         <div className="iconrow">
           <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
           <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
+          <ReportButton mode="guess-duell" gameCode={code} />
           <button className="iconbtn" title="Verlassen" onClick={onLeave}>⏏</button>
         </div>
       </div>
