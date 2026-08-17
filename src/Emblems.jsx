@@ -111,7 +111,6 @@ export function Cell({ cell, owner, paint, selected, adjHint, justClaimed, click
       className={`hex ${justClaimed ? "claimed" : ""}`}
       style={{
         left: `${cell.left}%`, top: `${cell.top}%`, background: bg, border, color: txt, boxShadow: shadow,
-        ...(paint?.glow ? { filter: `drop-shadow(0 3px 5px rgba(0,0,0,.5)) drop-shadow(0 0 8px ${paint.glow})` } : {}),
         ...(!paint && owner ? { filter: `drop-shadow(0 3px 5px rgba(0,0,0,.5)) drop-shadow(0 0 8px ${P[owner].glow})` } : {}),
         cursor: clickable ? "pointer" : "default",
         outline: selected ? "3px solid #FACC15" : adjHint ? "2px dashed rgba(250,204,21,.6)" : "none",

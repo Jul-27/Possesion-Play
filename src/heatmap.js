@@ -66,29 +66,36 @@ export const heatDone = (heat) => heatFilled(heat) === HEAT_CELLS.length;
 export const heatDensity = (heat) =>
   HEAT_CELLS.reduce((a, i) => a + (heat[i] || 0), 0) / HEAT_CELLS.length;
 
-/* Farbrampe kalt → weißglühend. Die Dichte liegt selbst bei optimalem Spiel nur bei
-   ~1,3, Stufe 4 und 5 sind also echte Ausnahmen und dürfen entsprechend knallen.
-   Ein Feld kann höchstens 1 + 6 Treffer sammeln, darüber deckelt die Rampe. */
+/* Farbrampe: EIN Farbton, der mit jedem Treffer dunkler wird — helles Gelb beim
+   ersten, tiefes Bernsteinbraun ab dem fünften. Ein Wechsel des Farbtons (türkis →
+   rot) las sich nicht als Steigerung, sondern als vier verschiedene Zustände.
+
+   Weil ein dunkles Feld auf dem dunklen Brett zu verschwinden droht, trägt jede
+   Stufe eine eigene, HELLERE Kante — sie hält die Kachel sichtbar und macht die
+   heißesten Felder eher deutlicher als schwächer. Aus demselben Grund kippt die
+   Schriftfarbe ab Stufe 3 von dunkel auf hell.
+
+   Ein Feld kann höchstens 1 + 6 Treffer sammeln; ab Stufe 5 deckelt die Rampe. */
 export const HEAT_MAX = 5;
 const RAMPE = [
-  { c1: "#2DD4BF", c2: "#0f766e", glow: "rgba(45,212,191,.45)" },  // 1 — frisch erobert
-  { c1: "#FACC15", c2: "#a16207", glow: "rgba(250,204,21,.45)" },  // 2
-  { c1: "#FB923C", c2: "#9a3412", glow: "rgba(251,146,60,.50)" },  // 3
-  { c1: "#F87171", c2: "#991b1b", glow: "rgba(248,113,113,.55)" }, // 4
-  { c1: "#FFE4E6", c2: "#DC2626", glow: "rgba(255,120,120,.75)" }, // 5+ weißglühend
+  { c1: "#FDE68A", c2: "#FACC15", kante: "#FEF3C7", txt: "#422006" }, // 1 — frisch erobert
+  { c1: "#FBBF24", c2: "#D97706", kante: "#FDE68A", txt: "#422006" }, // 2
+  { c1: "#D97706", c2: "#92400E", kante: "#F59E0B", txt: "#FFF7ED" }, // 3
+  { c1: "#92400E", c2: "#5C280A", kante: "#C2610C", txt: "#FFF7ED" }, // 4
+  { c1: "#5C280A", c2: "#2A1004", kante: "#8A4A16", txt: "#FFD9A8" }, // 5+ durchgeglüht
 ];
 
 /** Malvorschrift für eine Zelle — `null` heißt „unerobert, Standardfarbe". */
 export function heatPaint(level = 0) {
   if (!level) return null;
-  const stufe = Math.min(level, HEAT_MAX);   // zuerst deckeln, sonst wächst der Schein weiter
+  const stufe = Math.min(level, HEAT_MAX);   // zuerst deckeln, sonst liefe die Rampe weiter
   const r = RAMPE[stufe - 1];
   return {
     bg: `linear-gradient(150deg, ${r.c1}, ${r.c2})`,
-    border: `1px solid ${r.c1}`,
-    txt: stufe === HEAT_MAX ? "#4c0519" : "#fff",
-    shadow: `0 0 ${10 + stufe * 4}px ${r.glow}, inset 0 1px 0 rgba(255,255,255,.25)`,
-    glow: r.glow,
+    border: `1px solid ${r.kante}`,
+    txt: r.txt,
+    // Glanzkante oben, mit dunkler werdender Kachel zurückgenommen
+    shadow: `inset 0 1px 0 rgba(255,255,255,${(0.4 - stufe * 0.06).toFixed(2)})`,
   };
 }
 

@@ -118,8 +118,38 @@ test("die Mittelzelle zählt nicht in die Dichte", () => {
 test("die Farbrampe deckelt und lässt unerobert ungefärbt", () => {
   assert.equal(heatPaint(0), null);
   assert.equal(heatPaint(), null);
-  assert.deepEqual(heatPaint(HEAT_MAX), heatPaint(HEAT_MAX + 4), "über der Grenze bleibt es weißglühend");
+  assert.deepEqual(heatPaint(HEAT_MAX), heatPaint(HEAT_MAX + 4), "über der Grenze bleibt es gleich");
   assert.notDeepEqual(heatPaint(1), heatPaint(2));
+});
+
+/* Der Kern der Meldung „alle eroberten Felder sehen gleich aus": jede Stufe muss
+   MESSBAR dunkler sein als die vorige, nicht nur anders. */
+const helligkeit = (hex) => {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+const fuellung = (stufe) => heatPaint(stufe).bg.match(/#[0-9A-Fa-f]{6}/g);
+
+test("jede Hitzestufe ist dunkler als die vorige", () => {
+  const werte = [1, 2, 3, 4, 5].map((s) => helligkeit(fuellung(s)[0]));
+  for (let i = 1; i < werte.length; i++) {
+    assert.ok(werte[i] < werte[i - 1] - 0.05,
+      `Stufe ${i + 1} (${werte[i].toFixed(2)}) muss deutlich dunkler sein als Stufe ${i} (${werte[i - 1].toFixed(2)})`);
+  }
+  assert.ok(werte[0] > 0.8, "Stufe 1 ist ein helles Gelb");
+  assert.ok(werte[4] < 0.2, "Stufe 5 ist durchgeglüht");
+});
+
+/* Ein dunkles Feld auf dunklem Brett darf nicht verschwinden, und die Beschriftung
+   muss auf jeder Stufe lesbar bleiben. */
+test("Kante bleibt heller als die Füllung, Schrift kippt rechtzeitig", () => {
+  for (const s of [1, 2, 3, 4, 5]) {
+    const p = heatPaint(s);
+    const kante = p.border.match(/#[0-9A-Fa-f]{6}/)[0];
+    assert.ok(helligkeit(kante) > helligkeit(fuellung(s)[0]), `Stufe ${s}: Kante hebt sich ab`);
+    const hellSchrift = helligkeit(p.txt) > 0.5;
+    assert.equal(hellSchrift, s >= 3, `Stufe ${s}: helle Schrift erst auf dunklem Grund`);
+  }
 });
 
 test("das Teil-Raster hat Brettform und markiert die Mitte", () => {
