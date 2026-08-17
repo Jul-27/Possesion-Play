@@ -88,15 +88,30 @@ test("belegte Felder, die Mitte und unpassende Spieler sind kein Zug", () => {
   assert.equal(heatMove(board, {}, 0, spieler(["___"])), null, "Spieler passt nicht");
 });
 
-test("jeder Treffer erhöht die Hitze um eins", () => {
+/* Der Kern der Farbregel: die Stufe ist die GRÖSSE DES ZUGES, nicht die Zahl der
+   Treffer auf einem Feld. Ein Dreier-Zug färbt alle drei Felder gleich heiß. */
+test("alle Felder eines Zuges bekommen dessen Größe als Stufe", () => {
+  const board = testBoard();
+  const nb = HEAT_ADJ[0];
+  const heat = applyHeat({}, heatMove(board, {}, 0, spieler([keyAt(board, 0), keyAt(board, nb[0]), keyAt(board, nb[1])])));
+  assert.deepEqual([heat[0], heat[nb[0]], heat[nb[1]]], [3, 3, 3], "drei Felder auf einmal = Stufe 3");
+});
+
+test("ein Alleingang bleibt Stufe 1", () => {
+  const board = testBoard();
+  const heat = applyHeat({}, heatMove(board, {}, 0, spieler([keyAt(board, 0)])));
+  assert.equal(heat[0], 1);
+});
+
+test("ein Reheat hebt ein Feld um genau eine Stufe", () => {
   const board = testBoard();
   const nb = HEAT_ADJ[0];
   let heat = applyHeat({}, heatMove(board, {}, 0, spieler([keyAt(board, 0), keyAt(board, nb[0])])));
-  assert.deepEqual([heat[0], heat[nb[0]]], [1, 1]);
-  // zweiter Zug auf ein freies Feld, der Feld 0 mit reheatet
+  assert.equal(heat[0], 2, "Zweier-Zug");
   const zwei = HEAT_ADJ[0].find((i) => !heat[i] && HEAT_ADJ[i].includes(0));
   heat = applyHeat(heat, heatMove(board, heat, zwei, spieler([keyAt(board, zwei), keyAt(board, 0)])));
-  assert.equal(heat[0], 2, "Feld 0 wurde nachgeheizt");
+  assert.equal(heat[0], 3, "2 aus dem Zug + 1 nachgeheizt");
+  assert.equal(heat[zwei], 1, "der Reheat zählt nicht als neues Feld des Zuges");
 });
 
 test("Dichte und Fortschritt zählen über alle 30 Felder", () => {
@@ -105,8 +120,8 @@ test("Dichte und Fortschritt zählen über alle 30 Felder", () => {
   assert.equal(heatDone({}), false);
   const voll = Object.fromEntries(HEAT_CELLS.map((i) => [i, 1]));
   assert.equal(heatDone(voll), true);
-  assert.equal(heatDensity(voll), 1, "jedes Feld genau einmal getroffen = 1,0");
-  assert.equal(heatDensity({ ...voll, [HEAT_CELLS[0]]: 31 }), 2, "30 Extra-Treffer auf 30 Felder = +1,0");
+  assert.equal(heatDensity(voll), 1, "lauter Alleingänge = Dichte 1,0");
+  assert.equal(heatDensity(Object.fromEntries(HEAT_CELLS.map((i) => [i, 3]))), 3, "lauter Dreier-Züge = 3,0");
 });
 
 test("die Mittelzelle zählt nicht in die Dichte", () => {
@@ -131,35 +146,35 @@ const helligkeit = (hex) => {
 const fuellung = (stufe) => heatPaint(stufe).bg.match(/#[0-9A-Fa-f]{6}/g);
 
 test("jede Hitzestufe ist dunkler als die vorige", () => {
-  const werte = [1, 2, 3, 4, 5].map((s) => helligkeit(fuellung(s)[0]));
+  const werte = [1, 2, 3, 4, 5, 6].map((s) => helligkeit(fuellung(s)[0]));
   for (let i = 1; i < werte.length; i++) {
     assert.ok(werte[i] < werte[i - 1] - 0.05,
       `Stufe ${i + 1} (${werte[i].toFixed(2)}) muss deutlich dunkler sein als Stufe ${i} (${werte[i - 1].toFixed(2)})`);
   }
   assert.ok(werte[0] > 0.8, "Stufe 1 ist ein helles Gelb");
-  assert.ok(werte[4] < 0.2, "Stufe 5 ist durchgeglüht");
+  assert.ok(werte[5] < 0.2, "Stufe 6 ist praktisch schwarz");
 });
 
 /* Ein dunkles Feld auf dunklem Brett darf nicht verschwinden, und die Beschriftung
    muss auf jeder Stufe lesbar bleiben. */
 test("Kante bleibt heller als die Füllung, Schrift kippt rechtzeitig", () => {
-  for (const s of [1, 2, 3, 4, 5]) {
+  for (const s of [1, 2, 3, 4, 5, 6]) {
     const p = heatPaint(s);
     const kante = p.border.match(/#[0-9A-Fa-f]{6}/)[0];
     assert.ok(helligkeit(kante) > helligkeit(fuellung(s)[0]), `Stufe ${s}: Kante hebt sich ab`);
     const hellSchrift = helligkeit(p.txt) > 0.5;
-    assert.equal(hellSchrift, s >= 3, `Stufe ${s}: helle Schrift erst auf dunklem Grund`);
+    assert.equal(hellSchrift, s >= 5, `Stufe ${s}: helle Schrift erst auf dunklem Grund`);
   }
 });
 
 test("das Teil-Raster hat Brettform und markiert die Mitte", () => {
-  const zeilen = heatShareGrid({ 0: 1, 4: 3, 30: 9 }).split("\n");
+  const zeilen = heatShareGrid({ 0: 1, 4: 4, 30: 9 }).split("\n");
   assert.equal(zeilen.length, 7);
   assert.deepEqual(zeilen.map((z) => [...z.trim()].length), [4, 5, 4, 5, 4, 5, 4]);
-  assert.ok(zeilen[0].startsWith(" 🟩"), "Feld 0 ist einmal getroffen");
-  assert.ok(zeilen[1].startsWith("🟧"), "Feld 4 ist dreimal getroffen");
-  assert.ok(zeilen[6].endsWith("🔥"), "Feld 30 ist über der Rampe — weißglühend");
-  assert.ok(zeilen[3].includes("⬛"), "die Mittelzelle ist ein Loch, kein Feld");
+  assert.ok(zeilen[0].startsWith(" 🟨"), "Stufe 1 ist gelb");
+  assert.ok(zeilen[1].startsWith("🟥"), "Stufe 4 ist rot");
+  assert.ok(zeilen[6].endsWith("⬛"), "über der Rampe bleibt es schwarz");
+  assert.ok(zeilen[3].includes("🔲"), "die Mittelzelle ist kein Spielfeld");
 });
 
 test("der Zugtext erklärt, wie die Punkte zustande kommen", () => {
