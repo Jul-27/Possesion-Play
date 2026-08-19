@@ -4,8 +4,12 @@ import { buildBoardSerial, buildGridSerial, buildGuessSerial, genCode, START_SEC
 import { initCarousel, CAROUSEL_SECONDS } from "./carousel.js";
 import { loadPlayers } from "./playersStore.js";
 import { dailyDateStr, dailyNumber } from "./dailyLogic.js";
+import { challengeState, dailyRnd } from "./dailyChallenge.js";
+import { collectStats } from "./stats.js";
+import { berechneXp, stufeFuer, tagesserie, offeneHeute } from "./progress.js";
+import { tagesStand, missionenDesTages, fortschritt } from "./missions.js";
 import DataStamp from "./DataStamp.jsx";
-import { challengeBadge } from "./dailyChallenge.js";
+import Icon from "./Icons.jsx";
 
 export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
   const [name, setName] = useState(getSavedName());
@@ -94,146 +98,169 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
     } finally { setBusy(false); }
   }
 
+  /* ── Fortschritt: eine Zahl über alle Modi ─────────────────────────────────
+     Bis hierher zählte jeder Modus für sich, und die Lobby begrüßte einen Titel
+     statt eines Ich. Stufe, XP und Serie kommen aus den vorhandenen Statistiken
+     (progress.js) — kein neuer Speicher, alte Spielstände zählen rückwirkend. */
+  const entries = collectStats();
+  const stand = tagesStand();
+  const missionen = missionenDesTages(dailyRnd("mission"));
+  const { xp, raetsel, modi: modiGenutzt } = berechneXp(entries, missionen, stand);
+  const stufe = stufeFuer(xp);
+  const serie = tagesserie(entries);
+  const offen = offeneHeute();
+  const fertigeMissionen = missionen.filter((m) => fortschritt(m, stand).fertig).length;
+  const heute = dailyDateStr();
+
   return (
-    <div className="lobby">
-      <h1 className="title">POSSESSION PLAY</h1>
-      <div className="subtitle">Fußball-Rätsel · solo oder gegen einen Freund</div>
-
-      {/* Zuerst das, was sofort spielbar ist: die beiden Tagesrätsel, dann die freien
-          Modi. Das Duell-Formular braucht eine zweite Person und steht deshalb hinten. */}
-      <div className="lobSection">Heute</div>
-      <DailyCard onDaily={onDaily} />
-      <ElevenCard onSolo={onSolo} />
-
-      <div className="lobSection">Jederzeit spielen</div>
-      <div className="soloGrid">
-        <button type="button" className="soloTile" onClick={() => onSolo("career")}>
-          <span className="soloTop"><span className="soloIcon">🧭</span><span className={`tileBadge ${challengeBadge("career").tone}`}>{challengeBadge("career").text}</span></span>
-          <b>Karriere-Pfad</b>
-          <small>Spieler an seinen Stationen erraten</small>
-        </button>
-        <button type="button" className="soloTile" onClick={() => onSolo("odd")}>
-          <span className="soloTop"><span className="soloIcon">🧩</span><span className={`tileBadge ${challengeBadge("odd").tone}`}>{challengeBadge("odd").text}</span></span>
-          <b>Wer passt nicht?</b>
-          <small>Drei gehören zusammen, einer nicht</small>
-        </button>
-        <button type="button" className="soloTile" onClick={() => onSolo("carousel")}>
-          <span className="soloTop"><span className="soloIcon">🎠</span></span>
-          <b>Transferkarussell</b>
-          <small>Spieler und Verein im Wechsel, gegen den Bot</small>
-        </button>
-        <button type="button" className="soloTile" onClick={() => onSolo("chain")}>
-          <span className="soloTop"><span className="soloIcon">⛓️</span><span className={`tileBadge ${challengeBadge("chain").tone}`}>{challengeBadge("chain").text}</span></span>
-          <b>Fußball-Kette</b>
-          <small>Spieler verketten, gegen die Uhr</small>
-        </button>
-        <button type="button" className="soloTile" onClick={() => onSolo("heat")}>
-          <span className="soloTop"><span className="soloIcon">🔥</span><span className={`tileBadge ${challengeBadge("heat").tone}`}>{challengeBadge("heat").text}</span></span>
-          <b>Heatmap</b>
-          <small>Board füllen, Combos und Hitze sammeln</small>
-        </button>
-        <button type="button" className="soloTile" onClick={() => onSolo("hex")}>
-          <span className="soloTop"><span className="soloIcon">🎯</span><span className={`tileBadge ${challengeBadge("hex").tone}`}>{challengeBadge("hex").text}</span></span>
-          <b>Hex-Training</b>
-          <small>Board allein lösen, ohne Zeitdruck</small>
-        </button>
+    <div className="ppRoot draft">
+      <div className="dTop">
+        <h1 className="dTitle">POSSESSION PLAY</h1>
       </div>
 
-      <button type="button" className="duelToggle statsLink" onClick={onBoard}>
-        <span className="duelIcon">🏆</span>
-        <span className="duelText">
-          <b>Bestenliste</b>
-          <small>Tagesergebnisse im Freundeskreis vergleichen</small>
-        </span>
-        <span className="duelChev">›</span>
+      <div className="dMe">
+        <div className="dRing" style={{ "--anteil": stufe.anteil }}><span>{stufe.kurz}</span></div>
+        <div className="dMeBody">
+          <div className="dMeName">{name.trim() || "Spieler"}</div>
+          <div className="dMeStufe">{stufe.name}</div>
+          <div className="dBar"><i style={{ width: `${Math.round(stufe.anteil * 100)}%` }} /></div>
+          <div className="dMeSub">
+            {stufe.naechste ? <>noch <b>{stufe.bisNaechste}</b> XP bis {stufe.naechste.name}</> : <>höchste Stufe erreicht</>}
+          </div>
+        </div>
+        <div className="dSerie" title="Tage in Folge gespielt">
+          <b>{serie}</b><span><Icon name="streak" size={12} /> Serie</span>
+        </div>
+      </div>
+
+      <div className="dSectionRow">
+        <span className="dSection">Heute</span>
+        {offen > 0 && <span className="dOffen">{offen} offen</span>}
+      </div>
+
+      <button className="dHero" onClick={onDaily}>
+        <div className="dHeroTop">
+          <span className="dHeroIcon"><Icon name="star" size={28} /></span>
+          <span className="dHeroNr">#{dailyNumber(heute)}</span>
+        </div>
+        <div className="dHeroName">Daily-Star</div>
+        <div className="dHeroText">Acht Fragen, zwei Tipps — für alle dasselbe Rätsel.</div>
+        <div className="dHeroCta">{stand.dailyGespielt ? "Nochmal ansehen" : "Jetzt spielen"} <Icon name="pfeil" size={17} /></div>
       </button>
 
-      <button type="button" className="duelToggle statsLink" onClick={onStats}>
-        <span className="duelIcon">📊</span>
-        <span className="duelText">
-          <b>Deine Statistik</b>
-          <small>Serien und Bestwerte aus allen Modi</small>
+      <button className="dWide" onClick={() => onSolo("eleven")} style={{ "--ton": "#38BDF8" }}>
+        <span className="dWideIcon"><Icon name="jersey" /></span>
+        <span className="dWideBody">
+          <b>Elf des Tages #{dailyNumber(heute)}</b>
+          <small>Startelf nach elf Bedingungen</small>
         </span>
-        <span className="duelChev">›</span>
+        <span className="dWideBadge">{stand.elfKomplett ? <Icon name="check" size={16} /> : stand.elfFelder ? `${stand.elfFelder}/11` : "offen"}</span>
       </button>
 
-      <button type="button" className="duelToggle" aria-expanded={duelOpen} onClick={() => setDuelOpen((v) => !v)}>
-        <span className="duelIcon">🤝</span>
-        <span className="duelText">
-          <b>Mit einem Freund spielen</b>
-          <small>Spiel erstellen oder mit Code beitreten</small>
-        </span>
-        <span className={`duelChev ${duelOpen ? "open" : ""}`}>⌄</span>
+      <div className="dSectionRow">
+        <span className="dSection">Missionen</span>
+        <span className={`dOffen ${fertigeMissionen === 3 ? "" : "ghost"}`}>{fertigeMissionen}/3</span>
+      </div>
+      <div className="dMissions">
+        {missionen.map((m) => {
+          const f = fortschritt(m, stand);
+          return (
+            <div key={m.id} className={`dMission ${f.fertig ? "fertig" : ""}`}>
+              <span className="dMissionBox">{f.fertig && <Icon name="check" size={13} />}</span>
+              <span className="dMissionText">
+                {m.text}
+                {m.ziel > 1 && !f.fertig && <i className="dMissionCount"> {f.jetzt}/{f.ziel}</i>}
+              </span>
+              <span className="dMissionXp">+{m.xp}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="dSectionRow"><span className="dSection">Modi</span></div>
+      <div className="dGrid">
+        {SOLO_MODI.map((m) => {
+          const st = entries.find((e) => e.key === m.key);
+          const erledigt = m.daily && !!challengeState(m.key);
+          const meiste = Math.max(1, ...entries.map((e) => e.played || 0));
+          return (
+            <button key={m.key} className="dTile" style={{ "--ton": m.ton }} onClick={() => onSolo(m.key)}>
+              <span className="dTileHead">
+                <span className="dTileIcon"><Icon name={m.icon} /></span>
+                {erledigt ? <span className="dCheck"><Icon name="check" size={15} /></span>
+                  : st?.streak > 0 ? <span className="dFlame"><Icon name="streak" size={13} />{st.streak}</span> : null}
+              </span>
+              <b className="dTileName">{m.name}</b>
+              <small className="dTileText">{m.text}</small>
+              <span className="dTileBar"><i style={{ width: `${Math.round(((st?.played || 0) / meiste) * 100)}%` }} /></span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="dSectionRow"><span className="dSection">Gegen Freunde</span></div>
+      <button className="dWide" aria-expanded={duelOpen} onClick={() => setDuelOpen((v) => !v)} style={{ "--ton": "#2DD4BF" }}>
+        <span className="dWideIcon"><Icon name="duel" /></span>
+        <span className="dWideBody"><b>Duell starten</b><small>Vier Modi, erstellen oder mit Code beitreten</small></span>
+        <span className={`dWideChev ${duelOpen ? "open" : ""}`}><Icon name="chevron" size={18} /></span>
       </button>
 
       {duelOpen && (
-      <div className="panel" style={{ marginTop: 10 }}>
-        <label className="lobLabel">Dein Name</label>
-        <input className="field" placeholder="z. B. Julian" value={name} maxLength={20}
-          onChange={(e) => setName(e.target.value)} />
+        <div className="panel" style={{ marginTop: 10 }}>
+          <label className="lobLabel">Dein Name</label>
+          <input className="field" placeholder="z. B. Julian" value={name} maxLength={20}
+            onChange={(e) => setName(e.target.value)} />
 
-        <label className="lobLabel">Spielmodus</label>
-        <div className="inrow" style={{ flexWrap: "wrap" }}>
-          <button type="button" className={`btn ${mode === "hex" ? "primary" : "ghost"}`} style={{ flex: 1 }} onClick={() => setMode("hex")}>Hex-Duell</button>
-          <button type="button" className={`btn ${mode === "grid" ? "primary" : "ghost"}`} style={{ flex: 1 }} onClick={() => setMode("grid")}>Raster-Duell</button>
-          <button type="button" className={`btn ${mode === "guess" ? "primary" : "ghost"}`} style={{ flex: 1 }} onClick={() => setMode("guess")}>Errate den Star</button>
-          <button type="button" className={`btn ${mode === "carousel" ? "primary" : "ghost"}`} style={{ flex: 1 }} onClick={() => setMode("carousel")}>Transferkarussell</button>
+          <label className="lobLabel">Spielmodus</label>
+          <div className="inrow" style={{ flexWrap: "wrap" }}>
+            {DUELL_MODI.map((d) => (
+              <button key={d.key} type="button" className={`btn ${mode === d.key ? "primary" : "ghost"}`}
+                style={{ flex: 1 }} onClick={() => setMode(d.key)}>{d.name}</button>
+            ))}
+          </div>
+
+          <button className="btn primary block" style={{ marginTop: 14 }} disabled={busy} onClick={createGame}>
+            Neues Spiel erstellen
+          </button>
+
+          <div className="orline"><span>oder</span></div>
+
+          <label className="lobLabel">Mit Code beitreten</label>
+          <div className="inrow">
+            <input className="field mono" placeholder="ABC123" value={joinCode} maxLength={6}
+              onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+              onKeyDown={(e) => e.key === "Enter" && joinGame()} />
+            <button className="btn ghost" disabled={busy} onClick={joinGame}>Beitreten</button>
+          </div>
+
+          {error && <div className="fb err" style={{ marginTop: 12 }}>{error}</div>}
         </div>
-
-        <button className="btn primary block" style={{ marginTop: 14 }} disabled={busy} onClick={createGame}>
-          Neues Spiel erstellen
-        </button>
-
-        <div className="orline"><span>oder</span></div>
-
-        <label className="lobLabel">Mit Code beitreten</label>
-        <div className="inrow">
-          <input className="field mono" placeholder="ABC123" value={joinCode} maxLength={6}
-            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-            onKeyDown={(e) => e.key === "Enter" && joinGame()} />
-          <button className="btn ghost" disabled={busy} onClick={joinGame}>Beitreten</button>
-        </div>
-
-        {error && <div className="fb err" style={{ marginTop: 12 }}>{error}</div>}
-      </div>
       )}
+
+      <div className="dPair">
+        <button className="dSmall" onClick={onBoard}><span><Icon name="trophy" size={20} /></span><b>Bestenliste</b><small>im Freundeskreis</small></button>
+        <button className="dSmall" onClick={onStats}><span><Icon name="chart" size={20} /></span><b>Statistik</b><small>{raetsel} Rätsel · {modiGenutzt} Modi</small></button>
+      </div>
 
       <DataStamp />
     </div>
   );
 }
 
-function ElevenCard({ onSolo }) {
-  const dateStr = dailyDateStr();
-  let st = null;
-  try { st = JSON.parse(localStorage.getItem(`pp:eleven:${dateStr}`) || "null"); } catch { /* egal */ }
-  const filled = (st?.names || []).filter(Boolean).length;
-  const badge = st?.done ? "✓ komplett" : filled ? `${filled}/11` : "heute offen";
-  return (
-    <button className="dailyCard eleven" onClick={() => onSolo("eleven")}>
-      <span className="dailyCardIcon">👕</span>
-      <span className="dailyCardText">
-        <b>Elf des Tages #{dailyNumber(dateStr)}</b>
-        <small>Startelf nach elf Bedingungen — Formation wechselt täglich</small>
-      </span>
-      <span className={`dailyBadge ${st?.done ? "won" : ""}`}>{badge}</span>
-    </button>
-  );
-}
+/* Ein Farbton je Modus. Vorher teilten sich alle ein Türkis, weshalb das Raster
+   monoton wirkte, obwohl jede Kachel für sich sauber war. */
+const SOLO_MODI = [
+  { key: "career",   name: "Karriere-Pfad",     icon: "route", ton: "#A78BFA", text: "Stationen erraten",     daily: true },
+  { key: "odd",      name: "Wer passt nicht?",  icon: "odd", ton: "#A3E635", text: "Drei gehören zusammen", daily: true },
+  { key: "chain",    name: "Fußball-Kette",     icon: "chain", ton: "#22D3EE", text: "Gegen die Uhr",         daily: true },
+  { key: "heat",     name: "Heatmap",           icon: "flame", ton: "#FB923C", text: "Combos und Hitze",      daily: true },
+  { key: "hex",      name: "Hex-Training",      icon: "hex", ton: "#2DD4BF", text: "Ohne Zeitdruck",        daily: true },
+  { key: "carousel", name: "Transferkarussell", icon: "carousel", ton: "#F472B6", text: "Gegen den Bot",         daily: false },
+];
 
-function DailyCard({ onDaily }) {
-  const dateStr = dailyDateStr();
-  let state = null;
-  try { state = JSON.parse(localStorage.getItem(`pp:daily:${dateStr}`) || "null"); } catch { /* egal */ }
-  const badge = state?.done ? (state.won ? "✓ gelöst" : "✗ vorbei") : "heute offen";
-  return (
-    <button className="dailyCard" onClick={onDaily}>
-      <span className="dailyCardIcon">🌟</span>
-      <span className="dailyCardText">
-        <b>Daily-Star #{dailyNumber(dateStr)}</b>
-        <small>Das tägliche Rätsel — solo, für alle gleich</small>
-      </span>
-      <span className={`dailyBadge ${state?.done ? (state.won ? "won" : "lost") : ""}`}>{badge}</span>
-    </button>
-  );
-}
+const DUELL_MODI = [
+  { key: "hex",   name: "Hex-Duell" },
+  { key: "grid",  name: "Raster-Duell" },
+  { key: "guess", name: "Errate den Star" },
+  { key: "carousel", name: "Transferkarussell" },
+];

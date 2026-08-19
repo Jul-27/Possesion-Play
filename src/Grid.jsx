@@ -268,7 +268,7 @@ export default function Grid({ code, clientId, onLeave }) {
           <div key={"r" + r} className="ghead" title={cname(rd)}><Emblem def={rd} /><span className="gheadLbl">{rd.label}</span></div>,
           ...colDefs.map((cd, c) => {
             const idx = r * 3 + c; const o = owners[idx];
-            const bg = o ? `linear-gradient(150deg, ${P[o].c1}, ${P[o].c2})` : "rgba(10,22,19,.55)";
+            const bg = o ? `linear-gradient(150deg, ${P[o].c1}, ${P[o].c2})` : "rgba(19,26,34,.6)";
             return (
               <button key={idx} className={`gcell ${o ? "owned" : ""}`} disabled={!myTurn || !!o} onClick={() => pickCell(idx)}
                 style={{ background: bg, color: o ? "#fff" : "#cfe6dc", outline: selected === idx ? "3px solid #FACC15" : "none" }}>

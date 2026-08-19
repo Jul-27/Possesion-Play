@@ -100,8 +100,8 @@ export function Cell({ cell, owner, paint, selected, adjHint, justClaimed, click
     bg = `linear-gradient(150deg, ${pc.c1}, ${pc.c2})`; border = `1px solid ${pc.c1}`; txt = "#fff";
     shadow = `0 0 18px ${pc.glow}, inset 0 1px 0 rgba(255,255,255,.25)`;
   } else {
-    bg = "linear-gradient(155deg, rgba(34,60,50,.92), rgba(22,42,34,.96))";
-    border = "1px solid rgba(176,224,200,.22)"; txt = "#dfeee7"; shadow = "inset 0 1px 0 rgba(255,255,255,.10)";
+    bg = "linear-gradient(155deg, rgba(30,42,58,.92), rgba(17,24,32,.96))";
+    border = "1px solid rgba(148,178,208,.20)"; txt = "#DCE7F2"; shadow = "inset 0 1px 0 rgba(255,255,255,.10)";
   }
   return (
     <button

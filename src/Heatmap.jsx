@@ -86,7 +86,12 @@ export default function Heatmap({ onLeave }) {
     const fertig = heatDone(naechste);
     if (fertig) {
       const ergebnis = { score: score + zug.punkte, density: heatDensity(naechste), moves: moves + 1, misses };
-      if (!best || ergebnis.score > best.score) { store.set(BEST_KEY, ergebnis); setBest(ergebnis); }
+      /* played zählt JEDES volle Board, die Bestwerte nur das beste — sonst stünde
+         Heatmap in der Statistik ewig auf „noch nicht gespielt". */
+      const naechsterStand = !best || ergebnis.score > best.score
+        ? { ...ergebnis, played: (best?.played || 0) + 1 }
+        : { ...best, played: (best.played || 0) + 1 };
+      store.set(BEST_KEY, naechsterStand); setBest(naechsterStand);
       if (isDaily) {
         recordChallenge("heat", true);   // ein volles Board zählt als gelöst
         lbSubmit("heat", ergebnis).catch(() => {});
