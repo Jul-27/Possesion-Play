@@ -10,6 +10,8 @@ import { shareOdd } from "./share.js";
 import { dailyRnd, challengeState, recordChallenge, challengeStats } from "./dailyChallenge.js";
 import { submit as lbSubmit } from "./leaderboard.js";
 import ReportButton from "./ReportButton.jsx";
+import GameTop from "./GameTop.jsx";
+import Icon from "./Icons.jsx";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -57,15 +59,12 @@ export default function OddOne({ onLeave }) {
 
   return (
     <div className="ppRoot">
-      <div className="topbar">
-        <div><h1 className="title">POSSESSION PLAY</h1><div className="subtitle">🧩 Wer passt nicht? · {isDaily ? "Aufgabe des Tages" : "frei"}</div></div>
-        <div className="iconrow">
-          <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
-          <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
+      <GameTop icon="odd" name="Wer passt nicht?" ton="#A3E635" zusatz={isDaily ? "Aufgabe des Tages" : "frei"}>
+        <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}><Icon name={muted ? "mute" : "sound"} size={18} /></button>
+          <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}><Icon name="help" size={18} /></button>
           <ReportButton mode="odd" />
-          <button className="iconbtn" title="Zur Lobby" onClick={onLeave}>⏏</button>
-        </div>
-      </div>
+          <button className="iconbtn" title="Zur Lobby" onClick={onLeave}><Icon name="leave" size={18} /></button>
+      </GameTop>
 
       <div className="dailyMeta">
         {isDaily && (() => { const st = challengeStats("odd");

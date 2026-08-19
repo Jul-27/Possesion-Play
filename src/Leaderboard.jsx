@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { getGroup, setGroup, leaveGroup, getName, setName, createGroup, joinGroup, top, MODES } from "./leaderboard.js";
 import { dailyDateStr, dailyNumber } from "./dailyLogic.js";
 import DataStamp from "./DataStamp.jsx";
+import GameTop from "./GameTop.jsx";
+import Icon from "./Icons.jsx";
 
 /* Bestenliste für einen Freundeskreis. Ohne Gruppencode ist nichts sichtbar — die
    Datenbanktabellen sind gesperrt, jeder Zugriff verlangt den Code. */
@@ -51,12 +53,9 @@ export default function Leaderboard({ onLeave }) {
 
   return (
     <div className="ppRoot">
-      <div className="topbar">
-        <div><h1 className="title">POSSESSION PLAY</h1><div className="subtitle">🏆 Bestenliste · Tag #{dailyNumber(day)}</div></div>
-        <div className="iconrow">
-          <button className="iconbtn" title="Zur Lobby" onClick={onLeave}>⏏</button>
-        </div>
-      </div>
+      <GameTop icon="trophy" name="Bestenliste" ton="#FACC15" zusatz={<>Tag #{dailyNumber(day)}</>}>
+        <button className="iconbtn" title="Zur Lobby" onClick={onLeave}><Icon name="leave" size={18} /></button>
+      </GameTop>
 
       {!group ? (
         <div className="panel" style={{ marginTop: 18 }}>

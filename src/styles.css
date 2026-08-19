@@ -718,3 +718,29 @@ body::after {
 .dHeroIcon, .dWideIcon, .dTileIcon, .dSmall span { color: var(--ton, var(--teal)); }
 .dHeroIcon { color: var(--gold); }
 .dMissionBox { border-color: rgba(148,178,208,.3); }
+
+/* ── Gemeinsame Kopfzeile der Spielansichten ────────────────────────────────
+   Ersetzt den zweizeiligen Riesentitel, der auf jedem Spielbildschirm stand:
+   rund 120 Pixel vor dem Brett für eine Information, die der Spieler längst hat.
+   Jetzt steht dort, WO man ist und WER man ist. */
+.gtop { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  animation: dropIn .5s both; }
+.gtopMain { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.gtopIcon { width: 38px; height: 38px; flex: none; display: grid; place-items: center; border-radius: 12px;
+  color: var(--ton, var(--teal)); background: color-mix(in srgb, var(--ton, var(--teal)) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ton, var(--teal)) 26%, transparent); }
+.gtopText { display: flex; flex-direction: column; min-width: 0; }
+.gtopText b { font-size: 17px; font-weight: 800; letter-spacing: -.01em; line-height: 1.15; }
+.gtopText small { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
+  letter-spacing: .05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.gtopMe { display: flex; align-items: center; gap: 9px; margin-top: 11px; animation: dropIn .5s .05s both; }
+.gtopStufe { font-family: 'DM Mono', monospace; font-size: 10.5px; font-weight: 500; letter-spacing: .06em;
+  color: var(--teal); border: 1px solid rgba(34,211,238,.35); border-radius: 999px; padding: 2px 8px; flex: none; }
+.gtopBar { flex: 1; height: 4px; border-radius: 2px; background: rgba(148,178,208,.14); overflow: hidden; min-width: 40px; }
+.gtopBar i { display: block; height: 100%; background: var(--acc); }
+.gtopStufeName { font-size: 11px; color: var(--muted); flex: none; }
+.gtopSerie { display: inline-flex; align-items: center; gap: 3px; flex: none;
+  font-family: 'DM Mono', monospace; font-size: 11.5px; color: var(--gold); }
+.statIcon { display: grid; place-items: center; color: var(--teal); }
+.statStreak { display: inline-flex; align-items: center; gap: 4px; }

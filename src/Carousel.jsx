@@ -16,6 +16,8 @@ import DataStamp from "./DataStamp.jsx";
 import ShareButton from "./ShareButton.jsx";
 import { shareCarousel } from "./share.js";
 import ReportButton from "./ReportButton.jsx";
+import GameTop from "./GameTop.jsx";
+import Icon from "./Icons.jsx";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -183,18 +185,12 @@ export default function Carousel({ onLeave }) {
 
   return (
     <div className="ppRoot">
-      <div className="topbar">
-        <div>
-          <h1 className="title">POSSESSION PLAY</h1>
-          <div className="subtitle">🎠 Transferkarussell · {gestartet ? `gegen den Bot (${botLevel(level).name})` : "Übung"}</div>
-        </div>
-        <div className="iconrow">
-          <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
-          <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
+      <GameTop icon="carousel" name="Transferkarussell" ton="#F472B6" zusatz={gestartet ? `gegen den Bot (${botLevel(level).name})` : "Übung"}>
+        <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}><Icon name={muted ? "mute" : "sound"} size={18} /></button>
+          <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}><Icon name="help" size={18} /></button>
           <ReportButton mode="carousel" />
-          <button className="iconbtn" title="Zur Lobby" onClick={onLeave}>⏏</button>
-        </div>
-      </div>
+          <button className="iconbtn" title="Zur Lobby" onClick={onLeave}><Icon name="leave" size={18} /></button>
+      </GameTop>
 
       {!players || !idx ? <div className="qlogEmpty">Lade Spielerdaten…</div> : !gestartet ? (
         <div className="panel" style={{ marginTop: 18 }}>

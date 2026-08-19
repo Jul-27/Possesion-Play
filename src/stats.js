@@ -9,6 +9,7 @@ import { challengeStats } from "./dailyChallenge.js";
 const read = (k) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } };
 
 // Ein Eintrag: { key, icon, name, solo, played, lines: [{ label, value }], streak }
+// `icon` ist ein NAME aus Icons.jsx, kein Emoji — die Übersicht zeichnet ihn selbst.
 function entry(key, icon, name, solo, raw, lines, streak) {
   return { key, icon, name, solo, played: raw?.played || 0, lines: lines.filter((l) => l.value != null), streak };
 }
@@ -24,27 +25,27 @@ export function collectStats() {
   const carousel = read("pp:carouselStats");
 
   return [
-    entry("daily", "🌟", "Daily-Star", null, daily, [
+    entry("daily", "star", "Daily-Star", null, daily, [
       { label: "gelöst", value: daily?.wins ?? null },
       { label: "Rekordserie", value: daily?.maxStreak || null },
     ], daily?.streak || 0),
 
-    entry("eleven", "👕", "Elf des Tages", "eleven", eleven, [
+    entry("eleven", "jersey", "Elf des Tages", "eleven", eleven, [
       { label: "komplett", value: eleven?.solved ?? null },
     ], challengeStats("eleven")?.streak || 0),
 
-    entry("career", "🧭", "Karriere-Pfad", "career", career, [
+    entry("career", "route", "Karriere-Pfad", "career", career, [
       { label: "gelöst", value: career?.solved ?? null },
       // best = wenigste Stationen bis zur Lösung, also je kleiner desto besser
       { label: "beste Lösung", value: career?.best ? `${career.best} Stat.` : null },
     ], challengeStats("career")?.streak || 0),
 
-    entry("odd", "🧩", "Wer passt nicht?", "odd", odd, [
+    entry("odd", "odd", "Wer passt nicht?", "odd", odd, [
       { label: "richtig", value: odd?.solved ?? null },
       { label: "Rekordserie", value: odd?.best || null },
     ], challengeStats("odd")?.streak || 0),
 
-    entry("chain", "⛓️", "Fußball-Kette", "chain", chain, [
+    entry("chain", "chain", "Fußball-Kette", "chain", chain, [
       { label: "längste Kette", value: chain?.best || null },
       { label: "Glieder gesamt", value: chain?.total || null },
     ], challengeStats("chain")?.streak || 0),
@@ -52,17 +53,17 @@ export function collectStats() {
     /* Heatmap und Transferkarussell fehlten hier von Anfang an — beide speichern
        längst Werte (pp:heatBest, pp:carouselStats), tauchten in der Übersicht aber
        nicht auf. */
-    entry("heat", "🔥", "Heatmap", "heat", heat, [
+    entry("heat", "flame", "Heatmap", "heat", heat, [
       { label: "Bestwert", value: heat?.score ? `${heat.score} Punkte` : null },
       { label: "Dichte", value: heat?.density ? heat.density.toFixed(2) : null },
     ], challengeStats("heat")?.streak || 0),
 
-    entry("carousel", "🎠", "Transferkarussell", "carousel", carousel, [
+    entry("carousel", "carousel", "Transferkarussell", "carousel", carousel, [
       { label: "gewonnen", value: carousel?.won ?? null },
       { label: "längste Kette", value: carousel?.bestChain || null },
     ], 0),
 
-    entry("hex", "🎯", "Hex-Training", "hex", solo, [
+    entry("hex", "hex", "Hex-Training", "hex", solo, [
       { label: "Bestwert", value: solo?.bestMoves ? `${solo.bestMoves} Züge` : null },
       { label: "perfekt", value: solo?.perfect || null },
     ], challengeStats("hex")?.streak || 0),
