@@ -40,6 +40,11 @@ const CHAIN = [
      korrekturen, weil der Schlüssel norm(name)|by ist. Dauert ~40 min (Label-Batches
      gegen WDQS) und schreibt src/careerClubs.js, nicht players.js. */
   ["wikidata_career_clubs.mjs"],
+  /* 6d2) Kuratierte Karrierestationen NACH dem Neubau: das Skript oben schreibt
+     careerClubs.js jedes Mal komplett neu, gemeldete Nachträge wie Wanner/Elversberg
+     wären sonst nach jedem Lauf wieder weg. Genau dieser Fehler ließ
+     apply_extra_players lange aus der Kette fehlen. Kein Netz. */
+  ["apply_extra_career_clubs.mjs"],
   /* 6e) Datierte Stationen für den Karriere-Pfad. Eigene, kleine Datei: der Modus
      braucht Jahreszahlen, das Karussell nicht — die Jahre dort mitzuführen
      verdreifachte dessen Nachlade-Brocken. Nur sl>=40, also ~3 Minuten. */

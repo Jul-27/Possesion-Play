@@ -26,8 +26,9 @@ test("leseEnv holt Werte, ignoriert Kommentare und Anführungszeichen", () => {
 test("eine anwendbare Meldung bringt den EXTRA_PLAYERS-Eintrag mit", () => {
   const a = zuAusgabe(zeile(), karte([P("Fábio Vieira", 2000, ["ARS"])]));
   assert.equal(a.anwendbar, true);
+  assert.equal(a.ziel, "EXTRA_PLAYERS");
   assert.equal(a.grund, null);
-  assert.deepEqual(a.extraPlayersEntry, { n: "Fábio Vieira", by: 2000, clubs: ["HSV"] });
+  assert.deepEqual(a.eintrag, { n: "Fábio Vieira", by: 2000, clubs: ["HSV"] });
   assert.equal(a.clubKey, "HSV");
   assert.equal(a.reporters, 2, "Zahl der verschiedenen Melder, nicht die Liste");
   assert.equal(a.reports, 3);
@@ -38,16 +39,30 @@ test("steht der Verein schon beim Spieler, ist es kein Datenproblem", () => {
   assert.equal(a.bereitsBekannt, true);
   assert.equal(a.anwendbar, false);
   assert.match(a.grund, /bereits/);
-  assert.equal(a.extraPlayersEntry, null, "nichts zum Übernehmen");
+  assert.equal(a.ziel, null);
+  assert.equal(a.eintrag, null, "nichts zum Übernehmen");
 });
 
-test("ein Karriereverein wird erfasst, aber als nicht anwendbar markiert", () => {
-  const a = zuAusgabe(zeile({ club_key: null, club_name: "1. FC Nürnberg" }),
-    karte([P("Fábio Vieira", 2000)]));
+/* Karrierevereine haben seit apply_extra_career_clubs.mjs einen eigenen Weg — der
+   Export muss sie dorthin schicken statt sie als unlösbar abzutun. */
+test("ein Karriereverein geht nach EXTRA_CAREER_CLUBS, mit Namen statt Schlüssel", () => {
+  const a = zuAusgabe(zeile({ club_key: null, club_name: "SV Elversberg" }),
+    karte([P("Fábio Vieira", 2000)]), { clubs: ["FC Bayern München"], byKey: {} });
   assert.equal(a.clubKey, null);
-  assert.equal(a.clubName, "1. FC Nürnberg", "der Name geht nicht verloren");
+  assert.equal(a.clubName, "SV Elversberg", "der Name geht nicht verloren");
+  assert.equal(a.anwendbar, true);
+  assert.equal(a.ziel, "EXTRA_CAREER_CLUBS");
+  assert.deepEqual(a.eintrag, { n: "Fábio Vieira", by: 2000, clubs: ["SV Elversberg"] });
+  assert.equal(a.grund, null);
+});
+
+test("ein Karriereverein, den wir schon führen, ist kein Datenproblem", () => {
+  const a = zuAusgabe(zeile({ club_key: null, club_name: "SV Elversberg" }),
+    karte([P("Fábio Vieira", 2000)]),
+    { clubs: ["SV Elversberg"], byKey: { "fabio vieira|2000": [0] } });
+  assert.equal(a.bereitsBekannt, true);
   assert.equal(a.anwendbar, false);
-  assert.match(a.grund, /Karriereverein/);
+  assert.match(a.grund, /bereits/);
 });
 
 test("ein unbekannter Spieler wird gemeldet, nicht stillschweigend übernommen", () => {
@@ -65,7 +80,7 @@ test("der Vereinsname wird aus der Vereinsliste aufgefrischt", () => {
 });
 
 test("der Export zählt anwendbare Meldungen getrennt", () => {
-  const players = [P("Fábio Vieira", 2000, ["ARS"]), P("Marin Pongracic", 1997)];
+  const players = [P("Fábio Vieira", 2000, ["ARS"]), P("Marin Pongracic", 1997), P("İlkay Gündoğan", 1990)];
   const daten = baueExport([
     zeile(),
     zeile({ player_key: "marin pongracic|1997", player_name: "Marin Pongracic", player_by: 1997,
@@ -74,8 +89,10 @@ test("der Export zählt anwendbare Meldungen getrennt", () => {
       club_key: null, club_name: "1. FC Nürnberg" }),
   ], players);
   assert.equal(daten.gesamt, 3);
-  assert.equal(daten.anwendbar, 2, "der Karriereverein zählt nicht mit");
-  assert.equal(daten.reports.length, 3, "aber verloren geht keine Meldung");
+  assert.equal(daten.anwendbar, 3, "auch der Karriereverein hat jetzt ein Ziel");
+  assert.equal(daten.extraPlayers.length, 2);
+  assert.equal(daten.extraCareerClubs.length, 1);
+  assert.deepEqual(daten.extraCareerClubs[0], { n: "İlkay Gündoğan", by: 1990, clubs: ["1. FC Nürnberg"] });
   assert.ok(daten.exportedAt, "Zeitstempel für die Nachvollziehbarkeit");
 });
 
@@ -84,4 +101,6 @@ test("ein leerer Export ist gültig und leer, kein Fehler", () => {
   assert.equal(daten.gesamt, 0);
   assert.equal(daten.anwendbar, 0);
   assert.deepEqual(daten.reports, []);
+  assert.deepEqual(daten.extraPlayers, []);
+  assert.deepEqual(daten.extraCareerClubs, []);
 });
