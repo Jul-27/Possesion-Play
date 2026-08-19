@@ -11,7 +11,6 @@ import Chain from "./Chain.jsx";
 import Carousel from "./Carousel.jsx";
 import CarouselDuel from "./CarouselDuel.jsx";
 import Heatmap from "./Heatmap.jsx";
-import LobbyDraft from "./LobbyDraft.jsx";
 import Eleven from "./Eleven.jsx";
 import Stats from "./Stats.jsx";
 import Leaderboard from "./Leaderboard.jsx";
@@ -108,10 +107,6 @@ export default function App() {
   if (solo === "carousel") return <Carousel onLeave={leave} />;
   if (solo === "eleven") return <Eleven onLeave={leave} />;
   if (solo === "heat") return <Heatmap onLeave={leave} />;
-  /* Entwurf der neuen Lobby unter ?entwurf=lobby — die bestehende bleibt unberührt,
-     damit sich beides direkt vergleichen lässt. */
-  if (solo === "entwurf-lobby") return <LobbyDraft onDaily={enterDaily} onSolo={enterSolo}
-    onStats={enterStats} onBoard={enterBoard} onLeave={leave} />;
   return code
     ? <GameRouter code={code} clientId={clientId} onLeave={leave} />
     : <Lobby onEnter={enter} onDaily={enterDaily} onSolo={enterSolo} onStats={enterStats} onBoard={enterBoard} />;

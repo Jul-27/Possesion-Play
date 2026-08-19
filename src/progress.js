@@ -8,6 +8,7 @@
    Migration, und alte Spielstände zählen rückwirkend mit. */
 import { collectStats, totals } from "./stats.js";
 import { challengeState, CHALLENGE_MODES } from "./dailyChallenge.js";
+import { missionsXp } from "./missions.js";
 
 /* Fußball-Stufen statt „Level 7". Die Schwellen wachsen, aber nicht brutal: die
    erste Stufe nach ein paar Rätseln, die letzte als echtes Fernziel. */
@@ -44,14 +45,16 @@ export const XP_PRO_RAETSEL = 10;
 export const XP_PRO_SERIENTAG = 15;
 export const XP_PRO_MODUS = 25;
 
-export function berechneXp(entries = collectStats()) {
+export function berechneXp(entries = collectStats(), missionen = [], stand = null) {
   const t = totals(entries);
   const serien = entries.reduce((s, e) => s + (e.streak || 0), 0);
+  const ausMissionen = stand ? missionsXp(missionen, stand) : 0;
   return {
-    xp: t.played * XP_PRO_RAETSEL + serien * XP_PRO_SERIENTAG + t.modes * XP_PRO_MODUS,
+    xp: t.played * XP_PRO_RAETSEL + serien * XP_PRO_SERIENTAG + t.modes * XP_PRO_MODUS + ausMissionen,
     raetsel: t.played,
     modi: t.modes,
     serienTage: serien,
+    ausMissionen,
   };
 }
 
@@ -66,22 +69,4 @@ export function tagesserie(entries = collectStats()) {
    — sieben gleiche „heute offen"-Abzeichen tun das nicht. */
 export function offeneHeute(modi = CHALLENGE_MODES) {
   return modi.filter((m) => !challengeState(m)).length;
-}
-
-/** Tagesmissionen, aus dem Datum abgeleitet — für alle gleich, ohne Server. */
-export const MISSIONEN = [
-  { id: "drei-modi",   text: "Spiele drei verschiedene Modi",      ziel: 3 },
-  { id: "ohne-fehler", text: "Löse ein Rätsel ohne Fehlversuch",   ziel: 1 },
-  { id: "combo",       text: "Erreiche eine Combo aus 4 Feldern",  ziel: 1 },
-  { id: "kette",       text: "Baue eine Kette mit 12 Spielern",    ziel: 12 },
-  { id: "duell",       text: "Spiele ein Duell gegen einen Freund", ziel: 1 },
-  { id: "perfekt",     text: "Löse ein Board ohne Fehlversuch",    ziel: 1 },
-];
-
-/** Drei Missionen des Tages, deterministisch aus dem Datum. */
-export function missionenDesTages(rnd) {
-  const rest = [...MISSIONEN];
-  const out = [];
-  for (let i = 0; i < 3 && rest.length; i++) out.push(rest.splice(Math.floor(rnd() * rest.length), 1)[0]);
-  return out;
 }
