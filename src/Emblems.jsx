@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 import { P, cname } from "./gameData.js";
+import Icon from "./Icons.jsx";
 import { imageUrlFor, initialsOf, avatarHue } from "./playerImage.js";
 
 export function ClubBadge({ c1, c2, pat }) {
@@ -51,13 +52,13 @@ function Logo({ src, fallback }) {
 
 export function Emblem({ def }) {
   if (def.type === "nat") return <span className="emblem flag"><Flag spec={def.flag} /></span>;
-  if (def.type === "spec") return <span className="emblem icon" style={{ background: `linear-gradient(150deg,${def.c1},${def.c2})` }}>{def.icon}</span>;
+  if (def.type === "spec") return <span className="emblem icon" style={{ background: `linear-gradient(150deg,${def.c1},${def.c2})` }}><Icon name={def.ic} /></span>;
   if (def.type === "league") return (
     <span className="emblem league" style={{ background: `linear-gradient(150deg,${def.c1},${def.c2})` }}>
       <Logo src={`/logos/league/${def.key}.png`} fallback={def.label} />
     </span>
   );
-  if (def.type === "honour") return <span className="emblem icon" style={{ background: `linear-gradient(150deg,${def.c1},${def.c2})` }}>{def.icon}</span>;
+  if (def.type === "honour") return <span className="emblem icon" style={{ background: `linear-gradient(150deg,${def.c1},${def.c2})` }}><Icon name={def.ic} /></span>;
   return (
     <span className="emblem badge">
       <Logo src={`/logos/club/${def.key}.png`} fallback={<ClubBadge c1={def.c1} c2={def.c2} pat={def.pat} />} />

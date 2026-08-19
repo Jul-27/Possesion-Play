@@ -225,7 +225,7 @@ export default function Daily({ onLeave }) {
                 )}
                 {dim === "title" && (
                   <div className="chiprow">
-                    {HONOURS.map((h) => <button key={h.key} className="chip" disabled={askedSigs.has(sigOf("title", h.key))} onClick={() => ask("title", h.key)}>{h.icon} {h.name}</button>)}
+                    {HONOURS.map((h) => <button key={h.key} className="chip" disabled={askedSigs.has(sigOf("title", h.key))} onClick={() => ask("title", h.key)}><Icon name={h.ic} size={15} /> {h.name}</button>)}
                   </div>
                 )}
                 {dim === "born" && (
