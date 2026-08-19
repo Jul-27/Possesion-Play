@@ -20,6 +20,8 @@ export function collectStats() {
   const chain = read("pp:chainStats");
   const eleven = read("pp:elevenStats");
   const solo = read("pp:soloStats");
+  const heat = read("pp:heatBest");
+  const carousel = read("pp:carouselStats");
 
   return [
     entry("daily", "🌟", "Daily-Star", null, daily, [
@@ -46,6 +48,19 @@ export function collectStats() {
       { label: "längste Kette", value: chain?.best || null },
       { label: "Glieder gesamt", value: chain?.total || null },
     ], challengeStats("chain")?.streak || 0),
+
+    /* Heatmap und Transferkarussell fehlten hier von Anfang an — beide speichern
+       längst Werte (pp:heatBest, pp:carouselStats), tauchten in der Übersicht aber
+       nicht auf. */
+    entry("heat", "🔥", "Heatmap", "heat", heat, [
+      { label: "Bestwert", value: heat?.score ? `${heat.score} Punkte` : null },
+      { label: "Dichte", value: heat?.density ? heat.density.toFixed(2) : null },
+    ], challengeStats("heat")?.streak || 0),
+
+    entry("carousel", "🎠", "Transferkarussell", "carousel", carousel, [
+      { label: "gewonnen", value: carousel?.won ?? null },
+      { label: "längste Kette", value: carousel?.bestChain || null },
+    ], 0),
 
     entry("hex", "🎯", "Hex-Training", "hex", solo, [
       { label: "Bestwert", value: solo?.bestMoves ? `${solo.bestMoves} Züge` : null },

@@ -600,3 +600,94 @@ body::after {
 .carStep.cur { box-shadow: 0 0 0 2px rgba(255, 255, 255, .14); }
 .carEm { width: 22px; height: 22px; display: inline-flex; }
 .carEm svg, .carEm img { width: 100%; height: 100%; }
+
+/* ── ENTWURF neue Lobby (?entwurf=lobby) ───────────────────────────────────
+   Eigener Namensraum d*, damit nichts am bestehenden Design hängt und der
+   Entwurf rückstandslos verschwinden kann. */
+.draft { padding-top: 16px; }
+.dTop { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.dTitle { font-family: 'Anton', sans-serif; font-weight: 400; font-size: clamp(24px, 7.5vw, 34px);
+  margin: 0; letter-spacing: .01em; color: #f6fbf8; text-transform: uppercase; line-height: 1; }
+
+/* Kopfzeile mit Identität: Stufenring, Name, Fortschritt, Serie */
+.dMe { display: flex; align-items: center; gap: 14px; margin-top: 16px; padding: 14px;
+  border: 1px solid var(--brd); border-radius: 18px;
+  background: linear-gradient(150deg, rgba(45,212,191,.10), rgba(10,22,19,.72)); }
+.dRing { position: relative; width: 54px; height: 54px; flex: none; border-radius: 50%; display: grid; place-items: center;
+  background: conic-gradient(var(--teal) calc(var(--anteil) * 360deg), rgba(176,224,200,.14) 0); }
+.dRing::after { content: ""; position: absolute; inset: 4px; border-radius: 50%; background: #0a1a14; }
+.dRing span { position: relative; z-index: 1; font-family: 'Anton', sans-serif; font-size: 16px; color: #eafff8; letter-spacing: .02em; }
+.dMeBody { flex: 1; min-width: 0; }
+.dMeName { font-weight: 800; font-size: 15px; }
+.dMeStufe { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--teal); margin-top: 1px; }
+.dBar { height: 5px; border-radius: 3px; background: rgba(176,224,200,.14); margin: 7px 0 5px; overflow: hidden; }
+.dBar i { display: block; height: 100%; background: linear-gradient(90deg, var(--teal-d), var(--teal)); box-shadow: 0 0 10px rgba(45,212,191,.5); }
+.dMeSub { font-size: 11.5px; color: var(--muted); } .dMeSub b { color: #dff3ec; }
+.dSerie { text-align: center; flex: none; }
+.dSerie b { display: block; font-family: 'Anton', sans-serif; font-size: 26px; color: var(--gold); line-height: 1; }
+.dSerie span { font-size: 10px; color: var(--muted); }
+
+.dSectionRow { display: flex; align-items: baseline; justify-content: space-between; margin: 22px 0 9px; }
+.dSection { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+.dOffen { font-family: 'DM Mono', monospace; font-size: 11px; color: #0a1a14; background: var(--gold);
+  padding: 2px 9px; border-radius: 999px; font-weight: 500; }
+.dOffen.ghost { background: none; color: var(--muted); border: 1px solid var(--brd); }
+
+/* Held: das Tagesrätsel bekommt als Einziges die volle Bühne */
+.dHero { display: block; width: 100%; text-align: left; cursor: pointer; color: var(--text);
+  padding: 18px; border-radius: 20px; border: 1px solid rgba(244,201,93,.42);
+  background: radial-gradient(120% 140% at 85% 0%, rgba(244,201,93,.20), rgba(10,22,19,.85) 62%);
+  box-shadow: 0 18px 40px -22px rgba(0,0,0,.9); transition: transform .15s, border-color .15s; }
+.dHero:hover { transform: translateY(-2px); border-color: var(--gold); }
+.dHeroTop { display: flex; align-items: center; justify-content: space-between; }
+.dHeroIcon { font-size: 30px; }
+.dHeroNr { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--gold); }
+.dHeroName { font-family: 'Anton', sans-serif; font-size: 27px; margin-top: 8px; text-transform: uppercase; letter-spacing: .01em; }
+.dHeroText { font-size: 13.5px; color: #cbe0d6; margin-top: 2px; }
+.dHeroCta { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; padding: 9px 16px;
+  border-radius: 999px; background: var(--gold); color: #251c00; font-weight: 800; font-size: 14px; }
+
+/* Breite Einzelzeile (Elf des Tages, Duell) */
+.dWide { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 10px; padding: 13px 14px;
+  border-radius: 16px; border: 1px solid var(--brd); background: rgba(10,22,19,.6); color: var(--text);
+  cursor: pointer; text-align: left; transition: border-color .15s, transform .15s; }
+.dWide:hover { border-color: var(--ton); transform: translateY(-2px); }
+.dWideIcon { font-size: 22px; width: 38px; height: 38px; flex: none; display: grid; place-items: center;
+  border-radius: 12px; background: color-mix(in srgb, var(--ton) 18%, transparent); }
+.dWideBody { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.dWideBody b { font-size: 15px; } .dWideBody small { font-size: 12.5px; color: var(--muted); }
+.dWideBadge { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--ton); flex: none; }
+.dWideChev { color: var(--muted); font-size: 20px; flex: none; }
+
+/* Missionen */
+.dMissions { display: flex; flex-direction: column; gap: 8px; }
+.dMission { display: flex; align-items: center; gap: 11px; padding: 11px 13px; border-radius: 13px;
+  border: 1px solid var(--line-soft); background: rgba(10,22,19,.45); }
+.dMissionBox { width: 17px; height: 17px; flex: none; border-radius: 5px; border: 1.5px solid rgba(176,224,200,.35); }
+.dMissionText { flex: 1; font-size: 13.5px; color: #dbeee5; }
+.dMissionXp { font-family: 'DM Mono', monospace; font-size: 11.5px; color: var(--teal); }
+
+/* Modus-Raster: kompakt, je Modus ein Farbton */
+.dGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dTile { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  padding: 13px; border-radius: 16px; cursor: pointer; text-align: left; color: var(--text);
+  border: 1px solid var(--brd);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--ton) 13%, transparent), rgba(10,22,19,.66) 70%);
+  transition: transform .15s, border-color .15s; }
+.dTile:hover { transform: translateY(-3px); border-color: var(--ton); }
+.dTileHead { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 6px; }
+.dTileIcon { font-size: 19px; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px;
+  background: color-mix(in srgb, var(--ton) 22%, transparent); }
+.dCheck { font-size: 13px; color: var(--ton); font-weight: 800; }
+.dFlame { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--gold); }
+.dTileName { font-size: 14.5px; line-height: 1.2; }
+.dTileText { font-size: 12px; color: var(--muted); }
+.dTileBar { display: block; width: 100%; height: 3px; border-radius: 2px; margin-top: 10px; background: rgba(176,224,200,.12); overflow: hidden; }
+.dTileBar i { display: block; height: 100%; background: var(--ton); }
+
+.dPair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.dSmall { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 13px;
+  border-radius: 16px; border: 1px solid var(--brd); background: rgba(10,22,19,.6); color: var(--text); cursor: pointer; text-align: left; }
+.dSmall:hover { border-color: var(--teal); }
+.dSmall span { font-size: 19px; } .dSmall b { font-size: 14px; } .dSmall small { font-size: 11.5px; color: var(--muted); }
+.dNote { font-size: 11.5px; color: var(--muted); text-align: center; margin-top: 22px; line-height: 1.5; }
