@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getGroup, setGroup, leaveGroup, getName, setName, createGroup, joinGroup, top, MODES } from "./leaderboard.js";
+import { getGroup, setGroup, leaveGroup, getName, setName, createGroup, joinGroup, top, saison, MODES } from "./leaderboard.js";
 import { dailyDateStr, dailyNumber } from "./dailyLogic.js";
 import DataStamp from "./DataStamp.jsx";
 import GameTop from "./GameTop.jsx";
@@ -10,7 +10,9 @@ import Icon from "./Icons.jsx";
 export default function Leaderboard({ onLeave }) {
   const [group, setG] = useState(getGroup());
   const [name, setN] = useState(getName() || "");
+  const [ansicht, setAnsicht] = useState("saison");   // saison | heute
   const [mode, setMode] = useState("chain");
+  const [saisonDaten, setSaison] = useState(null);
   const [rows, setRows] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -26,6 +28,14 @@ export default function Leaderboard({ onLeave }) {
     top(mode, day).then((r) => { if (aktiv) setRows(r); });
     return () => { aktiv = false; };
   }, [group, mode, day]);
+
+  // Saison einmal je Gruppe laden — sie ändert sich nicht im Sekundentakt.
+  useEffect(() => {
+    if (!group) return setSaison(null);
+    let aktiv = true;
+    saison().then((d) => { if (aktiv) setSaison(d); });
+    return () => { aktiv = false; };
+  }, [group]);
 
   async function doCreate() {
     if (!groupName.trim()) { setError("Bitte einen Gruppennamen eingeben."); return; }
@@ -94,6 +104,13 @@ export default function Leaderboard({ onLeave }) {
             {!name.trim() && <p className="ruleP" style={{ marginTop: 8 }}>Ohne Namen wird dein Ergebnis nicht übertragen.</p>}
           </div>
 
+          <div className="lbSwitch">
+            <button type="button" className={ansicht === "saison" ? "active" : ""} onClick={() => setAnsicht("saison")}>Saison</button>
+            <button type="button" className={ansicht === "heute" ? "active" : ""} onClick={() => setAnsicht("heute")}>Heute</button>
+          </div>
+
+          {ansicht === "saison" ? <Saison daten={saisonDaten} /> : (
+          <>
           <div className="lbTabs">
             {Object.entries(MODES).map(([k, m]) => (
               <button key={k} type="button" className={`lbTab ${mode === k ? "active" : ""}`} onClick={() => setMode(k)}>
@@ -118,6 +135,9 @@ export default function Leaderboard({ onLeave }) {
               </div>
             )}
 
+          </>
+          )}
+
           <div className="closeline" style={{ marginTop: 14 }}>
             <button className="btn ghost" style={{ flex: 1, padding: "11px" }}
               onClick={() => { leaveGroup(); setG(null); }}>Gruppe verlassen</button>
@@ -127,5 +147,58 @@ export default function Leaderboard({ onLeave }) {
 
       <DataStamp />
     </div>
+  );
+}
+
+/* Saisontabelle. Zeigt neben Punkten und Platz die LIGA — sie ergibt sich aus den
+   Punkten, nicht aus dem Platz: In einem Freundeskreis soll niemand absteigen,
+   nur weil ein anderer besser war. Wer spielt, steigt; wer aussetzt, startet die
+   nächste Saison wieder unten. */
+function Saison({ daten }) {
+  if (!daten) return <div className="qlogEmpty">Lade Saison…</div>;
+  const { spanne, zeilen } = daten;
+  return (
+    <>
+      <div className="dSectionRow">
+        <span className="dSection">Saison {spanne.nummer}</span>
+        <span className="dOffen ghost">
+          {spanne.resttage === 1 ? "letzter Tag" : `noch ${spanne.resttage} Tage`}
+        </span>
+      </div>
+
+      {zeilen.length === 0 ? (
+        <div className="qlogEmpty">In dieser Saison hat noch niemand gespielt.</div>
+      ) : (
+        <div className="lbList">
+          {zeilen.map((r) => (
+            <div key={r.client_id} className={`lbRow ${r.ichSelbst ? "me" : ""}`}>
+              <span className="lbRank">{r.platz}</span>
+              <span className="lbName">
+                {r.name}{r.ichSelbst ? " (du)" : ""}
+                <small className="lbLiga">{r.liga.name} · {r.tage} {r.tage === 1 ? "Tag" : "Tage"}</small>
+              </span>
+              <span className="lbScore">{r.punkte}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(() => {
+        const ich = zeilen.find((r) => r.ichSelbst);
+        if (!ich) return null;
+        const l = ich.liga;
+        return (
+          <div className="lbLigaBox">
+            <div className="lbLigaKopf">
+              <b>{l.name}</b>
+              {l.naechste
+                ? <span>noch <b>{l.bisNaechste}</b> Punkte bis {l.naechste.name}</span>
+                : <span>höchste Liga erreicht</span>}
+            </div>
+            <span className="dBar"><i style={{ width: `${Math.round(l.anteil * 100)}%` }} /></span>
+          </div>
+        );
+      })()}
+    </>
   );
 }
