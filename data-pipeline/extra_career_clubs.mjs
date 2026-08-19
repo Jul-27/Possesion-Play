@@ -32,4 +32,13 @@ export const EXTRA_CAREER_CLUBS = [
   { n: "Hannes Wolf",       by: 1999, clubs: ["New York City FC"] }, // 2024–
   { n: "Luca Waldschmidt",  by: 1996, clubs: ["1. FC Köln"] },       // 2023–
   { n: "Marc Oliver Kempf", by: 1995, clubs: ["Hertha BSC"] },       // 2022–2024
+
+  /* Nachgezogen mit wikipedia_career.mjs (19.08.2026): Wer einmal gemeldet wurde,
+     hat meist mehrere Lücken — es sind dieselben Leihen und jüngeren Wechsel, die
+     Wikidata verschweigt. Damit erübrigen sich Folgemeldungen zu denselben Namen.
+     Vereinsnamen exakt in der Schreibweise von careerClubs.js. */
+  { n: "Paul Wanner",       by: 2005, clubs: ["1. FC Heidenheim 1846"] },      // 2024–2025, Leihe
+  { n: "Hannes Wolf",       by: 1999, clubs: ["Swansea City"] },               // 2022, Leihe
+  { n: "Junior Adamu",      by: 2001, clubs: ["FC St. Gallen", "Celtic Glasgow"] }, // 2021 (Leihe) · 2026
+  { n: "Marc Oliver Kempf", by: 1995, clubs: ["Como 1907"] },                  // 2024–
 ];
