@@ -46,7 +46,11 @@ export const EXTRA_PLAYERS = [
      Wikidata führt ihn als „Chikwubuike Adamu" (Q58170823) und kennt dort nur den
      FC Liefering — auch ein Voll-Refresh brächte Freiburg also nicht. de.wikipedia
      führt SC Freiburg 2023–2026 in der Karrieretabelle. */
-  { n: "Junior Adamu",    by: 2001, clubs: ["SCF"] },
+  { n: "Junior Adamu",    by: 2001, clubs: ["SCF", "RBS"] },   // Freiburg 2023–26, Salzburg 2020–23
+
+  /* Beim Nachziehen der vollen Karriere (wikipedia_career.mjs, 19.08.2026) gefunden:
+     Waldschmidt fehlten gleich zwei Spielvereine, obwohl nur Köln gemeldet war. */
+  { n: "Luca Waldschmidt", by: 1996, clubs: ["HSV", "SCF"] },  // HSV 2016–18, Freiburg 2018–20
 
   // Lothar Matthäus fehlte komplett: sein Wikidata-Eintrag führt als Beruf nur
   // „Fußballtrainer", nicht „Fußballspieler" (P106=Q937857) — der Roster-Filter
