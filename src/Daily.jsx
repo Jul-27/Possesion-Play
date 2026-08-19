@@ -13,6 +13,8 @@ import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
 import DataStamp from "./DataStamp.jsx";
 import ReportButton from "./ReportButton.jsx";
+import GameTop from "./GameTop.jsx";
+import Icon from "./Icons.jsx";
 
 const sigOf = (dim, val) =>
   dim === "born" ? `born:${val.cmp}:${val.year}` :
@@ -166,15 +168,12 @@ export default function Daily({ onLeave }) {
 
   return (
     <div className="ppRoot">
-      <div className="topbar">
-        <div><h1 className="title">POSSESSION PLAY</h1><div className="subtitle">🌟 Daily-Star #{num}</div></div>
-        <div className="iconrow">
-          <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
-          <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
+      <GameTop icon="star" name="Daily-Star" ton="#FACC15" zusatz={<>#{num}</>}>
+        <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}><Icon name={muted ? "mute" : "sound"} size={18} /></button>
+          <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}><Icon name="help" size={18} /></button>
           <ReportButton mode="daily" />
-          <button className="iconbtn" title="Zur Lobby" onClick={onLeave}>⏏</button>
-        </div>
-      </div>
+          <button className="iconbtn" title="Zur Lobby" onClick={onLeave}><Icon name="leave" size={18} /></button>
+      </GameTop>
 
       <div className="dailyMeta">
         <span className={`dailyCount ${noQLeft ? "spent" : ""}`}>Fragen {questionsUsed}/{DAILY_MAX_Q}</span>

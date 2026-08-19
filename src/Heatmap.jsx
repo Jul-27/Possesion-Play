@@ -14,6 +14,8 @@ import { shareHeat } from "./share.js";
 import { dailyRnd, challengeState, recordChallenge, challengeStats } from "./dailyChallenge.js";
 import { submit as lbSubmit } from "./leaderboard.js";
 import ReportButton from "./ReportButton.jsx";
+import GameTop from "./GameTop.jsx";
+import Icon from "./Icons.jsx";
 
 /* 🔥 Heatmap — Solo-Modus auf dem bekannten Brett, aber mit Wertung statt Eroberung.
    Alle Regeln stehen in heatmap.js; hier steht nur, wie sie sichtbar werden. */
@@ -121,15 +123,12 @@ export default function Heatmap({ onLeave }) {
 
   return (
     <div className="ppRoot">
-      <div className="topbar">
-        <div><h1 className="title">POSSESSION PLAY</h1><div className="subtitle">🔥 Heatmap · {isDaily ? "Board des Tages" : "frei"}</div></div>
-        <div className="iconrow">
-          <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
-          <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
+      <GameTop icon="flame" name="Heatmap" ton="#FB923C" zusatz={isDaily ? "Board des Tages" : "frei"}>
+        <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}><Icon name={muted ? "mute" : "sound"} size={18} /></button>
+          <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}><Icon name="help" size={18} /></button>
           <ReportButton mode="heat" />
-          <button className="iconbtn" title="Zur Lobby" onClick={onLeave}>⏏</button>
-        </div>
-      </div>
+          <button className="iconbtn" title="Zur Lobby" onClick={onLeave}><Icon name="leave" size={18} /></button>
+      </GameTop>
 
       <div className="dailyMeta">
         <span className="dailyCount">Felder {gefuellt}/{HEAT_CELLS.length}</span>

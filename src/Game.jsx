@@ -11,6 +11,8 @@ import Confetti from "./Confetti.jsx";
 import DataStamp from "./DataStamp.jsx";
 import { useLeaveEndsGame } from "./usePresence.js";
 import ReportButton from "./ReportButton.jsx";
+import GameTop from "./GameTop.jsx";
+import Icon from "./Icons.jsx";
 
 export default function Game({ code, clientId, onLeave }) {
   const [row, setRow] = useState(null);
@@ -256,18 +258,12 @@ export default function Game({ code, clientId, onLeave }) {
 
   return (
     <div className="ppRoot">
-      <div className="topbar">
-        <div>
-          <h1 className="title">POSSESSION PLAY</h1>
-          <div className="subtitle">Hex-Duell · Code {code}</div>
-        </div>
-        <div className="iconrow">
-          <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
-          <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
+      <GameTop icon="hex" name="Hex-Duell" ton="#22D3EE" zusatz={<>Code {code}</>}>
+        <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}><Icon name={muted ? "mute" : "sound"} size={18} /></button>
+          <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}><Icon name="help" size={18} /></button>
           <ReportButton mode="hex-duell" gameCode={code} />
-          <button className="iconbtn" title="Verlassen" onClick={onLeave}>⏏</button>
-        </div>
-      </div>
+          <button className="iconbtn" title="Verlassen" onClick={onLeave}><Icon name="leave" size={18} /></button>
+      </GameTop>
 
       <div className="score">
         <div className="team" style={{ opacity: row.turn === 1 ? 1 : 0.6 }}>

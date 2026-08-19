@@ -8,6 +8,7 @@ import { Emblem } from "./Emblems.jsx";
 import { clubKeyOf, reportFehlt, bereitsBekannt, modeName } from "./reports.js";
 import { submitReport } from "./reportClient.js";
 import { play } from "./sound.js";
+import Icon from "./Icons.jsx";
 
 /* 🚩 „Fehler melden" — eine Komponente für alle zwölf Spielmodi.
 
@@ -25,7 +26,7 @@ export default function ReportButton({ mode, gameCode = null }) {
   const [offen, setOffen] = useState(false);
   return (
     <>
-      <button className="iconbtn" title="Fehler melden" onClick={() => setOffen(true)}>🚩</button>
+      <button className="iconbtn" title="Fehler melden" onClick={() => setOffen(true)}><Icon name="flag" size={18} /></button>
       {/* PORTAL, kein gewöhnliches Kind: der Knopf steht in .topbar, und die trägt die
           dropIn-Animation mit fill:both — sie behält dadurch einen transform und wird
           zum Bezugsrahmen für position:fixed. Das Overlay hätte dort nur die Kopfzeile

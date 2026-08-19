@@ -14,6 +14,8 @@ import { useLeaveEndsGame } from "./usePresence.js";
 import Confetti from "./Confetti.jsx";
 import DataStamp from "./DataStamp.jsx";
 import ReportButton from "./ReportButton.jsx";
+import GameTop from "./GameTop.jsx";
+import Icon from "./Icons.jsx";
 
 /* Transferkarussell als Duell. Der gesamte Spielstand liegt in last_move.car und ist
    dieselbe Struktur wie im Solo-Modus — die Regeln stehen einmal in carousel.js.
@@ -221,18 +223,12 @@ export default function CarouselDuel({ code, clientId, onLeave }) {
 
   return (
     <div className="ppRoot">
-      <div className="topbar">
-        <div>
-          <h1 className="title">POSSESSION PLAY</h1>
-          <div className="subtitle">🎠 Transferkarussell · Duell</div>
-        </div>
-        <div className="iconrow">
-          <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}>{muted ? "🔇" : "🔊"}</button>
-          <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}>?</button>
+      <GameTop icon="carousel" name="Transferkarussell" ton="#F472B6" zusatz={<>Duell</>}>
+        <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}><Icon name={muted ? "mute" : "sound"} size={18} /></button>
+          <button className="iconbtn" title="Regeln" onClick={() => setShowRules(true)}><Icon name="help" size={18} /></button>
           <ReportButton mode="carousel-duell" gameCode={code} />
-          <button className="iconbtn" title="Zur Lobby" onClick={onLeave}>⏏</button>
-        </div>
-      </div>
+          <button className="iconbtn" title="Zur Lobby" onClick={onLeave}><Icon name="leave" size={18} /></button>
+      </GameTop>
 
       {status === "waiting" ? (
         <div className="panel" style={{ marginTop: 18 }}>

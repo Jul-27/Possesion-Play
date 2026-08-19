@@ -1,5 +1,7 @@
 import { collectStats, totals, hasAnyStats } from "./stats.js";
 import DataStamp from "./DataStamp.jsx";
+import GameTop from "./GameTop.jsx";
+import Icon from "./Icons.jsx";
 
 /* Statistik-Übersicht. Bisher sammelte jeder Modus seine Zahlen in einem eigenen
    Speicher, ohne dass sie irgendwo zusammen zu sehen waren — gesammelter Fortschritt
@@ -11,12 +13,9 @@ export default function Stats({ onLeave, onSolo, onDaily }) {
 
   return (
     <div className="ppRoot">
-      <div className="topbar">
-        <div><h1 className="title">POSSESSION PLAY</h1><div className="subtitle">📊 Deine Statistik</div></div>
-        <div className="iconrow">
-          <button className="iconbtn" title="Zur Lobby" onClick={onLeave}>⏏</button>
-        </div>
-      </div>
+      <GameTop icon="chart" name="Deine Statistik" ton="#22D3EE">
+        <button className="iconbtn" title="Zur Lobby" onClick={onLeave}><Icon name="leave" size={18} /></button>
+      </GameTop>
 
       {leer ? (
         <div className="panel" style={{ marginTop: 18 }}>
@@ -38,7 +37,7 @@ export default function Stats({ onLeave, onSolo, onDaily }) {
             {entries.map((e) => (
               <button key={e.key} type="button" className={`statRow ${e.played ? "" : "empty"}`}
                 onClick={() => (e.solo ? onSolo(e.solo) : onDaily())}>
-                <span className="statIcon">{e.icon}</span>
+                <span className="statIcon"><Icon name={e.icon} size={20} /></span>
                 <span className="statBody">
                   <span className="statName">{e.name}</span>
                   <span className="statLines">
@@ -47,7 +46,7 @@ export default function Stats({ onLeave, onSolo, onDaily }) {
                       : "noch nicht gespielt"}
                   </span>
                 </span>
-                {e.streak > 0 && <span className="statStreak">🔥 {e.streak}</span>}
+                {e.streak > 0 && <span className="statStreak"><Icon name="streak" size={13} /> {e.streak}</span>}
               </button>
             ))}
           </div>
