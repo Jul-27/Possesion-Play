@@ -10,6 +10,7 @@
 import { supabase, getClientId } from "./supabaseClient.js";
 import { dailyDateStr } from "./dailyLogic.js";
 import { scoreFor, MODES } from "./leaderboardScore.js";
+import { saisonSpanne, tabelle } from "./season.js";
 
 export { scoreFor, MODES };
 
@@ -62,4 +63,18 @@ export async function top(mode, day = dailyDateStr()) {
   if (error) return [];
   const me = getClientId();
   return (data || []).map((r, i) => ({ ...r, rank: i + 1, isMe: r.client_id === me }));
+}
+
+/* Saisontabelle: Punkte über den ganzen Zeitraum statt nur über heute. Die
+   Sortierung macht season.js (rein und getestet), die Datenbank liefert nur die
+   Rohsummen — so lässt sich die Reihenfolge ohne Server prüfen. */
+export async function saison(datum = dailyDateStr()) {
+  const g = getGroup();
+  const spanne = saisonSpanne(datum);
+  if (!g) return { spanne, zeilen: [] };
+  const { data, error } = await supabase.rpc("lb_season", {
+    p_code: g.code, p_von: spanne.von, p_bis: spanne.bis,
+  });
+  if (error) return { spanne, zeilen: [] };
+  return { spanne, zeilen: tabelle(data || [], getClientId()) };
 }
