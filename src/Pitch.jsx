@@ -9,7 +9,7 @@ export default function Pitch() {
       {[0, 2, 4, 6].map((i) => (
         <rect key={i} x="0" y={i * 17.5} width="100" height="17.5" fill="rgba(70,150,110,.10)" />
       ))}
-      <g fill="none" stroke="rgba(176,224,200,.30)" strokeWidth="0.5" vectorEffect="non-scaling-stroke">
+      <g fill="none" stroke="rgba(148,178,208,.28)" strokeWidth="0.5" vectorEffect="non-scaling-stroke">
         <rect x="2" y="2" width="96" height="136" rx="1" />
         <line x1="2" y1="70" x2="98" y2="70" />
         <circle cx="50" cy="70" r="14" />

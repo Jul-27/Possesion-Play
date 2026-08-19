@@ -9,6 +9,7 @@ import { collectStats } from "./stats.js";
 import { berechneXp, stufeFuer, tagesserie, offeneHeute } from "./progress.js";
 import { tagesStand, missionenDesTages, fortschritt } from "./missions.js";
 import DataStamp from "./DataStamp.jsx";
+import Icon from "./Icons.jsx";
 
 export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
   const [name, setName] = useState(getSavedName());
@@ -127,7 +128,9 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
             {stufe.naechste ? <>noch <b>{stufe.bisNaechste}</b> XP bis {stufe.naechste.name}</> : <>höchste Stufe erreicht</>}
           </div>
         </div>
-        <div className="dSerie" title="Tage in Folge gespielt"><b>{serie}</b><span>🔥 Serie</span></div>
+        <div className="dSerie" title="Tage in Folge gespielt">
+          <b>{serie}</b><span><Icon name="streak" size={12} /> Serie</span>
+        </div>
       </div>
 
       <div className="dSectionRow">
@@ -137,21 +140,21 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
 
       <button className="dHero" onClick={onDaily}>
         <div className="dHeroTop">
-          <span className="dHeroIcon">🌟</span>
+          <span className="dHeroIcon"><Icon name="star" size={28} /></span>
           <span className="dHeroNr">#{dailyNumber(heute)}</span>
         </div>
         <div className="dHeroName">Daily-Star</div>
         <div className="dHeroText">Acht Fragen, zwei Tipps — für alle dasselbe Rätsel.</div>
-        <div className="dHeroCta">{stand.dailyGespielt ? "Nochmal ansehen" : "Jetzt spielen"} <span>→</span></div>
+        <div className="dHeroCta">{stand.dailyGespielt ? "Nochmal ansehen" : "Jetzt spielen"} <Icon name="pfeil" size={17} /></div>
       </button>
 
       <button className="dWide" onClick={() => onSolo("eleven")} style={{ "--ton": "#38BDF8" }}>
-        <span className="dWideIcon">👕</span>
+        <span className="dWideIcon"><Icon name="jersey" /></span>
         <span className="dWideBody">
           <b>Elf des Tages #{dailyNumber(heute)}</b>
           <small>Startelf nach elf Bedingungen</small>
         </span>
-        <span className="dWideBadge">{stand.elfKomplett ? "✓" : stand.elfFelder ? `${stand.elfFelder}/11` : "offen"}</span>
+        <span className="dWideBadge">{stand.elfKomplett ? <Icon name="check" size={16} /> : stand.elfFelder ? `${stand.elfFelder}/11` : "offen"}</span>
       </button>
 
       <div className="dSectionRow">
@@ -163,7 +166,7 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
           const f = fortschritt(m, stand);
           return (
             <div key={m.id} className={`dMission ${f.fertig ? "fertig" : ""}`}>
-              <span className="dMissionBox">{f.fertig ? "✓" : ""}</span>
+              <span className="dMissionBox">{f.fertig && <Icon name="check" size={13} />}</span>
               <span className="dMissionText">
                 {m.text}
                 {m.ziel > 1 && !f.fertig && <i className="dMissionCount"> {f.jetzt}/{f.ziel}</i>}
@@ -183,9 +186,9 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
           return (
             <button key={m.key} className="dTile" style={{ "--ton": m.ton }} onClick={() => onSolo(m.key)}>
               <span className="dTileHead">
-                <span className="dTileIcon">{m.icon}</span>
-                {erledigt ? <span className="dCheck">✓</span>
-                  : st?.streak > 0 ? <span className="dFlame">🔥{st.streak}</span> : null}
+                <span className="dTileIcon"><Icon name={m.icon} /></span>
+                {erledigt ? <span className="dCheck"><Icon name="check" size={15} /></span>
+                  : st?.streak > 0 ? <span className="dFlame"><Icon name="streak" size={13} />{st.streak}</span> : null}
               </span>
               <b className="dTileName">{m.name}</b>
               <small className="dTileText">{m.text}</small>
@@ -197,9 +200,9 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
 
       <div className="dSectionRow"><span className="dSection">Gegen Freunde</span></div>
       <button className="dWide" aria-expanded={duelOpen} onClick={() => setDuelOpen((v) => !v)} style={{ "--ton": "#2DD4BF" }}>
-        <span className="dWideIcon">🤝</span>
+        <span className="dWideIcon"><Icon name="duel" /></span>
         <span className="dWideBody"><b>Duell starten</b><small>Vier Modi, erstellen oder mit Code beitreten</small></span>
-        <span className={`dWideChev ${duelOpen ? "open" : ""}`}>⌄</span>
+        <span className={`dWideChev ${duelOpen ? "open" : ""}`}><Icon name="chevron" size={18} /></span>
       </button>
 
       {duelOpen && (
@@ -235,8 +238,8 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
       )}
 
       <div className="dPair">
-        <button className="dSmall" onClick={onBoard}><span>🏆</span><b>Bestenliste</b><small>im Freundeskreis</small></button>
-        <button className="dSmall" onClick={onStats}><span>📊</span><b>Statistik</b><small>{raetsel} Rätsel · {modiGenutzt} Modi</small></button>
+        <button className="dSmall" onClick={onBoard}><span><Icon name="trophy" size={20} /></span><b>Bestenliste</b><small>im Freundeskreis</small></button>
+        <button className="dSmall" onClick={onStats}><span><Icon name="chart" size={20} /></span><b>Statistik</b><small>{raetsel} Rätsel · {modiGenutzt} Modi</small></button>
       </div>
 
       <DataStamp />
@@ -247,12 +250,12 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
 /* Ein Farbton je Modus. Vorher teilten sich alle ein Türkis, weshalb das Raster
    monoton wirkte, obwohl jede Kachel für sich sauber war. */
 const SOLO_MODI = [
-  { key: "career",   name: "Karriere-Pfad",     icon: "🧭", ton: "#A78BFA", text: "Stationen erraten",     daily: true },
-  { key: "odd",      name: "Wer passt nicht?",  icon: "🧩", ton: "#A3E635", text: "Drei gehören zusammen", daily: true },
-  { key: "chain",    name: "Fußball-Kette",     icon: "⛓️", ton: "#22D3EE", text: "Gegen die Uhr",         daily: true },
-  { key: "heat",     name: "Heatmap",           icon: "🔥", ton: "#FB923C", text: "Combos und Hitze",      daily: true },
-  { key: "hex",      name: "Hex-Training",      icon: "🎯", ton: "#2DD4BF", text: "Ohne Zeitdruck",        daily: true },
-  { key: "carousel", name: "Transferkarussell", icon: "🎠", ton: "#F472B6", text: "Gegen den Bot",         daily: false },
+  { key: "career",   name: "Karriere-Pfad",     icon: "route", ton: "#A78BFA", text: "Stationen erraten",     daily: true },
+  { key: "odd",      name: "Wer passt nicht?",  icon: "odd", ton: "#A3E635", text: "Drei gehören zusammen", daily: true },
+  { key: "chain",    name: "Fußball-Kette",     icon: "chain", ton: "#22D3EE", text: "Gegen die Uhr",         daily: true },
+  { key: "heat",     name: "Heatmap",           icon: "flame", ton: "#FB923C", text: "Combos und Hitze",      daily: true },
+  { key: "hex",      name: "Hex-Training",      icon: "hex", ton: "#2DD4BF", text: "Ohne Zeitdruck",        daily: true },
+  { key: "carousel", name: "Transferkarussell", icon: "carousel", ton: "#F472B6", text: "Gegen den Bot",         daily: false },
 ];
 
 const DUELL_MODI = [
