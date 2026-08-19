@@ -2,6 +2,7 @@ import { collectStats, totals, hasAnyStats } from "./stats.js";
 import DataStamp from "./DataStamp.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
+import { alleBadges, BADGES } from "./badges.js";
 
 /* Statistik-Übersicht. Bisher sammelte jeder Modus seine Zahlen in einem eigenen
    Speicher, ohne dass sie irgendwo zusammen zu sehen waren — gesammelter Fortschritt
@@ -33,6 +34,34 @@ export default function Stats({ onLeave, onSolo, onDaily }) {
             <div className="statTotal"><b>{t.bestStreak}</b><span>längste Serie</span></div>
           </div>
 
+          {(() => {
+            const badges = alleBadges();
+            const erreicht = badges.filter((b) => b.fertig).length;
+            return (
+              <>
+                <div className="dSectionRow">
+                  <span className="dSection">Abzeichen</span>
+                  <span className={`dOffen ${erreicht === BADGES.length ? "" : "ghost"}`}>
+                    {erreicht}/{BADGES.length}
+                  </span>
+                </div>
+                <div className="badgeGrid">
+                  {badges.map((b) => (
+                    <div key={b.id} className={`badge ${b.fertig ? "hat" : ""}`} title={b.text}>
+                      <span className="badgeIcon"><Icon name={b.icon} size={21} /></span>
+                      <b className="badgeName">{b.name}</b>
+                      <small className="badgeText">{b.text}</small>
+                      {b.fertig
+                        ? <span className="badgeXp">+{b.xp} XP</span>
+                        : <span className="badgeBar"><i style={{ width: `${Math.round(b.anteil * 100)}%` }} /></span>}
+                    </div>
+                  ))}
+                </div>
+              </>
+            );
+          })()}
+
+          <div className="dSectionRow"><span className="dSection">Modi</span></div>
           <div className="statList">
             {entries.map((e) => (
               <button key={e.key} type="button" className={`statRow ${e.played ? "" : "empty"}`}
