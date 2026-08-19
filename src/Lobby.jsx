@@ -10,6 +10,7 @@ import { berechneXp, stufeFuer, tagesserie, offeneHeute } from "./progress.js";
 import { tagesStand, missionenDesTages, fortschritt } from "./missions.js";
 import DataStamp from "./DataStamp.jsx";
 import Icon from "./Icons.jsx";
+import { erreichteAnzahl, BADGES } from "./badges.js";
 
 export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
   const [name, setName] = useState(getSavedName());
@@ -239,7 +240,7 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
 
       <div className="dPair">
         <button className="dSmall" onClick={onBoard}><span><Icon name="trophy" size={20} /></span><b>Bestenliste</b><small>im Freundeskreis</small></button>
-        <button className="dSmall" onClick={onStats}><span><Icon name="chart" size={20} /></span><b>Statistik</b><small>{raetsel} Rätsel · {modiGenutzt} Modi</small></button>
+        <button className="dSmall" onClick={onStats}><span><Icon name="chart" size={20} /></span><b>Statistik</b><small>{raetsel} Rätsel · {erreichteAnzahl()}/{BADGES.length} Abzeichen</small></button>
       </div>
 
       <DataStamp />

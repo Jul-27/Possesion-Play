@@ -9,6 +9,7 @@
 import { collectStats, totals } from "./stats.js";
 import { challengeState, CHALLENGE_MODES } from "./dailyChallenge.js";
 import { missionsXp } from "./missions.js";
+import { badgeXp, badgeStand } from "./badges.js";
 
 /* Fußball-Stufen statt „Level 7". Die Schwellen wachsen, aber nicht brutal: die
    erste Stufe nach ein paar Rätseln, die letzte als echtes Fernziel. */
@@ -49,12 +50,15 @@ export function berechneXp(entries = collectStats(), missionen = [], stand = nul
   const t = totals(entries);
   const serien = entries.reduce((s, e) => s + (e.streak || 0), 0);
   const ausMissionen = stand ? missionsXp(missionen, stand) : 0;
+  const ausAbzeichen = badgeXp(badgeStand(undefined, entries));
   return {
-    xp: t.played * XP_PRO_RAETSEL + serien * XP_PRO_SERIENTAG + t.modes * XP_PRO_MODUS + ausMissionen,
+    xp: t.played * XP_PRO_RAETSEL + serien * XP_PRO_SERIENTAG + t.modes * XP_PRO_MODUS
+      + ausMissionen + ausAbzeichen,
     raetsel: t.played,
     modi: t.modes,
     serienTage: serien,
     ausMissionen,
+    ausAbzeichen,
   };
 }
 
