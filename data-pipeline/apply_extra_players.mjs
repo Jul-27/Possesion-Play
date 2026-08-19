@@ -42,6 +42,12 @@ export const EXTRA_PLAYERS = [
   { n: "Fábio Vieira",    by: 2000, clubs: ["HSV"] },
   { n: "Marin Pongracic", by: 1997, clubs: ["RBS"] },
 
+  /* Gemeldet über „Fehler melden" aus dem Transferkarussell-Duell (18.08.2026).
+     Wikidata führt ihn als „Chikwubuike Adamu" (Q58170823) und kennt dort nur den
+     FC Liefering — auch ein Voll-Refresh brächte Freiburg also nicht. de.wikipedia
+     führt SC Freiburg 2023–2026 in der Karrieretabelle. */
+  { n: "Junior Adamu",    by: 2001, clubs: ["SCF"] },
+
   // Lothar Matthäus fehlte komplett: sein Wikidata-Eintrag führt als Beruf nur
   // „Fußballtrainer", nicht „Fußballspieler" (P106=Q937857) — der Roster-Filter
   // schließt ihn dadurch aus. Vereine/Titel/cp sind aus Wikidata belegt (P54 + die

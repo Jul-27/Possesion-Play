@@ -17336,7 +17336,7 @@ export const PLAYERS = [
   {"n": "Junichi Inamoto", "ln": "Inamoto", "by": 1979, "nat": ["JPN"], "clubs": ["ARS","SGE"], "t": ["MPL"], "sl": 58, "pos": "MF", "cp": [["ARS",2001,2002],["SGE",2007,2009]], "lg": ["BL","L1","PL"], "span": [2001,2010]},
   {"n": "Juninho Paulista", "ln": "Paulista", "by": 1973, "nat": ["BRA"], "clubs": ["ATM"], "t": ["CA","WM"], "sl": 33, "pos": "MF", "cp": [["ATM",1997,2002]], "lg": ["LL"], "span": [1993,2007]},
   {"n": "Juninho Pernambucano", "ln": "Pernambucano", "by": 1975, "nat": ["BRA"], "clubs": ["OL"], "t": ["CA","ML1","WM"], "sl": 50, "pos": "MF", "cp": [["OL",2001,2009]], "lg": ["L1"], "span": [1992,2014]},
-  {"n": "Junior Adamu", "ln": "Adamu", "by": 2001, "nat": ["AUT"], "clubs": ["S04"], "sl": 24, "pos": "MF", "cp": [["S04",2026,0]]},
+  {"n": "Junior Adamu", "ln": "Adamu", "by": 2001, "nat": ["AUT"], "clubs": ["S04","SCF"], "sl": 24, "pos": "MF", "cp": [["S04",2026,0]]},
   {"n": "Junior Ajayi", "ln": "Ajayi", "by": 1996, "nat": ["NGA"], "clubs": [], "sl": 16, "pos": "ST"},
   {"n": "Júnior Alonso", "ln": "Júnior Alonso", "by": 1993, "nat": [], "clubs": ["LIL"], "pos": "ABW"},
   {"n": "Júnior Baiano", "ln": "Baiano", "by": 1970, "nat": ["BRA"], "clubs": ["SVW"], "t": ["CA","WM"], "sl": 30, "pos": "ABW", "cp": [["SVW",1995,1996]], "lg": ["BL"], "span": [1989,2005]},
