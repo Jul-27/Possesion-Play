@@ -5,12 +5,12 @@
    weniger besser ist (Stationen, Züge), wird umgerechnet. */
 
 export const MODES = {
-  career: { name: "Karriere-Pfad", icon: "🧭", label: (s, d) => (d?.solved ? `nach ${d.stations} Stat.` : "aufgelöst") },
-  odd:    { name: "Wer passt nicht?", icon: "🧩", label: (s) => (s > 0 ? "richtig" : "daneben") },
-  chain:  { name: "Fußball-Kette", icon: "⛓️", label: (s, d) => `${d?.length ?? s} Spieler` },
-  hex:    { name: "Hex-Training", icon: "🎯", label: (s, d) => `${d?.moves ?? "?"} Züge` },
-  eleven: { name: "Elf des Tages", icon: "👕", label: (s, d) => (d?.wrong ? `${d.wrong} Fehlversuche` : "ohne Fehler") },
-  heat:   { name: "Heatmap", icon: "🔥", label: (s, d) => `Dichte ${(d?.density ?? 0).toFixed(2)}` },
+  career: { name: "Karriere-Pfad", icon: "route", label: (s, d) => (d?.solved ? `nach ${d.stations} Stat.` : "aufgelöst") },
+  odd:    { name: "Wer passt nicht?", icon: "odd", label: (s) => (s > 0 ? "richtig" : "daneben") },
+  chain:  { name: "Fußball-Kette", icon: "chain", label: (s, d) => `${d?.length ?? s} Spieler` },
+  hex:    { name: "Hex-Training", icon: "hex", label: (s, d) => `${d?.moves ?? "?"} Züge` },
+  eleven: { name: "Elf des Tages", icon: "jersey", label: (s, d) => (d?.wrong ? `${d.wrong} Fehlversuche` : "ohne Fehler") },
+  heat:   { name: "Heatmap", icon: "flame", label: (s, d) => `Dichte ${(d?.density ?? 0).toFixed(2)}` },
 };
 
 export function scoreFor(mode, result = {}) {

@@ -97,7 +97,7 @@ export default function Leaderboard({ onLeave }) {
           <div className="lbTabs">
             {Object.entries(MODES).map(([k, m]) => (
               <button key={k} type="button" className={`lbTab ${mode === k ? "active" : ""}`} onClick={() => setMode(k)}>
-                <span>{m.icon}</span>
+                <span><Icon name={m.icon} size={17} /></span>
               </button>
             ))}
           </div>

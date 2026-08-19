@@ -744,3 +744,14 @@ body::after {
   font-family: 'DM Mono', monospace; font-size: 11.5px; color: var(--gold); }
 .statIcon { display: grid; place-items: center; color: var(--teal); }
 .statStreak { display: inline-flex; align-items: center; gap: 4px; }
+/* Gezeichnete Icons in den runden Feld-Emblemen: Größe relativ zum Kreis */
+.emblem.icon .ic { width: 60%; height: auto; color: #fff; }
+.chip .ic { display: inline-block; vertical-align: -2px; margin-right: 2px; }
+
+/* Kopfzeile auf schmalen Geräten: vier Knöpfe à 40 px lassen für den Modusnamen
+   nur ~110 px — „Hex-Training" brach um und der Zusatz wurde abgeschnitten.
+   Knöpfe etwas kleiner, Abstände enger, Zusatz darf umbrechen statt zu kürzen. */
+.gtop .iconbtn { width: 36px; height: 36px; font-size: 15px; border-radius: 11px; }
+.gtop .iconrow { gap: 6px; }
+.gtopText b { font-size: 16px; }
+.gtopText small { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.3; }

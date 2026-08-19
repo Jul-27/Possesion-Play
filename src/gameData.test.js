@@ -56,7 +56,7 @@ test("HONOURS enthält 15 Honours als type 'honour'", () => {
   );
   for (const h of HONOURS) {
     assert.equal(h.type, "honour");
-    assert.ok(h.name && h.label && h.icon && h.c1 && h.c2);
+    assert.ok(h.name && h.label && h.ic && h.c1 && h.c2, `${h.key}: name/label/ic/Farben nötig`);
   }
 });
 

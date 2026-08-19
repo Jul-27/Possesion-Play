@@ -111,17 +111,20 @@ export function activeInRange(p, from, to) {
 const TOP5 = new Set(["BL", "PL", "LL", "SA", "L1"]);
 
 // Nur DB-prüfbare Spezialfelder (Geburtsjahr / Karrierezeitraum / Liga-Vielfalt).
+/* `ic` ist ein Formname aus Icons.jsx, kein Emoji. Mehrere Felder teilen sich
+   bewusst eine Form — WELCHER Jahrgang oder WELCHE Liga gemeint ist, sagt die
+   Beschriftung der Kachel, nicht das Zeichen. */
 export const SPECIALS = [
-  { key: "Y2K", label: "AB 2000",   icon: "🎂", name: "Geboren ab 2000",   c1: "#34D399", c2: "#065f46", test: (p) => p.by >= 2000 },
-  { key: "N90", label: "90ER JG.",  icon: "📅", name: "Geboren 1990–1999", c1: "#A78BFA", c2: "#5b21b6", test: (p) => p.by >= 1990 && p.by <= 1999 },
-  { key: "OLD", label: "VOR 1990",  icon: "⏳", name: "Geboren vor 1990",  c1: "#94a3b8", c2: "#475569", test: (p) => p.by < 1990 },
-  { key: "A90", label: "90ER AKTIV", icon: "📼", name: "Aktiv in den 90ern",   c1: "#F472B6", c2: "#831843", test: (p) => activeInRange(p, 1990, 1999) },
-  { key: "A00", label: "00ER AKTIV", icon: "💿", name: "Aktiv in den 2000ern", c1: "#60A5FA", c2: "#1e3a8a", test: (p) => activeInRange(p, 2000, 2009) },
-  { key: "A10", label: "10ER AKTIV", icon: "📱", name: "Aktiv in den 2010ern", c1: "#FBBF24", c2: "#78350f", test: (p) => activeInRange(p, 2010, 2019) },
-  { key: "B70", label: "70ER JG.",   icon: "📻", name: "Geboren 1970–1979", c1: "#D4A373", c2: "#6b4423", test: (p) => p.by >= 1970 && p.by <= 1979 },
-  { key: "B80", label: "80ER JG.",   icon: "🎧", name: "Geboren 1980–1989", c1: "#C084FC", c2: "#581c87", test: (p) => p.by >= 1980 && p.by <= 1989 },
-  { key: "B00", label: "2000ER JG.", icon: "🎮", name: "Geboren 2000–2009", c1: "#4ADE80", c2: "#14532d", test: (p) => p.by >= 2000 && p.by <= 2009 },
-  { key: "T5L", label: "3+ TOP-LIGEN", icon: "🌐", name: "In 3+ Top-5-Ligen gespielt", c1: "#38BDF8", c2: "#0c4a6e",
+  { key: "Y2K", label: "AB 2000",   ic: "cake", name: "Geboren ab 2000",   c1: "#34D399", c2: "#065f46", test: (p) => p.by >= 2000 },
+  { key: "N90", label: "90ER JG.",  ic: "cake", name: "Geboren 1990–1999", c1: "#A78BFA", c2: "#5b21b6", test: (p) => p.by >= 1990 && p.by <= 1999 },
+  { key: "OLD", label: "VOR 1990",  ic: "cake", name: "Geboren vor 1990",  c1: "#94a3b8", c2: "#475569", test: (p) => p.by < 1990 },
+  { key: "A90", label: "90ER AKTIV", ic: "clock", name: "Aktiv in den 90ern",   c1: "#F472B6", c2: "#831843", test: (p) => activeInRange(p, 1990, 1999) },
+  { key: "A00", label: "00ER AKTIV", ic: "clock", name: "Aktiv in den 2000ern", c1: "#60A5FA", c2: "#1e3a8a", test: (p) => activeInRange(p, 2000, 2009) },
+  { key: "A10", label: "10ER AKTIV", ic: "clock", name: "Aktiv in den 2010ern", c1: "#FBBF24", c2: "#78350f", test: (p) => activeInRange(p, 2010, 2019) },
+  { key: "B70", label: "70ER JG.",   ic: "cake", name: "Geboren 1970–1979", c1: "#D4A373", c2: "#6b4423", test: (p) => p.by >= 1970 && p.by <= 1979 },
+  { key: "B80", label: "80ER JG.",   ic: "cake", name: "Geboren 1980–1989", c1: "#C084FC", c2: "#581c87", test: (p) => p.by >= 1980 && p.by <= 1989 },
+  { key: "B00", label: "2000ER JG.", ic: "cake", name: "Geboren 2000–2009", c1: "#4ADE80", c2: "#14532d", test: (p) => p.by >= 2000 && p.by <= 2009 },
+  { key: "T5L", label: "3+ TOP-LIGEN", ic: "network", name: "In 3+ Top-5-Ligen gespielt", c1: "#38BDF8", c2: "#0c4a6e",
     test: (p) => [...leaguesOf(p)].filter((lg) => TOP5.has(lg)).length >= 3 },
 ].map((s) => ({ ...s, type: "spec" }));
 
@@ -149,21 +152,21 @@ export function leaguesOf(player) {
 
 // Honour-Felder: erfüllt, wenn der Spieler den Titel gewonnen hat (player.t).
 export const HONOURS = [
-  { key: "CL",  label: "CL",  name: "Champions-League-Sieger", icon: "🏆", c1: "#1b2a6b", c2: "#0a1030" },
-  { key: "WM",  label: "WM",  name: "Weltmeister",            icon: "🌍", c1: "#C9A227", c2: "#6b4e00" },
-  { key: "MBL", label: "DE",  name: "Deutscher Meister",      icon: "🏅", c1: "#D3010C", c2: "#1a1a1a" },
-  { key: "MPL", label: "EN",  name: "Englischer Meister",     icon: "🏅", c1: "#3D195B", c2: "#1f0e36" },
-  { key: "MLL", label: "ES",  name: "Spanischer Meister",     icon: "🏅", c1: "#E03A3E", c2: "#1f1f3c" },
-  { key: "MSA", label: "IT",  name: "Italienischer Meister",  icon: "🏅", c1: "#0A66B0", c2: "#0a2a4a" },
-  { key: "ML1", label: "FR",  name: "Französischer Meister",  icon: "🏅", c1: "#091C3E", c2: "#1d6f6f" },
-  { key: "DFB", label: "DFB", name: "DFB-Pokal-Sieger",       icon: "🥇", c1: "#D3010C", c2: "#1a1a1a" },
-  { key: "FAC", label: "FA",  name: "FA-Cup-Sieger",          icon: "🥇", c1: "#3D195B", c2: "#1f0e36" },
-  { key: "CDR", label: "CDR", name: "Copa-del-Rey-Sieger",    icon: "🥇", c1: "#E03A3E", c2: "#1f1f3c" },
-  { key: "CIT", label: "CIT", name: "Coppa-Italia-Sieger",    icon: "🥇", c1: "#0A66B0", c2: "#0a2a4a" },
-  { key: "BDO", label: "BdO", name: "Ballon-d'Or-Sieger",     icon: "👑", c1: "#C9A227", c2: "#3d2f00" },
-  { key: "EM",  label: "EM",  name: "Europameister",          icon: "🇪🇺", c1: "#123B8F", c2: "#C9A227" },
-  { key: "CA",  label: "CA",  name: "Copa-América-Sieger",    icon: "🌎", c1: "#2DD4BF", c2: "#0e4d44" },
-  { key: "EL",  label: "EL",  name: "Europa-League-Sieger",   icon: "🏆", c1: "#F26F21", c2: "#5c2500" },
+  { key: "CL",  label: "CL",  name: "Champions-League-Sieger", ic: "trophy", c1: "#1b2a6b", c2: "#0a1030" },
+  { key: "WM",  label: "WM",  name: "Weltmeister",            ic: "globe", c1: "#C9A227", c2: "#6b4e00" },
+  { key: "MBL", label: "DE",  name: "Deutscher Meister",      ic: "medal", c1: "#D3010C", c2: "#1a1a1a" },
+  { key: "MPL", label: "EN",  name: "Englischer Meister",     ic: "medal", c1: "#3D195B", c2: "#1f0e36" },
+  { key: "MLL", label: "ES",  name: "Spanischer Meister",     ic: "medal", c1: "#E03A3E", c2: "#1f1f3c" },
+  { key: "MSA", label: "IT",  name: "Italienischer Meister",  ic: "medal", c1: "#0A66B0", c2: "#0a2a4a" },
+  { key: "ML1", label: "FR",  name: "Französischer Meister",  ic: "medal", c1: "#091C3E", c2: "#1d6f6f" },
+  { key: "DFB", label: "DFB", name: "DFB-Pokal-Sieger",       ic: "cup", c1: "#D3010C", c2: "#1a1a1a" },
+  { key: "FAC", label: "FA",  name: "FA-Cup-Sieger",          ic: "cup", c1: "#3D195B", c2: "#1f0e36" },
+  { key: "CDR", label: "CDR", name: "Copa-del-Rey-Sieger",    ic: "cup", c1: "#E03A3E", c2: "#1f1f3c" },
+  { key: "CIT", label: "CIT", name: "Coppa-Italia-Sieger",    ic: "cup", c1: "#0A66B0", c2: "#0a2a4a" },
+  { key: "BDO", label: "BdO", name: "Ballon-d'Or-Sieger",     ic: "crown", c1: "#C9A227", c2: "#3d2f00" },
+  { key: "EM",  label: "EM",  name: "Europameister",          ic: "stars", c1: "#123B8F", c2: "#C9A227" },
+  { key: "CA",  label: "CA",  name: "Copa-América-Sieger",    ic: "globe", c1: "#2DD4BF", c2: "#0e4d44" },
+  { key: "EL",  label: "EL",  name: "Europa-League-Sieger",   ic: "trophy", c1: "#F26F21", c2: "#5c2500" },
 ].map((h) => ({ ...h, type: "honour" }));
 
 /* Spielerdaten liegen in ./players.js (~2,6 MB) und werden NICHT mehr statisch
