@@ -152,6 +152,12 @@ const FORMEN = {
     <path {...P} d="M10.6 7.4L6.8 15M13.4 7.4L17.2 15M7.8 17.4h8.4" />
   </>,
 
+  // Sammlung — gestapelte Karten
+  cards: <>
+    <path {...P} d="M8.2 7.6h9.6a2 2 0 012 2v8.6a2 2 0 01-2 2H8.2a2 2 0 01-2-2V9.6a2 2 0 012-2z" />
+    <path {...P} d="M9.4 4.8h8.2a3 3 0 013 3v7.4" />
+  </>,
+
   check: <path {...P} d="M4.5 12.5l5 5 10-11" />,
   pfeil: <><path {...P} d="M4.5 12h15" /><path {...P} d="M13.5 6l6 6-6 6" /></>,
   chevron: <path {...P} d="M6 9.5l6 6 6-6" />,

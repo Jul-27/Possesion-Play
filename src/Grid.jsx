@@ -13,6 +13,7 @@ import { useLeaveEndsGame } from "./usePresence.js";
 import ReportButton from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
+import { merkeSpieler } from "./collection.js";
 
 export default function Grid({ code, clientId, onLeave }) {
   const [row, setRow] = useState(null);
@@ -181,6 +182,7 @@ export default function Grid({ code, clientId, onLeave }) {
     const win = gridWinner(newOwners);
     const full = Object.keys(newOwners).length === 9;
     setSelected(null); setNameInput(""); setChosen(null); setSugOpen(false); setLocalFeedback(null);
+    merkeSpieler(player);
     play("ok");
     writeMove({
       owners: newOwners,

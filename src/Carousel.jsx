@@ -18,6 +18,7 @@ import { shareCarousel } from "./share.js";
 import ReportButton from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
+import { merkeSpieler } from "./collection.js";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -164,6 +165,7 @@ export default function Carousel({ onLeave }) {
         return setFeedback({ ok: false, text: `${hit.n} hat außer ${ziel} keinen freien Verein — such jemanden, der die Kette weiterträgt.` });
       }
     }
+    merkeSpieler(hit);
     setState((s) => addMove(s, "player", hit.n));
     setEingabe(""); setSugOpen(false); setFeedback(null); play("ok");
   }

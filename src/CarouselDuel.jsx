@@ -16,6 +16,7 @@ import DataStamp from "./DataStamp.jsx";
 import ReportButton from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
+import { merkeSpieler } from "./collection.js";
 
 /* Transferkarussell als Duell. Der gesamte Spielstand liegt in last_move.car und ist
    dieselbe Struktur wie im Solo-Modus — die Regeln stehen einmal in carousel.js.
@@ -184,6 +185,7 @@ export default function CarouselDuel({ code, clientId, onLeave }) {
       }
     }
     setEingabe(""); setFeedback(null); play("ok");
+    merkeSpieler(hit);
     return zugSchreiben(addMove(state, "player", hit.n));
   }
 

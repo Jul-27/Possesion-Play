@@ -14,6 +14,7 @@ import { useLeaveEndsGame } from "./usePresence.js";
 import ReportButton from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
+import { merkeSpieler } from "./collection.js";
 
 const sigOf = (dim, val) =>
   dim === "born" ? `born:${val.cmp}:${val.year}` :
@@ -215,6 +216,7 @@ export default function Guess({ code, clientId, onLeave }) {
     const idx = players.indexOf(player);
     setNameInput(""); setChosen(null); setSugOpen(false);
     if (checkGuess(board.tgt, idx)) {
+      merkeSpieler(player);
       writeMove({ status: "finished", clocks: chargedClocks(),
         last_move: { ...(row.last_move || {}), log: [...log, { p: myPlayer, guess: player.n, correct: true }], winner: myPlayer } });
     } else {

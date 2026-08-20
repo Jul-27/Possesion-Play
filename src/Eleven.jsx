@@ -14,6 +14,7 @@ import { submit as lbSubmit } from "./leaderboard.js";
 import ReportButton from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
+import { merkeSpieler } from "./collection.js";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -111,6 +112,7 @@ export default function Eleven({ onLeave }) {
 
     const next = [...names]; next[active] = hit.n; setNames(next);
     setNameInput(""); setSugOpen(false); setActive(null); setFeedback(null);
+    merkeSpieler(player);
     play("ok");
   }
 

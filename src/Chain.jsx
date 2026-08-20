@@ -16,6 +16,7 @@ import { submit as lbSubmit } from "./leaderboard.js";
 import ReportButton from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
+import { merkeSpieler } from "./collection.js";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -106,6 +107,7 @@ export default function Chain({ onLeave }) {
     setLeft((s) => s + CHAIN_BONUS_SECONDS);
     setFeedback({ ok: true, text: `+${CHAIN_BONUS_SECONDS}s · über ${attrLabel(via)}` });
     setNameInput(""); setSugOpen(false); setSugActive(-1);
+    merkeSpieler(player);
     play("ok");
 
     // Sackgasse: der neue Spieler hat keine freien Anschlüsse mehr

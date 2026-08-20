@@ -11,6 +11,7 @@ import { tagesStand, missionenDesTages, fortschritt } from "./missions.js";
 import DataStamp from "./DataStamp.jsx";
 import Icon from "./Icons.jsx";
 import { erreichteAnzahl, BADGES } from "./badges.js";
+import { gesammelt } from "./collection.js";
 
 export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
   const [name, setName] = useState(getSavedName());
@@ -237,6 +238,15 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
           {error && <div className="fb err" style={{ marginTop: 12 }}>{error}</div>}
         </div>
       )}
+
+      <button className="dWide" onClick={() => onSolo("sammlung")} style={{ "--ton": "#A78BFA" }}>
+        <span className="dWideIcon"><Icon name="cards" /></span>
+        <span className="dWideBody">
+          <b>Sammlung</b>
+          <small>Jeder richtig genannte Spieler bleibt als Karte</small>
+        </span>
+        <span className="dWideBadge">{gesammelt().size}</span>
+      </button>
 
       <div className="dPair">
         <button className="dSmall" onClick={onBoard}><span><Icon name="trophy" size={20} /></span><b>Bestenliste</b><small>im Freundeskreis</small></button>
