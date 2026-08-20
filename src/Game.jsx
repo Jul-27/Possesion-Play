@@ -13,6 +13,7 @@ import { useLeaveEndsGame } from "./usePresence.js";
 import ReportButton from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
+import { merkeSpieler } from "./collection.js";
 
 export default function Game({ code, clientId, onLeave }) {
   const [row, setRow] = useState(null);
@@ -206,6 +207,7 @@ export default function Game({ code, clientId, onLeave }) {
     setSelected(null); setNameInput(""); setChosen(null); setSugOpen(false); setLocalFeedback(null);
     const rem = liveRemaining(clk, myPlayer, Date.now());
     const nextClocks = { ...clk, [myPlayer]: rem, started: new Date().toISOString() };
+    merkeSpieler(player);
     play("ok");
     writeMove({ owners: newOwners, turn: myPlayer === 1 ? 2 : 1, status: neutralLeft === 0 ? "finished" : "playing", last_move: move, clocks: nextClocks });
   }

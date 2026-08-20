@@ -16,6 +16,7 @@ import { submit as lbSubmit } from "./leaderboard.js";
 import ReportButton from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
+import { merkeSpieler } from "./collection.js";
 
 // Hex-Training: volles Duell-Board, aber solo, ohne Uhr und ohne Zugverlust.
 /* Hex-Training war der einzige Modus ohne jeden gespeicherten Fortschritt — gelöste
@@ -83,6 +84,7 @@ export default function Solo({ onLeave }) {
       setNameInput(""); setChosen(null); setSugOpen(false);
       return;
     }
+    merkeSpieler(player);
     const newOwners = { ...owners, [String(selected)]: 1 };
     const claimed = [selected];
     ADJP[selected].forEach((ai) => {

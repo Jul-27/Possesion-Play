@@ -16,6 +16,7 @@ import { submit as lbSubmit } from "./leaderboard.js";
 import ReportButton from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
+import { merkeSpieler } from "./collection.js";
 
 /* 🔥 Heatmap — Solo-Modus auf dem bekannten Brett, aber mit Wertung statt Eroberung.
    Alle Regeln stehen in heatmap.js; hier steht nur, wie sie sichtbar werden. */
@@ -80,6 +81,7 @@ export default function Heatmap({ onLeave }) {
       return;
     }
 
+    merkeSpieler(player);
     const naechste = applyHeat(heat, zug);
     setHeat(naechste); setScore((s) => s + zug.punkte); setMoves((m) => m + 1);
     setLastClaimed([...zug.neu, ...zug.reheat]); setTimeout(() => setLastClaimed([]), 900);

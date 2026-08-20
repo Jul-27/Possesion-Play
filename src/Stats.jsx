@@ -47,7 +47,7 @@ export default function Stats({ onLeave, onSolo, onDaily }) {
                 </div>
                 <div className="badgeGrid">
                   {badges.map((b) => (
-                    <div key={b.id} className={`badge ${b.fertig ? "hat" : ""}`} title={b.text}>
+                    <div key={b.id} className={`abzKarte ${b.fertig ? "hat" : ""}`} title={b.text}>
                       <span className="badgeIcon"><Icon name={b.icon} size={21} /></span>
                       <b className="badgeName">{b.name}</b>
                       <small className="badgeText">{b.text}</small>

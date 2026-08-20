@@ -15,6 +15,7 @@ import DataStamp from "./DataStamp.jsx";
 import ReportButton from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
+import { merkeSpieler } from "./collection.js";
 
 const sigOf = (dim, val) =>
   dim === "born" ? `born:${val.cmp}:${val.year}` :
@@ -123,6 +124,7 @@ export default function Daily({ onLeave }) {
     setNameInput(""); setChosen(null); setSugOpen(false);
     if (player === target) {
       setFeedback(null);
+      merkeSpieler(player);
       play("win");
       save({ ...game, log: [...log, { guess: player.n, correct: true }], done: true, won: true });
     } else {

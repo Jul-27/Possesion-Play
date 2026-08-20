@@ -14,6 +14,7 @@ import { submit as lbSubmit } from "./leaderboard.js";
 import ReportButton from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
+import { merkeSpieler } from "./collection.js";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -84,7 +85,7 @@ export default function Career({ onLeave }) {
     }
     if (!player) { setFeedback({ type: "err", text: "Bitte einen Spieler aus der Vorschlagsliste wählen." }); return; }
     setNameInput(""); setChosen(null); setSugOpen(false);
-    if (player === target) { setFeedback(null); finish(true); return; }
+    if (player === target) { setFeedback(null); merkeSpieler(player); finish(true); return; }
     setWrong((w) => w + 1);
     if (allShown) {
       setFeedback({ type: "err", text: `${player.n} ist leider falsch.` });
