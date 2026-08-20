@@ -167,7 +167,11 @@ body::after {
 .hex::before {
   content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
   background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0) 42%);
-  box-shadow: inset 0 -13px 18px rgba(0,0,0,.3);
+  /* Bodenschatten bewusst schwach: Bei allen Reihen außer der untersten verdeckt
+     die nächste Reihe die dunkle Hexspitze. Ganz unten steht sie frei und ließ
+     die Kacheln wie abgeschnitten aussehen. Der Wert stammt aus dem alten
+     dunkelgrünen Thema mit kräftiger Vignette; auf dem neuen Grund trägt weniger. */
+  box-shadow: inset 0 -7px 11px rgba(0,0,0,.16);
 }
 /* Hairline-Kante entlang der Hex-Form (über dem Inhalt, nur Rand) */
 .hex::after {

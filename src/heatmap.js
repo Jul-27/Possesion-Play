@@ -91,7 +91,12 @@ const RAMPE = [
   { c1: "#FB923C", c2: "#F97316", kante: "#FED7AA", txt: "#431407" }, // 3 orange
   { c1: "#F87171", c2: "#EF4444", kante: "#FCA5A5", txt: "#450A0A" }, // 4 hellrot
   { c1: "#DC2626", c2: "#991B1B", kante: "#F87171", txt: "#FFF1F2" }, // 5 rot
-  { c1: "#292524", c2: "#0C0A09", kante: "#78716C", txt: "#FAFAF9" }, // 6+ schwarz
+  /* Stufe 6 ist Schwarz — und Schwarz sieht auf dunklem Grund aus wie GAR NICHTS.
+     Ein unerobertes Feld ist rgba(30,42,58) und damit ebenfalls fast schwarz; die
+     heißesten Felder wirkten dadurch unerobert. Die Füllung bleibt schwarz, aber
+     warm getönt, und bekommt einen glühenden Rand plus inneres Glimmen — Kohle,
+     die noch brennt, statt eines Lochs im Brett. */
+  { c1: "#241713", c2: "#0B0605", kante: "#F97316", txt: "#FFE4CC", glut: true }, // 6+ durchgeglüht
 ];
 
 /** Malvorschrift für eine Zelle — `null` heißt „unerobert, Standardfarbe". */
@@ -103,8 +108,12 @@ export function heatPaint(level = 0) {
     bg: `linear-gradient(150deg, ${r.c1}, ${r.c2})`,
     border: `1px solid ${r.kante}`,
     txt: r.txt,
-    // Glanzkante oben, mit dunkler werdender Kachel zurückgenommen
-    shadow: `inset 0 1px 0 rgba(255,255,255,${(0.4 - stufe * 0.06).toFixed(2)})`,
+    /* Glanzkante oben, mit dunkler werdender Kachel zurückgenommen. Die oberste
+       Stufe bekommt stattdessen inneres Glimmen — nur so ist sie von einem
+       unereroberten Feld zu unterscheiden. */
+    shadow: r.glut
+      ? "inset 0 0 15px rgba(249,115,22,.5), inset 0 0 3px rgba(249,115,22,.7)"
+      : `inset 0 1px 0 rgba(255,255,255,${(0.4 - stufe * 0.06).toFixed(2)})`,
   };
 }
 

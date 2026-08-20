@@ -147,8 +147,11 @@ export default function Heatmap({ onLeave }) {
         <span className="heatLegendLab">Hitze</span>
         {Array.from({ length: HEAT_MAX }, (_, i) => i + 1).map((stufe) => {
           const p = heatPaint(stufe);
+          // boxShadow mit übernehmen: sonst zeigte die Legende die heißeste Stufe ohne
+          // ihr Glimmen und damit nicht das, was auf dem Brett steht.
           return (
-            <span key={stufe} className="heatLegendDot" style={{ background: p.bg, color: p.txt, border: p.border }}>
+            <span key={stufe} className="heatLegendDot"
+              style={{ background: p.bg, color: p.txt, border: p.border, boxShadow: p.shadow }}>
               {stufe === HEAT_MAX ? `${HEAT_MAX}+` : stufe}
             </span>
           );
