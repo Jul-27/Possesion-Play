@@ -177,6 +177,21 @@ test("das Teil-Raster hat Brettform und markiert die Mitte", () => {
   assert.ok(zeilen[3].includes("🔲"), "die Mittelzelle ist kein Spielfeld");
 });
 
+/* Der Fehler, der das nötig macht: Stufe 6 ist Schwarz — und ein UNEROBERTES Feld
+   ist rgba(30,42,58) und damit ebenfalls fast schwarz. Die heißesten Felder sahen
+   dadurch aus, als wären sie nie erobert worden. Die Unterscheidung darf deshalb
+   nicht an der Füllung hängen, sondern muss über Rand und Glimmen laufen. */
+test("die heißeste Stufe hebt sich vom unereroberten Feld ab", () => {
+  const p = heatPaint(HEAT_MAX);
+  const kante = p.border.match(/#[0-9A-Fa-f]{6}/)[0];
+  const fuellung = p.bg.match(/#[0-9A-Fa-f]{6}/g)[0];
+  assert.ok(helligkeit(fuellung) < 0.15, "die Füllung darf schwarz bleiben");
+  assert.ok(helligkeit(kante) > 0.45, `die Kante muss deutlich leuchten (${kante})`);
+  assert.match(p.shadow, /inset 0 0/, "und die Kachel bekommt inneres Glimmen");
+  // Eine bloße Glanzkante wie bei den übrigen Stufen genügt hier nicht
+  assert.ok(!/rgba\(255,255,255/.test(p.shadow), "kein weißer Glanzstrich, sondern Glut");
+});
+
 test("der Zugtext erklärt, wie die Punkte zustande kommen", () => {
   const t = heatMoveText({ neu: [1, 2, 3], reheat: [4], punkte: 7 }, "FC Bayern München");
   assert.equal(t, "✓ FC Bayern München · 3 Felder = 6 · 1× Reheat +1 → +7");
