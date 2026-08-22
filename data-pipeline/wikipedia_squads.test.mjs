@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { waehleAbschnitt, parseZeilen, seitJahr, saisonAus, mergeKader, KADER_MIN, KADER_MAX } from "./wikipedia_squads.mjs";
+import { waehleAbschnitt, parseZeilen, parseDatum, kaderTabellen, istGeburtsdatum, ohneKlammer, seitJahr, saisonAus, mergeKader, KADER_MIN, KADER_MAX } from "./wikipedia_squads.mjs";
 
 // Abschnittsliste wie sie die Wikipedia-API liefert (index/line/number)
 const sec = (num, line) => ({ index: String(num).replace(/\D/g, "") || "1", number: num, line });
@@ -65,6 +65,107 @@ test("parseZeilen liefert je Tabellenzeile Artikel und Jahreszahlen", () => {
 test("parseZeilen überspringt Zeilen ohne Verlinkung und Namensraum-Links", () => {
   const html = `<tr><td>Kopfzeile</td></tr><tr><td><a href="/wiki/Datei:Foo.png">x</a></td></tr>`;
   assert.deepEqual(parseZeilen(html), []);
+});
+
+/* ── Rückennummer, Nation, Position, Geburtsdatum ────────────────────────────
+   Die Zeilen unten sind gekürzte, aber unveränderte Ausschnitte aus de.wikipedia
+   (Stand 21.08.2026). Sie decken die drei Eigenheiten ab, an denen eine naive
+   Fassung scheitert: unsichtbare Sortier-Spans, die per rowspan fehlende
+   Positionsspalte und Vereine mit zusätzlichen Zahlenspalten. */
+const FLAGGE = (land) => `<td><span style="display:none;">${land}</span><span typeof="mw:File">`
+  + `<a href="/wiki/${land}" title="${land}"><img alt="" class="mw-file-element" /></a></span></td>`;
+
+test("parseZeilen liest Nummer, Nation, Position und Geburtsdatum", () => {
+  const html = `<tr><td data-sort-value="1" rowspan="2"><b>Tor</b></td>`
+    + `<td><span style="visibility:hidden;">0</span>1</td>${FLAGGE("Deutschland")}`
+    + `<td style="text-align:left"><a href="/wiki/Manuel_Neuer">Manuel Neuer</a></td>`
+    + `<td style="text-align:right">27.&#160;März 1986</td><td>2011</td><td>2027</td></tr>`;
+  const [z] = parseZeilen(html);
+  assert.equal(z.nr, 1, "der versteckte Sortier-Span macht aus 1 kein 01");
+  assert.equal(z.nation, "Deutschland");
+  assert.equal(z.gruppe, "TW");
+  assert.equal(z.geb, "1986-03-27");
+});
+
+test("parseZeilen trägt die Positionsgruppe über rowspan-Zeilen hinweg mit", () => {
+  const html = `<tr><td rowspan="2"><b>Abwehr</b></td><td>4</td>${FLAGGE("Frankreich")}`
+    + `<td><a href="/wiki/Dayot_Upamecano">Dayot Upamecano</a></td><td>27. Oktober 1998</td></tr>`
+    + `<tr><td>2</td>${FLAGGE("Israel")}<td><a href="/wiki/Sacha_Boey">Sacha Boey</a></td>`
+    + `<td>13. September 2000</td></tr>`;
+  const z = parseZeilen(html);
+  assert.deepEqual(z.map((r) => r.gruppe), ["ABW", "ABW"]);
+  assert.deepEqual(z.map((r) => r.nr), [4, 2]);
+});
+
+/* Dortmund schiebt „BL-Spiele" und „Tore" zwischen Name und Beitrittsjahr. Beide
+   Spalten sind einstellig bis dreistellig — eine Nummernsuche über die ganze Zeile
+   würde dort die Torzahl als Rückennummer eintragen. Anker ist die Flaggenspalte. */
+test("parseZeilen nimmt nur die Zahl VOR der Flagge als Rückennummer", () => {
+  const html = `<tr><td rowspan="4"><b>Sturm</b></td><td>9</td>${FLAGGE("Deutschland")}`
+    + `<td><a href="/wiki/Serhou_Guirassy">Serhou Guirassy</a></td><td>12.3.1996</td>`
+    + `<td>34</td><td>21</td><td>2024</td></tr>`;
+  const [z] = parseZeilen(html);
+  assert.equal(z.nr, 9, "34 Spiele und 21 Tore dürfen die Nummer nicht überschreiben");
+  assert.equal(z.geb, "1996-03-12", "auch die rein numerische Schreibweise");
+});
+
+test("parseZeilen liefert null statt geratener Werte, wenn Spalten fehlen", () => {
+  const html = `<tr><td><a href="/wiki/Erling_Haaland">Erling Haaland</a></td></tr>`;
+  const [z] = parseZeilen(html);
+  assert.deepEqual([z.nr, z.nation, z.geb], [null, null, null]);
+});
+
+/* Spanische, italienische und englische Vereine verlinken die Position je Zeile
+   („[[Torwart|TW]]") statt sie als Gruppenüberschrift zu setzen. Ohne diesen Zweig
+   stand die halbe Primera División ohne Position da. */
+test("parseZeilen liest die Position auch aus dem verlinkten Positionsartikel", () => {
+  const html = `<tr><td>1</td>${FLAGGE("Italien")}<td><a href="/wiki/Torwart">TW</a></td>`
+    + `<td class="fn"><a href="/wiki/Elia_Caprile">Elia Caprile</a></td></tr>`
+    + `<tr><td>4</td>${FLAGGE("Spanien")}<td><a href="/wiki/Abwehrspieler">AB</a></td>`
+    + `<td class="fn"><a href="/wiki/Pau_Cubars%C3%AD">Pau Cubarsí</a></td></tr>`;
+  assert.deepEqual(parseZeilen(html).map((z) => z.gruppe), ["TW", "ABW"]);
+});
+
+/* Sergio Herrera (Osasuna) hat keinen deutschen Artikel — sein Name steht hinter
+   einem Rotlink. Vor dieser Erweiterung fehlten dadurch ganze Kader aus Spanien und
+   Portugal, weil in ihren Zeilen kein einziger /wiki/-Spielerlink steckt. */
+test("parseZeilen sammelt die Namen hinter Rotlinks", () => {
+  const html = `<tr><td>1</td>${FLAGGE("Spanien")}`
+    + `<td><a href="/w/index.php?title=Sergio_Herrera&amp;action=edit&amp;redlink=1" class="new"`
+    + ` title="Sergio Herrera (Seite nicht vorhanden)">Sergio Herrera</a></td>`
+    + `<td data-sort-value="5.6.1993">5.&#160;Juni 1993</td></tr>`;
+  const [z] = parseZeilen(html);
+  assert.deepEqual(z.rot, ["Sergio Herrera"]);
+  assert.deepEqual(z.titel, ["Spanien"], "der Rotlink taucht nicht als Artikel auf");
+  assert.equal(z.geb, "1993-06-05");
+});
+
+/* Zwei Layouts, ein Verfahren: Köln hängt Abgänge und Trainerstab als eigene Tabellen
+   an (nur die erste ist der Kader), Villarreal und Cagliari verteilen den Kader auf
+   zwei nebeneinanderstehende Tabellen (beide gehören dazu). Unterschieden wird am
+   Inhalt — Kaderzeilen tragen Nummer und Flagge, Abgangszeilen nicht. */
+const KADERZEILE = (nr, land, name) =>
+  `<tr><td>${nr}</td>${FLAGGE(land)}<td><a href="/wiki/${name.replace(/ /g, "_")}">${name}</a></td></tr>`;
+const ABGANGSZEILE = (name, verein) =>
+  `<tr><td><a href="/wiki/${name.replace(/ /g, "_")}">${name}</a></td><td><a href="/wiki/${verein}">${verein}</a></td></tr>`;
+
+test("kaderTabellen nimmt fortlaufende Kadertabellen und hört bei den Abgängen auf", () => {
+  const kader = (n, ab) => "<table>" + Array.from({ length: n }, (_, i) =>
+    KADERZEILE(ab + i, "Spanien", `Spieler ${ab + i}`)).join("") + "</table>";
+  const abgaenge = "<table>" + Array.from({ length: 5 }, (_, i) =>
+    ABGANGSZEILE(`Weg ${i}`, "FC Bologna")).join("") + "</table>";
+
+  assert.equal(kaderTabellen(kader(14, 1) + kader(13, 15)).length, 27, "zwei Hälften eines Kaders");
+  assert.equal(kaderTabellen(kader(28, 1) + abgaenge).length, 28, "Abgänge bleiben draußen");
+  assert.equal(kaderTabellen(abgaenge).length, 0, "ohne Kadertabelle nichts");
+});
+
+test("parseDatum kennt volle und abgekürzte Monatsnamen und weist Unsinn ab", () => {
+  assert.equal(parseDatum("3. August 1988"), "1988-08-03");
+  assert.equal(parseDatum("6. Dez. 1997"), "1997-12-06");
+  assert.equal(parseDatum("29.7.2001"), "2001-07-29");
+  assert.equal(parseDatum("im Verein seit 2016"), null);
+  assert.equal(parseDatum("13.13.1990"), null, "Monat 13 gibt es nicht");
 });
 
 /* Eine Kaderzeile enthält Geburtsjahr, Beitrittsjahr und oft das Vertragsende
@@ -187,4 +288,62 @@ test("mergeKader lässt einen plausiblen Zeitraum aus der Vergangenheit in Ruhe"
   const r = mergeKader(players, "FCB", [{ n: "Manuel Neuer", by: 1986, sl: 90, nat: "GER", pos: "TW", seit: 2026 }], 2026);
   assert.equal(r.cpRepariert, 0);
   assert.deepEqual(players[0].cp, [["FCB", 2011, 0]]);
+});
+
+/* PSG überschreibt seine Gruppen mit „Torhüter" und „Abwehrspieler". Eine frühere
+   Fassung verlangte exakt „Abwehr“ — die Überschrift griff nicht, die Gruppe blieb
+   auf Torwart stehen, und 491 Spieler in 20 Vereinen standen als Torhüter in den
+   Daten. Der Test hält beide Schreibweisen fest. */
+test("Gruppenüberschriften werden in allen gängigen Schreibweisen erkannt", () => {
+  const kopf = (wort) => `<tr><th colspan="6">${wort}</th></tr>`;
+  const zeile = (nr, name) => `<tr><td>${nr}</td>${FLAGGE("Frankreich")}`
+    + `<td><a href="/wiki/${name}">${name}</a></td></tr>`;
+  const html = kopf("Torhüter") + zeile(30, "Lucas_Chevalier")
+    + kopf("Abwehrspieler") + zeile(2, "Achraf_Hakimi")
+    + kopf("Mittelfeldspieler") + zeile(17, "Vitinha")
+    + kopf("Angriff") + zeile(10, "Ousmane_Dembele");
+  assert.deepEqual(parseZeilen(html).map((z) => z.gruppe), ["TW", "ABW", "MF", "ST"]);
+});
+
+/* Beim Link darf NICHT auf Präfixe geprüft werden: Dortmunds Kadertabelle verlinkt
+   den vorherigen Verein mit, und „SK Sturm Graz" machte sonst jeden Zugang von dort
+   zum Stürmer. */
+test("ein verlinkter Verein wird nicht als Position gelesen", () => {
+  const html = `<tr><td>9</td>${FLAGGE("Österreich")}`
+    + `<td><a href="/wiki/Ein_Spieler">Ein Spieler</a></td>`
+    + `<td><a href="/wiki/SK_Sturm_Graz">SK Sturm Graz</a></td></tr>`;
+  assert.equal(parseZeilen(html)[0].gruppe, null);
+});
+
+/* Manche Tabellen führen „im Verein seit" und „Vertrag bis" ebenfalls tagesgenau, und
+   sie stehen mal vor, mal hinter dem Geburtstag. Das erste Datum der Zeile zu nehmen
+   ergab Spieler mit Geburtsdatum 2026 — also null Jahre alt. */
+test("parseZeilen nimmt das Datum, das ein Profialter ergibt", () => {
+  const html = `<tr><td>7</td>${FLAGGE("Israel")}`
+    + `<td><a href="/wiki/Anan_Khalaili">Anan Khalaili</a></td>`
+    + `<td>18.8.2026</td><td>3. Mai 2004</td></tr>`;
+  assert.equal(parseZeilen(html)[0].geb, "2004-05-03", "das Beitrittsdatum steht zuerst");
+});
+
+test("istGeburtsdatum grenzt Profialter ein", () => {
+  assert.equal(istGeburtsdatum("2004-05-03", 2026), true);
+  assert.equal(istGeburtsdatum("2026-08-18", 2026), false, "null Jahre alt");
+  assert.equal(istGeburtsdatum("1960-01-01", 2026), false, "66 Jahre alt");
+  assert.equal(istGeburtsdatum(null, 2026), false);
+});
+
+/* Rotlink-Namen sind Artikeltitel. „Aitor Fernández (Fußballspieler, 1991)" stand so
+   im Spiel — 54-mal. */
+test("ohneKlammer macht aus dem Artikeltitel einen Namen", () => {
+  assert.equal(ohneKlammer("Aitor Fernández (Fußballspieler, 1991)"), "Aitor Fernández");
+  assert.equal(ohneKlammer("Stürmer (Fußball)"), "Stürmer");
+  assert.equal(ohneKlammer("Harry Kane"), "Harry Kane");
+  assert.equal(ohneKlammer("Borussia Mönchengladbach"), "Borussia Mönchengladbach");
+});
+
+test("der Positionsartikel wird auch mit Klammerzusatz erkannt", () => {
+  const html = `<tr><td>9</td>${FLAGGE("England")}`
+    + `<td><a href="/wiki/St%C3%BCrmer_(Fu%C3%9Fball)">ST</a></td>`
+    + `<td><a href="/wiki/Liam_Delap">Liam Delap</a></td></tr>`;
+  assert.equal(parseZeilen(html)[0].gruppe, "ST");
 });

@@ -25,7 +25,7 @@ export function collectStats() {
   const carousel = read("pp:carouselStats");
 
   return [
-    entry("daily", "star", "Daily-Star", null, daily, [
+    entry("daily", "guess", "Steckbrief", null, daily, [
       { label: "gelöst", value: daily?.wins ?? null },
       { label: "Rekordserie", value: daily?.maxStreak || null },
     ], daily?.streak || 0),

@@ -3,7 +3,7 @@ import Lobby from "./Lobby.jsx";
 import Game from "./Game.jsx";
 import Grid from "./Grid.jsx";
 import Guess from "./Guess.jsx";
-import Daily from "./Daily.jsx";
+import Steckbrief from "./Steckbrief.jsx";
 import Solo from "./Solo.jsx";
 import Career from "./Career.jsx";
 import OddOne from "./OddOne.jsx";
@@ -100,7 +100,7 @@ export default function App() {
 
   if (board) return <Leaderboard onLeave={leave} />;
   if (stats) return <Stats onLeave={leave} onSolo={enterSolo} onDaily={enterDaily} />;
-  if (daily) return <Daily onLeave={leave} />;
+  if (daily) return <Steckbrief onLeave={leave} />;
   if (solo === "hex") return <Solo onLeave={leave} />;
   if (solo === "career") return <Career onLeave={leave} />;
   if (solo === "odd") return <OddOne onLeave={leave} />;

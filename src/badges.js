@@ -49,7 +49,7 @@ export const BADGES = [
   { id: "serie7",      icon: "streak",   name: "Serientäter",      text: "Sieben Tage in Folge",                 ziel: 7,   xp: 80,  wert: (s) => s.serie },
   { id: "serie30",     icon: "crown",    name: "Unbeugsam",        text: "Dreißig Tage in Folge",                ziel: 30,  xp: 300, wert: (s) => s.serie },
 
-  { id: "detektiv",    icon: "guess",    name: "Detektiv",         text: "25× den Daily-Star geknackt",          ziel: 25,  xp: 120, wert: (s) => s.daily.wins || 0 },
+  { id: "detektiv",    icon: "guess",    name: "Detektiv",         text: "25× den Steckbrief geknackt",          ziel: 25,  xp: 120, wert: (s) => s.daily.wins || 0 },
   { id: "elf",         icon: "jersey",   name: "Elf Freunde",      text: "10× die Elf des Tages komplett",       ziel: 10,  xp: 100, wert: (s) => s.eleven.solved || 0 },
   { id: "spurleser",   icon: "route",    name: "Spurleser",        text: "Karriere-Pfad nach zwei Stationen",    ziel: 1,   xp: 90,
     wert: (s) => (s.career.best && s.career.best <= 2 ? 1 : 0) },

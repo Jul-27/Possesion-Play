@@ -6,7 +6,7 @@
 
    Messbar ist heute:
      pp:ch:<modus>:<datum>   Tagesaufgabe gelöst (career, odd, chain, hex, heat)
-     pp:daily:<datum>        Daily-Star gespielt/gelöst
+     pp:daily:<datum>        Steckbrief gespielt/gelöst (Schlüssel historisch)
      pp:eleven:<datum>       Elf des Tages, mit Zwischenstand
    Daraus lassen sich „wie viele Tagesrätsel", „wie viele verschiedene Modi" und
    „welches bestimmte Rätsel" ableiten — mehr braucht die erste Fassung nicht.
@@ -31,7 +31,7 @@ export function tagesStand(datum = dailyDateStr(), leser = read) {
     elfKomplett: !!elf?.done,
     elfFelder: (elf?.names || []).filter(Boolean).length,
     /* „Rätsel heute" zählt die Tagesaufgaben plus die zwei eigenständigen
-       Tagesrätsel — für den Spieler ist Daily-Star genauso ein Rätsel wie Heatmap. */
+       Tagesrätsel — für den Spieler ist der Steckbrief genauso ein Rätsel wie Heatmap. */
     raetsel: geloest.length + (daily?.won ? 1 : 0) + (elf?.done ? 1 : 0),
   };
 }
@@ -42,7 +42,7 @@ export const MISSIONEN = [
   { id: "zwei-raetsel", text: "Löse zwei Tagesrätsel",            ziel: 2, xp: 40, wert: (s) => s.raetsel },
   { id: "drei-raetsel", text: "Löse drei Tagesrätsel",            ziel: 3, xp: 60, wert: (s) => s.raetsel },
   { id: "drei-modi",    text: "Spiele in drei verschiedenen Modi", ziel: 3, xp: 50, wert: (s) => s.modi.length },
-  { id: "daily",        text: "Löse den Daily-Star",              ziel: 1, xp: 40, wert: (s) => (s.dailyGeloest ? 1 : 0) },
+  { id: "daily",        text: "Löse den Steckbrief",              ziel: 1, xp: 40, wert: (s) => (s.dailyGeloest ? 1 : 0) },
   { id: "elf",          text: "Stelle die Elf des Tages komplett", ziel: 1, xp: 50, wert: (s) => (s.elfKomplett ? 1 : 0) },
   { id: "elf-halb",     text: "Besetze sechs Positionen in der Elf", ziel: 6, xp: 30, wert: (s) => s.elfFelder },
   { id: "heatmap",      text: "Fülle ein Heatmap-Board",          ziel: 1, xp: 40, wert: (s) => (s.modi.includes("heat") ? 1 : 0) },

@@ -1,8 +1,12 @@
 /* Ergebnisse teilen — reine Logik (kein React).
 
-   Bisher konnte nur der Daily-Star teilen. Das Emoji-Raster ist aber genau das, was
+   Bisher konnte nur das Tagesrätsel teilen. Das Emoji-Raster ist aber genau das, was
    solche Rätsel im Freundeskreis weiterträgt, deshalb bekommt es jeder Solo-Modus.
-   Einheitlicher Aufbau: Titel · Kennzahl / Emoji-Zeile / Link. */
+   Einheitlicher Aufbau: Titel · Kennzahl / Emoji-Zeile / Link.
+
+   „Steckbrief" baut seinen Text selbst (steckbrief.js): sein Raster hat zwei
+   Dimensionen — eine Zeile je Versuch, eine Spalte je Kachel — und passt nicht in
+   die einzeilige Form, die alle anderen Modi teilen. */
 
 export const SHARE_BASE = () => `${window.location.origin}${window.location.pathname}`;
 

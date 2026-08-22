@@ -23,7 +23,7 @@ export default function Stats({ onLeave, onSolo, onDaily }) {
           <div className="prompt">Noch nichts gespielt</div>
           <p className="ruleP">Sobald du ein Rätsel löst, sammeln sich hier deine Serien und Bestwerte.</p>
           <div className="closeline">
-            <button className="btn primary" style={{ flex: 1, padding: "12px" }} onClick={onDaily}>Daily-Star starten</button>
+            <button className="btn primary" style={{ flex: 1, padding: "12px" }} onClick={onDaily}>Steckbrief starten</button>
           </div>
         </div>
       ) : (

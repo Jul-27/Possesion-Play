@@ -142,11 +142,11 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
 
       <button className="dHero" onClick={onDaily}>
         <div className="dHeroTop">
-          <span className="dHeroIcon"><Icon name="star" size={28} /></span>
+          <span className="dHeroIcon"><Icon name="guess" size={28} /></span>
           <span className="dHeroNr">#{dailyNumber(heute)}</span>
         </div>
-        <div className="dHeroName">Daily-Star</div>
-        <div className="dHeroText">Acht Fragen, zwei Tipps — für alle dasselbe Rätsel.</div>
+        <div className="dHeroName">Steckbrief</div>
+        <div className="dHeroText">Acht Versuche, sechs Kacheln — für alle dasselbe Rätsel.</div>
         <div className="dHeroCta">{stand.dailyGespielt ? "Nochmal ansehen" : "Jetzt spielen"} <Icon name="pfeil" size={17} /></div>
       </button>
 
