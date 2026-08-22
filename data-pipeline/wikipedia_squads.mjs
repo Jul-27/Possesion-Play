@@ -81,15 +81,139 @@ export function saisonAus(titel, jetzt = new Date().getFullYear()) {
   return m ? Number(m[0]) : jetzt;
 }
 
-/** Tabellenzeilen des Abschnitts: je Zeile die verlinkten Artikel und alle Jahreszahlen. */
+/* ── Zellen einer Kaderzeile ──────────────────────────────────────────────────
+   Die Spaltenreihenfolge ist quer durch die Vereine stabil (Pos. · Nr. · Nat. ·
+   Name · Geburtstag · …), die ANZAHL der Spalten ist es nicht: Dortmund schiebt
+   „BL-Spiele" und „Tore" dazwischen, Bayern nicht. Feste Spaltenindizes scheitern
+   daran. Erkannt wird deshalb am Inhalt, mit der Flaggenspalte als Anker — sie ist
+   die einzige Zelle mit Bilddatei vor dem Namen. */
+const ZELLEN = (zeile) => zeile.split(/<t[dh](?=[\s>])/).slice(1)
+  .map((z) => z.slice(z.indexOf(">") + 1));   // Attribute des öffnenden Tags abschneiden
+
+/* Unsichtbare Spans tragen Sortierschlüssel: „<span visibility:hidden>0</span>1"
+   ist die Nummer 1, nicht 01, und „<span display:none>Deutschland</span>" steht vor
+   der Flagge. Beides muss weg, bevor der sichtbare Text gelesen wird. */
+const VERSTECKT = /<span[^>]*style="[^"]*(?:display:\s*none|visibility:\s*hidden)[^"]*"[^>]*>.*?<\/span>/gi;
+const sichtbar = (zelle) => zelle.replace(VERSTECKT, "").replace(/<[^>]+>/g, " ")
+  .replace(/&#160;|&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
+
+const MONATE = { jan: 1, feb: 2, "mär": 3, mar: 3, apr: 4, mai: 5, jun: 6, jul: 7, aug: 8, sep: 9, okt: 10, nov: 11, dez: 12 };
+
+/* Ein Profi ist zwischen 15 und 45 Jahre alt. Alles außerhalb ist in einer
+   Kadertabelle kein Geburtsdatum, sondern ein Beitritts- oder Vertragsdatum. */
+export const ALTER_MIN = 15;
+export const ALTER_MAX = 45;
+export function istGeburtsdatum(iso, jetzt = new Date().getFullYear()) {
+  if (!iso) return false;
+  const jahr = Number(iso.slice(0, 4));
+  return jetzt - jahr >= ALTER_MIN && jetzt - jahr <= ALTER_MAX;
+}
+
+/** „6. Dez. 1997", „3. August 1988" oder „29.7.2001" -> „1997-12-06". null sonst. */
+export function parseDatum(text) {
+  const m = String(text).match(/\b(\d{1,2})\.\s*([A-Za-zÄÖÜäöüß]+|\d{1,2})\.?\s*((?:19|20)\d{2})\b/);
+  if (!m) return null;
+  const monat = /^\d+$/.test(m[2]) ? +m[2] : MONATE[m[2].slice(0, 3).toLowerCase()];
+  if (!monat || monat < 1 || monat > 12) return null;
+  return `${m[3]}-${String(monat).padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+}
+
+/* Die Position steht in zwei ganz verschiedenen Formen in den Tabellen:
+   ENTWEDER als Zwischenüberschrift über einer ganzen Gruppe (rowspan oder eigene
+   Zeile) — dann fehlt sie in den übrigen Zeilen und wird mitgeführt,
+   ODER je Zeile als Link auf den Positionsartikel („[[Torwart|TW]]") — so machen es
+   die meisten spanischen, italienischen und englischen Vereine.
+   Ohne die zweite Form blieben deren Spieler ohne Position.
+
+   Die Schreibweise der ÜBERSCHRIFT schwankt stark: „Tor" und „Abwehr" (Bayern),
+   „Torhüter" und „Abwehrspieler" (PSG), „Angriff" und „Sturm" nebeneinander. Eine
+   frühere Fassung verlangte exakt „Abwehr" — bei PSG griff dadurch keine einzige
+   Überschrift nach der ersten, die Gruppe blieb auf „Torwart" stehen, und 491 Spieler
+   in 20 Vereinen standen als Torhüter in den Daten. Deshalb Präfixe. */
+const GRUPPEN = [
+  [/^tor(wart|h(ü|ue)ter)?$/i, "TW"],
+  [/^(abwehr|verteidig)/i, "ABW"],
+  [/^mittelfeld/i, "MF"],
+  [/^(sturm|angriff|st(ü|ue)rmer|angreifer)/i, "ST"],
+];
+const gruppeAus = (text) => GRUPPEN.find(([re]) => re.test(text))?.[1] || null;
+
+/* Beim LINK wird dagegen exakt verglichen. Präfixe wären hier gefährlich: in einer
+   Kaderzeile kann auch ein früherer Verein verlinkt sein, und „Sturm Graz" würde
+   jeden solchen Spieler zum Stürmer machen. Nur der Klammerzusatz fällt weg — der
+   Artikel heißt „Stürmer (Fußball)", und ohne diesen Schritt blieben 123 Spieler in
+   26 Vereinen ohne Position. */
+const POS_ARTIKEL = {
+  Torwart: "TW", "Torhüter": "TW", Abwehrspieler: "ABW", Verteidiger: "ABW",
+  Abwehr: "ABW", Mittelfeldspieler: "MF", Mittelfeld: "MF",
+  "Stürmer": "ST", Angreifer: "ST", Sturm: "ST",
+};
+export const ohneKlammer = (titel) => String(titel).replace(/\s*\([^)]*\)\s*$/, "").trim();
+const positionAusLink = (titel) => {
+  for (const t of titel) { const p = POS_ARTIKEL[ohneKlammer(t)]; if (p) return p; }
+  return null;
+};
+
+/* Tabellenzeilen des Abschnitts: je Zeile die verlinkten Artikel und alle Jahreszahlen.
+   Zusätzlich, soweit die Tabelle sie hergibt: Rückennummer, Nationsartikel,
+   Positionsgruppe, volles Geburtsdatum — und `rot`, die Namen hinter ROTLINKS.
+
+   Rotlinks sind der Grund, warum halb Spanien und Portugal sonst fehlten: Sergio
+   Herrera (Osasuna) und Cezary Miszta (Rio Ave) haben keinen deutschen Artikel, ihr
+   Name steht deshalb nicht als /wiki/-Link, sondern als Bearbeiten-Link. Für
+   Wikidata sind sie unerreichbar, die Kadertabelle nennt aber Name UND Geburtsdatum
+   — genug für ein Rätsel, nur ohne Bekanntheitswert und ohne Foto. */
 export function parseZeilen(html) {
+  let gruppe = null;                                  // trägt über rowspan hinweg
   return String(html).split(/<tr[\s>]/).slice(1).map((zeile) => {
     const titel = [...zeile.matchAll(/href="\/wiki\/([^"#:]+)"/g)]
       .map((m) => decodeURIComponent(m[1]).replace(/_/g, " "));
+    const rot = [...zeile.matchAll(/\/w\/index\.php\?title=([^"&]+)&(?:amp;)?action=edit/g)]
+      .map((m) => decodeURIComponent(m[1]).replace(/_/g, " "));
     const text = zeile.replace(/<[^>]+>/g, " ");
     const jahre = [...text.matchAll(/\b(?:19|20)\d{2}\b/g)].map((m) => Number(m[0]));
-    return { titel, jahre };
-  }).filter((z) => z.titel.length);
+
+    const zellen = ZELLEN(zeile);
+    const g = gruppeAus(sichtbar(zellen[0] || ""));
+    if (g) gruppe = g;
+
+    // Flaggenzelle als Anker: erste Zelle mit Bilddatei, deren Link kein Spieler ist.
+    const flagge = zellen.findIndex((z) => /class="[^"]*mw-file-element/.test(z));
+    const vorFlagge = flagge < 0 ? [] : zellen.slice(0, flagge);
+    const nrText = [...vorFlagge].reverse().map(sichtbar).find((t) => /^\d{1,2}$/.test(t));
+    const nr = nrText && +nrText >= 1 && +nrText <= 99 ? +nrText : null;
+    const nation = flagge < 0 ? null
+      : decodeURIComponent(zellen[flagge].match(/href="\/wiki\/([^"#:]+)"/)?.[1] || "").replace(/_/g, " ") || null;
+    /* NICHT das erste Datum der Zeile nehmen: manche Tabellen führen „im Verein
+       seit" oder „Vertrag bis" ebenfalls tagesgenau, und die stehen mal vor, mal
+       hinter dem Geburtstag. Ein Datum aus 2026 als Geburtstag ergab Spieler im Alter
+       von null Jahren. Genommen wird das erste, das ein glaubhaftes Profialter
+       ergibt — Beitritts- und Vertragsdaten liegen außerhalb. */
+    const geb = zellen.map(sichtbar).map(parseDatum).find((d) => istGeburtsdatum(d)) || null;
+
+    return { titel, rot, jahre, nr, nation, gruppe: gruppe || positionAusLink(titel), geb };
+  }).filter((z) => z.titel.length || z.rot.length);
+}
+
+/* Die Tabellen EINES Kaderabschnitts, die wirklich den Kader tragen.
+
+   Zwei Layouts stehen sich gegenüber. Köln setzt den Kader in EINE Tabelle und lässt
+   Abgänge, Zugänge und Trainerstab als weitere folgen — nimmt man alle, hat der
+   „Kader" 43 Spieler und Eric Martel steht gleichzeitig in Köln und Mainz. Villarreal
+   und Cagliari verteilen den Kader dagegen auf ZWEI gleichwertige Tabellen nebeneinander
+   — nimmt man nur die erste, fehlt die halbe Mannschaft.
+
+   Unterschieden wird nicht an der Position, sondern am Inhalt: Kaderzeilen tragen
+   Rückennummer und Flagge, Abgangs- und Trainerzeilen nicht. Genommen wird der erste
+   ununterbrochene Lauf solcher Tabellen. */
+export function kaderTabellen(html) {
+  const tabellen = String(html).split(/<table[\s>]/).slice(1).map(parseZeilen);
+  const istKader = (z) => z.length >= 3 && z.filter((r) => r.nr && r.nation).length >= z.length * 0.6;
+  const erste = tabellen.findIndex(istKader);
+  if (erste < 0) return [];
+  const out = [];
+  for (let i = erste; i < tabellen.length && istKader(tabellen[i]); i++) out.push(...tabellen[i]);
+  return out;
 }
 
 /* „im Verein seit" aus den Jahreszahlen einer Zeile. Eine Zeile enthält typischerweise
@@ -185,7 +309,7 @@ async function chunked(ids, fn, size = 45) {
 }
 
 /** Artikeltitel -> QID, exakt über pageprops (keine Namenssuche). */
-async function titelZuQid(titel) {
+export async function titelZuQid(titel) {
   const map = new Map();
   await chunked(titel, async (c) => {
     const r = await wp({ action: "query", prop: "pageprops", ppprop: "wikibase_item", titles: c.join("|") });
@@ -200,14 +324,20 @@ async function titelZuQid(titel) {
 }
 
 /** QID -> Personendaten aus Wikidata. Nicht-Fußballer und Datenlose fallen raus. */
-async function spielerDaten(qids) {
+export async function spielerDaten(qids) {
   const out = new Map();
   await chunked(qids, async (c) => {
     const e = await wd({ action: "wbgetentities", ids: c.join("|"), props: "claims|labels|sitelinks", languages: LANGS.join("|") });
     for (const [id, ent] of Object.entries(e.entities || {})) {
       const cl = ent.claims || {};
       if (!(cl.P106 || []).some((x) => x.mainsnak?.datavalue?.value?.id === "Q937857")) continue;
-      const by = cl.P569?.[0]?.mainsnak?.datavalue?.value?.time?.slice(1, 5);
+      /* Das volle Geburtsdatum, nicht nur das Jahr: fünf Vereine (Villarreal,
+         Cagliari, Hull City …) führen in der Kadertabelle gar keine Geburtstagsspalte,
+         und ohne Datum fiele ihr halber Kader aus „Steckbrief" heraus. Präzision 11
+         heißt tagesgenau — bei gröberen Angaben bleibt nur das Jahr. */
+      const zeit = cl.P569?.[0]?.mainsnak?.datavalue?.value;
+      const by = zeit?.time?.slice(1, 5);
+      const gb = zeit?.precision === 11 ? zeit.time.slice(1, 11) : null;
       const roh = bestesLabel(ent.labels);
       if (!by || !roh) continue;
       if (istAusgeschlossen(roh, Number(by), id)) continue;
@@ -220,7 +350,7 @@ async function spielerDaten(qids) {
          Corberán (Valencia) und Marcelino (Villarreal) trifft es zu, bei Kramarić und
          Undav nicht. Beide Trainer waren sonst als Spieler ihres Vereins gelandet. */
       const trainerVon = new Set((cl.P6087 || []).map((x) => x.mainsnak?.datavalue?.value?.id).filter(Boolean));
-      out.set(id, { n, by: Number(by), sl: Object.keys(ent.sitelinks || {}).length, nat, posQids, trainerVon });
+      out.set(id, { n, by: Number(by), gb, sl: Object.keys(ent.sitelinks || {}).length, nat, posQids, trainerVon });
     }
   });
   return out;

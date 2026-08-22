@@ -12,6 +12,12 @@ export const PLAYER_IMG_BASE = "/players/";
 export const COMMONS_BASE = "https://upload.wikimedia.org/wikipedia/commons/thumb/";
 export const COMMONS_WIDTH = 120; // gleiche Stufe wie die lokalen Thumbnails
 
+/* Commons rendert NICHT jede beliebige Breite für Fremdeinbindung. Gemessen an vier
+   Dateien: 120 px und 250 px kommen mit 200 zurück, 320 px mit 400 („Wikimedia
+   Error"). Wer eine größere Darstellung braucht, nimmt diese Stufe — sie ist die
+   größte belegt verfügbare. */
+export const COMMONS_WIDTH_GROSS = 250;
+
 export function imageKey(player) {
   if (!player?.n || !player?.by) return null;
   return `${norm(player.n)}|${player.by}`;
@@ -31,14 +37,23 @@ export function commonsUrl(path, width = COMMONS_WIDTH) {
   return `${COMMONS_BASE}${path.slice(0, i)}/${file}/${width}px-${file}`;
 }
 
-// Anzuzeigende URL: lokal bevorzugt, sonst Commons, sonst null.
-export function imageUrlFor(player) {
+/* Anzuzeigende URL: lokal bevorzugt, sonst Commons, sonst null.
+   `breite` gilt nur für Commons — lokal liegt eine feste Größe. „Steckbrief" zeigt
+   das Foto groß und braucht mehr als die 120 px, mit denen die Avatare sonst
+   auskommen. */
+export function imageUrlFor(player, breite = COMMONS_WIDTH) {
   const k = imageKey(player);
   if (!k) return null;
   const local = PLAYER_IMG_LOCAL[k];
   if (local) return PLAYER_IMG_BASE + local;
   const remote = PLAYER_IMG_COMMONS[k];
-  return remote ? commonsUrl(remote) : null;
+  return remote ? commonsUrl(remote, breite) : null;
+}
+
+/** „Hat dieser Spieler überhaupt ein Foto?" — ohne eine URL zu bauen. */
+export function hatFoto(player) {
+  const k = imageKey(player);
+  return !!k && !!(PLAYER_IMG_LOCAL[k] || PLAYER_IMG_COMMONS[k]);
 }
 
 // „Lionel Messi" -> „LM"; fällt auf den Nachnamen zurück, wenn nur ein Wort da ist.

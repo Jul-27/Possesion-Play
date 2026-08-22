@@ -32,6 +32,10 @@ export const REPORT_MODES = {
   eleven:         { name: "Elf des Tages",          art: "solo" },
   heat:           { name: "Heatmap",                art: "solo" },
   daily:          { name: "Daily-Star",             art: "solo" },
+  /* „Daily-Star" bleibt stehen, obwohl der Modus abgelöst wurde: die bereits
+     eingegangenen Meldungen tragen diesen Schlüssel, und sie sollen in der
+     Auswertung weiter unter ihrem damaligen Namen erscheinen. */
+  steckbrief:     { name: "Steckbrief",             art: "solo" },
   "hex-duell":    { name: "Hex-Duell",              art: "duell" },
   "grid-duell":   { name: "Raster-Duell",           art: "duell" },
   "guess-duell":  { name: "Errate den Star",        art: "duell" },

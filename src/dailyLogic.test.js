@@ -1,14 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { GUESS_SL_MIN } from "./gameData.js";
-import {
-  DAILY_EPOCH, DAILY_MAX_Q, DAILY_MAX_G,
-  dailyDateStr, dailyNumber, dailyStarIndex, updateStreak, buildShareText,
-} from "./dailyLogic.js";
+import { DAILY_EPOCH, dailyDateStr, dailyNumber, updateStreak } from "./dailyLogic.js";
 
 test("Konstanten & dailyNumber", () => {
-  assert.equal(DAILY_MAX_Q, 8);
-  assert.equal(DAILY_MAX_G, 2);
   assert.equal(dailyNumber(DAILY_EPOCH), 0);
   assert.equal(dailyNumber("2026-07-01"), 1);
   assert.equal(dailyNumber("2026-07-31"), 31);
@@ -19,17 +13,6 @@ test("dailyDateStr formatiert lokal als YYYY-MM-DD", () => {
   assert.equal(dailyDateStr(new Date(2026, 0, 5)), "2026-01-05");
 });
 
-test("dailyStarIndex: deterministisch, variiert über Tage, erfüllt Filter", async () => {
-  const { PLAYERS } = await import("./players.js");
-  const a = dailyStarIndex("2026-07-01", PLAYERS);
-  const b = dailyStarIndex("2026-07-01", PLAYERS);
-  assert.equal(a, b);
-  const days = Array.from({ length: 10 }, (_, i) => `2026-07-${String(i + 1).padStart(2, "0")}`);
-  const idxs = new Set(days.map((d) => dailyStarIndex(d, PLAYERS)));
-  assert.ok(idxs.size > 3, "zu wenig Variation über 10 Tage");
-  const p = PLAYERS[a];
-  assert.ok(p.pos && p.nat.length && p.clubs.length && (p.sl || 0) >= GUESS_SL_MIN);
-});
 
 test("updateStreak: Folgetag-Sieg, Lücke, Niederlage", () => {
   let s = updateStreak(null, "2026-07-01", true);
@@ -44,34 +27,4 @@ test("updateStreak: Folgetag-Sieg, Lücke, Niederlage", () => {
   assert.deepEqual([s.streak, s.played, s.wins], [0, 4, 3]);
 });
 
-test("dailyStarIndex: stabil gegenüber Pool-Verschiebung (Rendezvous)", () => {
-  const mk = (n) => ({ n, ln: n, by: 1990, nat: ["GER"], clubs: ["FCB"], sl: 50, pos: "ST" });
-  const base = ["Anna Adler", "Ben Berg", "Carl Cords", "Dora Dill", "Emil Eck",
-    "Finn Faber", "Gero Gans", "Hans Huber", "Ivo Iber", "Jan Joost"].map(mk);
-  const days = Array.from({ length: 10 }, (_, i) => `2026-08-${String(i + 1).padStart(2, "0")}`);
-  for (const day of days) {
-    const winner = base[dailyStarIndex(day, base)].n;
-    // Kandidat am ANFANG einfügen -> alle Indizes verschieben sich um 1.
-    // Gewinner muss identisch bleiben, außer der Neue gewinnt selbst.
-    const extended = [mk("Zora Zusatz"), ...base];
-    const b = extended[dailyStarIndex(day, extended)].n;
-    assert.ok(b === winner || b === "Zora Zusatz", `${day}: ${b} statt ${winner}`);
-    // Entfernen eines Nicht-Gewinners ändert den Gewinner nie.
-    const loser = base.find((p) => p.n !== winner).n;
-    const reduced = base.filter((p) => p.n !== loser);
-    assert.equal(reduced[dailyStarIndex(day, reduced)].n, winner, `${day} (reduced)`);
-  }
-});
 
-test("buildShareText: gewonnen und verloren", () => {
-  const wonLog = [{ dim: "nat" }, { dim: "club" }, { guess: "X", wrong: true }, { dim: "pos" }, { guess: "Y", correct: true }];
-  assert.equal(
-    buildShareText(12, wonLog, true, "https://x.y?daily=1"),
-    "Daily-Star #12 ⭐\n🟦🟦❌🟦⭐\nhttps://x.y?daily=1"
-  );
-  const lostLog = [{ dim: "nat" }, { guess: "X", wrong: true }, { guess: "Z", wrong: true }];
-  assert.equal(
-    buildShareText(3, lostLog, false, "https://x.y?daily=1"),
-    "Daily-Star #3 💀\n🟦❌❌💀\nhttps://x.y?daily=1"
-  );
-});

@@ -95,7 +95,7 @@ test("XP gibt es nur für erreichte Abzeichen", () => {
 test("alle acht Solo-Modi kommen in der Sammlung vor", () => {
   // klein geschrieben vergleichen: „Karussell" steckt in „Transferkarussell"
   const text = BADGES.map((b) => b.id + b.name + b.text).join(" ").toLowerCase();
-  for (const wort of ["daily", "elf", "karriere", "passt nicht", "kette", "hex", "heat", "karussell"]) {
+  for (const wort of ["steckbrief", "elf", "karriere", "passt nicht", "kette", "hex", "heat", "karussell"]) {
     assert.ok(text.includes(wort), `kein Abzeichen für ${wort}`);
   }
 });

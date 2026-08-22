@@ -53,6 +53,10 @@ const CHAIN = [
   //    daher die bereits korrigierten Namen sehen, sonst zeigen die Schlüssel ins Leere.
   ["wikidata_player_careers.mjs"], // 8) lg (gespielte Ligen) + span (Karriere-Spanne) — auch Nicht-Spielvereine
   ["wikidata_images.mjs"],
+  /* 9) Aktuelle Kader für „Steckbrief". Läuft NACH den Fotos, weil der Modus für
+     das Tagesrätsel nur Spieler zieht, die eines haben — die Auswahl soll den
+     frischen Bildindex sehen. Schreibt src/squads.js, nicht players.js. */
+  ["league_squads.mjs"],
 ];
 
 /* Stand sichern, damit verify_refresh.mjs am Ende Verluste erkennen kann. Wikidata

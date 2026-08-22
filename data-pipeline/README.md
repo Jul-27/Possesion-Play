@@ -27,6 +27,7 @@ Kaggle (kein lokales Setup, kein Admin-Recht nötig).
 | `wikidata_career_clubs.mjs` | Holt die **vollständige** Vereinsliste je Spieler nach `src/careerClubs.js` — die Grundlage für „Transferkarussell". Siehe „Zwei Vereins-Ebenen". |
 | `audit_clubs.mjs` | **Diagnose, schreibt nichts.** Meldet Spieler, bei denen wir einen Verein führen, den Wikidata nicht kennt. Treffer sind Verdacht, kein Befund — siehe „Datenqualität". |
 | `wikipedia_squads.mjs` | Ergänzt die **aktuellen Kader** aus der deutschen Wikipedia: `node data-pipeline/wikipedia_squads.mjs [KEY …] [--probe]`. Wikipedia liefert dabei nur die Vereinszugehörigkeit und das Jahr aus „im Verein seit"; alle Personendaten kommen weiter aus Wikidata. Siehe „Aktuelle Kader". |
+| `league_squads.mjs` | Baut `src/squads.js`: die aktuellen Kader **aller** Vereine der sieben Spielligen, mit Rückennummer, Nationalität, Position und Geburtsdatum — die Grundlage für „Steckbrief". `npm run data:squads [BL PL …] [--probe]`. Siehe „Und eine vierte für Steckbrief". |
 
 Das Notebook ist die browserbasierte Zusammenführung der beiden `.py`-Skripte.
 Die Skripte selbst sind als Referenz / für lokale Läufe enthalten.
@@ -306,6 +307,46 @@ sonst begänne mancher Pfad im Jugendbereich.
 
 Fällt für einen Spieler nichts an, greift weiter das `cp`-Feld mit den 47 Vereinen —
 er verschwindet also nicht aus dem Rätselpool.
+
+### Und eine vierte für „Steckbrief": `squads.js`
+
+`league_squads.mjs` liest dieselben Kadertabellen wie `wikipedia_squads.mjs`, aber für
+**alle Vereine der sieben Spielligen** statt der 47 Spielvereine, und zieht vier
+Angaben mit, die es sonst nirgends gibt:
+
+| Angabe | warum sie nicht aus `players.js` kommen kann |
+|---|---|
+| Rückennummer | steht dort überhaupt nicht |
+| Nationalität | dort nur 19 Länder — Achraf Hakimi steht als `ESP`, weil Marokko fehlt |
+| Geburtsdatum | dort nur das Jahr; für die Alterskachel zu grob |
+| aktueller Verein | ableitbar, aber aus Wikidatas P54 — und das hinkt bei Transfers nach |
+
+Die Vereinsauswahl läuft zweistufig: **Kandidaten** kommen aus Wikidata (`P118` auf die
+Liga, ohne Enddatum, keine Menschen), die **Entscheidung** fällt die Infobox des
+Vereinsartikels. Nennt sie eine andere unserer Ligen, fliegt der Verein raus; nennt sie
+mehrere, ist es gar kein Verein, sondern ein Sammelartikel („Kader der deutschen
+Fußball-Bundesliga 2009/10"). Wikidatas `P118` allein wäre zu grob, ein reiner Typfilter
+zu scharf — `wdt:P31/wdt:P279* wd:Q476028` verliert Chelsea und Barcelona, die anders
+modelliert sind.
+
+Gelesen wird nur die **erste** Tabelle des Kaderabschnitts. Köln listet darunter Abgänge
+und Trainerstab; ohne diese Einschränkung stand Eric Martel gleichzeitig in Köln und
+Mainz und der „Kader" hatte 43 Spieler.
+
+Zwei Fallstricke stecken in der ISO-Abfrage der Nationen: `p:P297/ps:P297` statt
+`wdt:P297`, sonst fehlen die Niederlande; und England, Schottland, Wales und Nordirland
+sind keine ISO-3166-1-Länder — ihr Code steht in `P300` (`GB-ENG`). Ohne den Rückgriff
+hätte die häufigste Nation der Premier League keine Flagge.
+
+Die Datei ist **selbsttragend** (Name, Geburtsjahr, Bekanntheit stehen darin, obwohl
+`players.js` sie auch führt): ein Teil der Kaderspieler ist so neu, dass `players.js`
+sie nicht kennt — ohne eigene Kopie fielen genau die Neuzugänge aus dem Spiel, die man
+am ehesten errät. Der Schlüssel `norm(name)|geburtsjahr` ist derselbe wie überall,
+Fotos sind also weiter über `playerImage.js` erreichbar.
+
+Eigener Lauf: `npm run data:squads` (oder `node data-pipeline/league_squads.mjs BL PL`
+für einzelne Ligen, `--probe` schreibt nichts). Im `refresh_all`-Lauf steht der Schritt
+**hinter** den Fotos, weil das Tagesrätsel nur Spieler mit Bild zieht.
 
 ## WDQS-Fenster: warum 4 Jahre
 
