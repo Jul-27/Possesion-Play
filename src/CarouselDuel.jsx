@@ -16,6 +16,7 @@ import DataStamp from "./DataStamp.jsx";
 import ReportButton from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
+import WaitForOpponent from "./WaitForOpponent.jsx";
 import { merkeSpieler } from "./collection.js";
 
 /* Transferkarussell als Duell. Der gesamte Spielstand liegt in last_move.car und ist
@@ -35,7 +36,6 @@ export default function CarouselDuel({ code, clientId, onLeave }) {
   const [jetzt, setJetzt] = useState(Date.now());
   const [muted, setMuted] = useState(isMuted());
   const [showRules, setShowRules] = useState(false);
-  const [copied, setCopied] = useState(false);
   const schreibt = useRef(false);
 
   const [idx, setIdx] = useState(null);
@@ -233,16 +233,7 @@ export default function CarouselDuel({ code, clientId, onLeave }) {
       </GameTop>
 
       {status === "waiting" ? (
-        <div className="panel" style={{ marginTop: 18 }}>
-          <div className="prompt">Warte auf den zweiten Spieler</div>
-          <p className="ruleP">Gib den Code weiter — sobald jemand beitritt, geht es los.</p>
-          <div className="closeline">
-            <button className="btn primary" style={{ flex: 1, padding: "12px" }}
-              onClick={() => navigator.clipboard?.writeText(code).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); })}>
-              {copied ? "Kopiert ✓" : `Code ${code} kopieren`}
-            </button>
-          </div>
-        </div>
+        <WaitForOpponent code={code} onLeave={onLeave} />
       ) : (
         <>
           <CarScore lives={state.lives} owner={owner} round={state.over ? state.round - 1 : state.round}

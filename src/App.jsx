@@ -15,7 +15,9 @@ import Collection from "./Collection.jsx";
 import Eleven from "./Eleven.jsx";
 import Stats from "./Stats.jsx";
 import Leaderboard from "./Leaderboard.jsx";
-import { supabase, getClientId } from "./supabaseClient.js";
+import { supabase, getClientId, getSavedName, saveName } from "./supabaseClient.js";
+import { beitrittsLage, duellName, LAGE } from "./duelJoin.js";
+import { gastPlatzBeanspruchen } from "./duelJoinClient.js";
 
 function codeFromUrl() {
   const c = new URLSearchParams(window.location.search).get("game");
@@ -41,16 +43,95 @@ function soloFromUrl() {
   return v === "1" ? "hex" : v;
 }
 
+function NameFragen({ row, fehler, onFertig }) {
+  const [wert, setWert] = useState("");
+  const senden = () => wert.trim() && onFertig(wert.trim());
+  const wirt = row?.names?.[1];
+  return (
+    <>
+      {/* Wer einlädt und wozu — beides steht in der geladenen Zeile, und ohne es
+          begrüßt den Eingeladenen ein namenloser Kasten. */}
+      <div className="prompt">{wirt ? `${wirt} fordert dich heraus` : "Du wurdest herausgefordert"}</div>
+      <p className="ruleP">
+        <b>{duellName(row?.board)}</b> — unter welchem Namen sollen deine Züge erscheinen?
+      </p>
+      <div className="inrow">
+        <input className="field" autoFocus maxLength={20} placeholder="Dein Name" value={wert}
+          onChange={(e) => setWert(e.target.value)} onKeyDown={(e) => e.key === "Enter" && senden()} />
+        <button className="btn primary" disabled={!wert.trim()} onClick={senden}>Mitspielen</button>
+      </div>
+      {fehler && <div className="fb err" style={{ marginTop: 12 }}>{fehler}</div>}
+    </>
+  );
+}
+
+/* Der Einladungslink `?game=CODE` landet hier. Vor der Spielansicht steht deshalb
+   der Beitritt: Wer über den Link kommt, ist noch niemand im Spiel, und ohne diesen
+   Schritt bliebe er stiller Zuschauer, während beim Ersteller weiter „Warte auf
+   Mitspieler" steht.
+
+   Gefragt wird höchstens nach dem NAMEN, nie nach dem Code — der steht im Link.
+   Ist ein Name gespeichert (jeder, der schon einmal gespielt hat, hat einen), fällt
+   auch das weg und die Partie beginnt beim Öffnen. */
 function GameRouter({ code, clientId, onLeave }) {
-  const [board, setBoard] = useState(undefined); // undefined=lädt, null=nicht gefunden
+  const [row, setRow] = useState(undefined);        // undefined = lädt, null = nicht gefunden
+  const [name, setName] = useState(getSavedName());
+  const [beitritt, setBeitritt] = useState(null);   // null | "laeuft" | "fertig"
+  const [fehler, setFehler] = useState("");
+
   useEffect(() => {
-    let active = true;
-    setBoard(undefined);
-    supabase.from("games").select("board").eq("code", code).maybeSingle()
-      .then(({ data }) => { if (active) setBoard(data ? data.board : null); });
-    return () => { active = false; };
+    let aktiv = true;
+    setRow(undefined); setBeitritt(null); setFehler("");
+    supabase.from("games").select("*").eq("code", code).maybeSingle()
+      .then(({ data }) => { if (aktiv) setRow(data || null); });
+    return () => { aktiv = false; };
   }, [code]);
-  if (board === undefined) return <div className="ppRoot"><div className="panel" style={{ marginTop: 40 }}>Lade Spiel…</div></div>;
+
+  const lage = beitrittsLage(row, clientId);
+
+  /* Beitreten, sobald klar ist, dass der Platz frei ist und ein Name vorliegt.
+     Der Effekt läuft genau einmal je Spiel — `beitritt` sperrt ihn danach. */
+  useEffect(() => {
+    if (lage !== LAGE.FREI || beitritt || !name.trim()) return;
+    setBeitritt("laeuft");
+    gastPlatzBeanspruchen(code, clientId, name.trim()).then(({ ok, fehler: f }) => {
+      if (!ok) { setBeitritt(null); setFehler(f); return; }
+      saveName(name.trim());
+      setBeitritt("fertig");
+      /* Die geladene Zeile ist jetzt veraltet — ohne diesen Nachtrag bliebe die Lage
+         „frei" und die Ansicht hinge auf „Trete dem Spiel bei…". Die Spielansicht
+         lädt gleich ohnehin ihren eigenen, vollständigen Stand. */
+      setRow((r) => (r ? { ...r, guest_id: clientId, status: "playing" } : r));
+    });
+  }, [lage, beitritt, name, code, clientId]);
+
+  const rahmen = (inhalt) => <div className="ppRoot"><div className="panel" style={{ marginTop: 40 }}>{inhalt}</div></div>;
+
+  if (row === undefined) return rahmen("Lade Spiel…");
+  if (row === null) return rahmen(<>
+    <div className="fb err">Kein Spiel mit diesem Code gefunden.</div>
+    <button className="btn primary block" style={{ marginTop: 12 }} onClick={onLeave}>Zur Lobby</button>
+  </>);
+
+  if (lage === LAGE.VOLL) return rahmen(<>
+    <div className="prompt">Dieses Spiel ist bereits voll</div>
+    <p className="ruleP">Zwei Spieler sind schon dabei. Starte selbst eine Partie und schick deinen Link weiter.</p>
+    <button className="btn primary block" style={{ marginTop: 12 }} onClick={onLeave}>Zur Lobby</button>
+  </>);
+
+  // Einmalige Namensfrage, wenn dieses Gerät noch nie gespielt hat.
+  if (lage === LAGE.FREI && !name.trim()) {
+    return rahmen(<NameFragen row={row} fehler={fehler} onFertig={setName} />);
+  }
+
+  if (lage === LAGE.FREI) return rahmen(fehler
+    ? <>
+      <div className="fb err">{fehler}</div>
+      <button className="btn primary block" style={{ marginTop: 12 }} onClick={onLeave}>Zur Lobby</button>
+    </>
+    : "Trete dem Spiel bei…");
+
+  const board = row.board;
   const kind = board && !Array.isArray(board) ? board.kind : "hex";
   if (kind === "grid") return <Grid code={code} clientId={clientId} onLeave={onLeave} />;
   if (kind === "guess") return <Guess code={code} clientId={clientId} onLeave={onLeave} />;
