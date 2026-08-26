@@ -27,6 +27,8 @@ Kaggle (kein lokales Setup, kein Admin-Recht nötig).
 | `wikidata_career_clubs.mjs` | Holt die **vollständige** Vereinsliste je Spieler nach `src/careerClubs.js` — die Grundlage für „Transferkarussell". Siehe „Zwei Vereins-Ebenen". |
 | `audit_clubs.mjs` | **Diagnose, schreibt nichts.** Meldet Spieler, bei denen wir einen Verein führen, den Wikidata nicht kennt. Treffer sind Verdacht, kein Befund — siehe „Datenqualität". |
 | `wikipedia_squads.mjs` | Ergänzt die **aktuellen Kader** aus der deutschen Wikipedia: `node data-pipeline/wikipedia_squads.mjs [KEY …] [--probe]`. Wikipedia liefert dabei nur die Vereinszugehörigkeit und das Jahr aus „im Verein seit"; alle Personendaten kommen weiter aus Wikidata. Siehe „Aktuelle Kader". |
+| `wikipedia_positions.mjs` | Setzt `pp` (genaue Positionen) je Spieler aus dem Infobox-Feld „Position" der deutschen Wikipedia: `npm run data:positions [--probe N] [--ab-sl 40]`. Siehe „Genaue Positionen". |
+| `player_record.mjs` | Die **eine** Stelle, an der ein Spielerdatensatz nach `players.js` geschrieben wird. Vorher stand diese Funktion fünfzehnmal wortgleich in der Pipeline. |
 | `league_squads.mjs` | Baut `src/squads.js`: die aktuellen Kader **aller** Vereine der sieben Spielligen, mit Rückennummer, Nationalität, Position und Geburtsdatum — die Grundlage für „Steckbrief". `npm run data:squads [BL PL …] [--probe]`. Siehe „Und eine vierte für Steckbrief". |
 
 Das Notebook ist die browserbasierte Zusammenführung der beiden `.py`-Skripte.
@@ -347,6 +349,61 @@ Fotos sind also weiter über `playerImage.js` erreichbar.
 Eigener Lauf: `npm run data:squads` (oder `node data-pipeline/league_squads.mjs BL PL`
 für einzelne Ligen, `--probe` schreibt nichts). Im `refresh_all`-Lauf steht der Schritt
 **hinter** den Fotos, weil das Tagesrätsel nur Spieler mit Bild zieht.
+
+## Genaue Positionen: warum Wikipedia und nicht Wikidata
+
+Das Spiel kannte vier Gruppen — Torwart, Abwehr, Mittelfeld, Sturm. Für Hexfelder
+genügt das, für eine **Aufstellung** nicht: Eine Viererkette aus „ABW, ABW, ABW, ABW"
+ist keine Kette.
+
+**Wikidata scheidet aus.** Gemessen an allen 27.482 Spielern unserer Vereine:
+
+| | Anteil |
+|---|---|
+| nur eine der vier groben Gruppen (`P413`) | **82,4 %** |
+| feine Position | 11,0 % |
+| mehr als eine Angabe | 3,7 % |
+
+Weltweit sind 90 % aller `P413`-Angaben genau die vier Sammelbegriffe. Ein
+Wikidata-Lauf würde also fast nichts hinzufügen.
+
+**Die deutsche Wikipedia liefert es.** Das Infobox-Feld `Position` ergibt im Rätselpool
+(sl ≥ 40) bei **46 %** eine genaue Position, im gesamten Bestand bei 17,5 % (5.514 von
+31.565). Was fehlt, fehlt an der Quelle: 43 % der Spieler haben keinen deutschen
+Artikel, bei 27 % steht im Feld wörtlich nur „Sturm".
+
+`pp` steht **neben** `pos`, nicht an dessen Stelle. Sonst verlören alle Spieler ohne
+Artikel ihre Hexfelder. Jede feine Position gehört zu genau einer groben Gruppe
+(`src/positions.js`) — ein Innenverteidiger erfüllt „Abwehr" automatisch.
+
+### Das Feld ist Freitext, und zwar gründlich
+
+62 Schreibweisen in einer Stichprobe von 320 Spielern. `position_parse.mjs` übersetzt
+sie in ein geschlossenes Vokabular aus 17 Positionen; die Regelreihenfolge trägt dabei
+die Bedeutung („Offensives Mittelfeld" muss vor „Mittelfeld" geprüft werden). Was nicht
+passt, wird **gemeldet statt geraten** — der Lauf listet unbekannte Textstücke ab drei
+Vorkommen als Kandidaten fürs Vokabular. Genau daraus kamen diese Funde:
+
+| Fund | Häufigkeit | Ursache |
+|---|---|---|
+| „Mittelfeld (defensiv)", „(offensiv)", „(zentral)" | 80× | Klammerform statt Adjektiv |
+| „Außenläufer" | 72× | Position des WM-Systems |
+| `jugendvereine_tabelle =` | 75× | **Parserfehler**: kompakte Infoboxen setzen mehrere Parameter in eine Zeile |
+| „Stürmerin", „Mittelfeldspielerin" | 21× | weibliche Formen |
+| `ABFRAGE_WIKIDATA` | 211× | Platzhalter, der an Wikidata delegiert |
+
+Bei Arjen Robben steckt eine vollständige Transfermarkt-Quellenangabe im Feld — ein
+naives Zerteilen an Satzzeichen machte daraus neun „Positionen" wie `url=https:` und
+`4360`. Vorlagen und Fußnoten müssen **vor** dem Trennen raus.
+
+### Zuordnung Artikel → Spieler
+
+Über den Namen, gegengeprüft am **Geburtsjahr** — es gibt zwei Hannes Wolf. Zwei
+Eigenheiten kosteten dabei Abdeckung, beide behoben: Das Infobox-Feld heißt
+`geburtstag`, nicht `geburtsdatum`. Und häufige Namen führen auf
+**Begriffsklärungsseiten** („Bruno Fernandes", „Ben Davies"); die Seite nennt die
+richtige Variante samt Jahr selbst, ein zweiter Anlauf löst sie auf. Stehen dort zwei
+Fußballer desselben Jahrgangs, wird keiner genommen.
 
 ## WDQS-Fenster: warum 4 Jahre
 

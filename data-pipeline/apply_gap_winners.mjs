@@ -6,20 +6,10 @@ import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
 import { applyGapWinners } from "./wikidata_honours.mjs";
 import { stampFixes } from "./stamp.mjs";
+import { recToString } from "./player_record.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLAYERS_PATH = join(HERE, "..", "src", "players.js");
-
-function recToString(r) {
-  let s = `{"n": ${JSON.stringify(r.n)}, "ln": ${JSON.stringify(r.ln)}, "by": ${r.by}, "nat": ${JSON.stringify(r.nat)}, "clubs": ${JSON.stringify(r.clubs)}`;
-  if (r.t && r.t.length) s += `, "t": ${JSON.stringify(r.t)}`;
-  if (r.sl) s += `, "sl": ${r.sl}`;
-  if (r.pos) s += `, "pos": ${JSON.stringify(r.pos)}`;
-  if (r.cp && r.cp.length) s += `, "cp": ${JSON.stringify(r.cp)}`;
-  if (r.lg && r.lg.length) s += `, "lg": ${JSON.stringify(r.lg)}`;
-  if (r.span && r.span.length) s += `, "span": ${JSON.stringify(r.span)}`;
-  return s + "}";
-}
 
 const mod = await import(pathToFileURL(PLAYERS_PATH).href + "?t=" + Date.now());
 const players = mod.PLAYERS.map((p) => ({ ...p }));

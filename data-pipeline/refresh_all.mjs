@@ -57,6 +57,11 @@ const CHAIN = [
      das Tagesrätsel nur Spieler zieht, die eines haben — die Auswahl soll den
      frischen Bildindex sehen. Schreibt src/squads.js, nicht players.js. */
   ["league_squads.mjs"],
+  /* 10) Genaue Positionen aus den Wikipedia-Infoboxen. Ganz zuletzt, weil der Abgleich
+     Artikel->Spieler über norm(name)|geburtsjahr läuft und deshalb die bereits
+     korrigierten Namen sehen muss — dieselbe Begründung wie bei den Fotos. Setzt `pp`
+     neben `pos`; die grobe Gruppe bleibt unangetastet. Braucht rund 35 Minuten. */
+  ["wikipedia_positions.mjs"],
 ];
 
 /* Stand sichern, damit verify_refresh.mjs am Ende Verluste erkennen kann. Wikidata
