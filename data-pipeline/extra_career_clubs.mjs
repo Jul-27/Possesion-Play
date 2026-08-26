@@ -41,4 +41,39 @@ export const EXTRA_CAREER_CLUBS = [
   { n: "Hannes Wolf",       by: 1999, clubs: ["Swansea City"] },               // 2022, Leihe
   { n: "Junior Adamu",      by: 2001, clubs: ["FC St. Gallen", "Celtic Glasgow"] }, // 2021 (Leihe) · 2026
   { n: "Marc Oliver Kempf", by: 1995, clubs: ["Como 1907"] },                  // 2024–
+
+  /* Zweite Ladung aus „Fehler melden" (26.08.2026), 15 Meldungen. Gemeldet wurde
+     jeweils EINE Station; eingetragen ist die ganze fehlende Karriere aus der
+     Infobox-Tabelle, weil eine Meldung fast nie allein kommt.
+
+     VIER Namen sind bewusst NICHT übernommen, obwohl Wikipedia sie nennt — sie
+     stehen bei uns schon unter anderer Schreibweise, und ein zweiter Eintrag wäre
+     ein zweiter Verein:
+       „FC Admira Wacker Mödling" → haben wir als „Admira Wacker"
+       „FC Parma"                 → „Parma Calcio 1913"
+       „AS Livorno"               → „US Livorno 1915"
+       „FC Magna Wiener Neustadt" → „SC Wiener Neustadt"
+       „Al-Gharafa"               → „Al-Gharafa Sports Club"
+     Die deutsche Wikipedia verlinkt diese Vereine unter Kurzformen, careerClubs.js
+     führt sie unter dem deutschen Wikidata-Label. Nur „FK IMT" ist wirklich neu.
+     Ebenso draußen bleibt Stefan Schwabs „Red Bull Juniors": eine Nachwuchsmannschaft,
+     und die führt careerClubs.js grundsätzlich nicht.
+
+     NICHT übernommen wurde außerdem die Meldung „Raheem Sterling → PSV Eindhoven":
+     seine Karrieretabelle nennt Liverpool, Manchester City, Chelsea, Arsenal und
+     Feyenoord Rotterdam — kein PSV. Vermutlich wurden die beiden niederländischen
+     Vereine verwechselt. Eine Meldung ist eine Behauptung, kein Beleg. */
+  { n: "Fisnik Asllani",    by: 2002, clubs: ["FK Austria Wien", "SV Elversberg"] },   // 2023–2024 · 2024–2025
+  { n: "Stefan Schwab",     by: 1990, clubs: ["PAOK Thessaloniki", "Holstein Kiel", "SV Ried"] }, // 2020–2025 · 2025–2026 · 2026–
+  { n: "Ishak Belfodil",    by: 1992, clubs: ["Standard Lüttich", "Hertha BSC", "Al-Gharafa Sports Club", "Sabah FK", "FK IMT"] }, // 2016–2018 · 2021–2022 · 2022–2023 · 2023–2024 · 2025
+  { n: "Davinson Sánchez",  by: 1996, clubs: ["Galatasaray Istanbul"] },               // 2023–
+  { n: "Carlos Espí",       by: 2005, clubs: ["Levante UD"] },                         // 2024–2026
+  { n: "Oscar Bobb",        by: 2003, clubs: ["FC Fulham"] },                          // 2026–
+  { n: "Patrick Farkas",    by: 1992, clubs: ["FC Luzern", "TSV Hartberg", "SV Oberwart"] }, // 2021 · 2022–2023 · 2023–
+  { n: "Michaël Cuisance",  by: 1999, clubs: ["FC Venedig", "Sampdoria Genua", "VfL Osnabrück", "Hertha BSC", "RC Lens"] }, // 2022–2024 · 2023 (Leihe) · 2023–2024 (Leihe) · 2024–2026 · 2026–
+  { n: "Sepp van den Berg", by: 2001, clubs: ["PEC Zwolle", "Preston North End", "FC Brentford"] }, // 2018–2019 · 2021–2022 (Leihe) · 2024–
+  { n: "Alexander Schwolow", by: 1992, clubs: ["1. FC Union Berlin", "Heart of Midlothian"] }, // 2023–2025 · 2025–2026
+  { n: "Jannik Vestergaard", by: 1992, clubs: ["FC Southampton", "Leicester City"] },  // 2018–2021 · 2021–
+  { n: "Eren Dinkçi",       by: 2001, clubs: ["1. FC Heidenheim 1846"] },              // 2023–2024
+  { n: "Guido Burgstaller", by: 1989, clubs: ["FC St. Pauli"] },                       // 2020–2022
 ];

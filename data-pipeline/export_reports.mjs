@@ -36,6 +36,28 @@ export function leseEnv(text) {
 
 const NAME_VON_KEY = new Map(CLUBS.map((c) => [c.key, c.name]));
 
+/* GEPRÜFT UND ABGELEHNT.
+ *
+ * Eine Meldung, die sich als falsch erweist, verschwindet nicht von selbst: der
+ * Verein steht ja gerade NICHT beim Spieler, also gilt sie beim nächsten Export
+ * wieder als anwendbar. Ohne diese Liste würde derselbe falsche Eintrag immer
+ * wieder vorgeschlagen — und irgendwann übernommen.
+ *
+ * Hier steht nur, was am Beleg gescheitert ist, mit dem Grund. Das Gegenstück ist
+ * WRONG_CLUBS in apply_extra_players.mjs: das entfernt einen Verein, den wir
+ * fälschlich FÜHREN, dies hier verhindert, dass wir einen aufnehmen. */
+export const ABGELEHNT = [
+  {
+    n: "Raheem Sterling", by: 1994, club: "PSV Eindhoven",
+    grund: "Karrieretabelle nennt Liverpool, Manchester City, Chelsea, Arsenal und "
+      + "Feyenoord Rotterdam — kein PSV. Vermutlich mit Feyenoord verwechselt (26.08.2026).",
+  },
+];
+
+const ABGELEHNT_KEY = new Set(ABGELEHNT.map((a) => `${norm(a.n)}|${a.by}|${norm(a.club)}`));
+export const istAbgelehnt = (playerKey, clubName) =>
+  ABGELEHNT_KEY.has(`${playerKey}|${norm(String(clubName || ""))}`);
+
 /* Eine Datenbankzeile in den Ausgabesatz übersetzen.
  *
  * `ziel` ist die wichtigste Information der Datei — es sagt, WOHIN die Korrektur
@@ -56,7 +78,8 @@ export function zuAusgabe(zeile, spielerNachKey, karriere) {
     ? !!spieler?.clubs?.includes(key)
     : (karriere?.byKey?.[zeile.player_key] || []).some((i) => karriere.clubs[i] === name);
 
-  const ziel = !spieler || bekannt ? null : key ? "EXTRA_PLAYERS" : "EXTRA_CAREER_CLUBS";
+  const abgelehnt = istAbgelehnt(zeile.player_key, name);
+  const ziel = !spieler || bekannt || abgelehnt ? null : key ? "EXTRA_PLAYERS" : "EXTRA_CAREER_CLUBS";
   return {
     playerKey: zeile.player_key,
     playerName: zeile.player_name,
@@ -76,6 +99,8 @@ export function zuAusgabe(zeile, spielerNachKey, karriere) {
     ziel,
     grund: !spieler ? "Spieler steht nicht in players.js — Name/Geburtsjahr prüfen"
       : bekannt ? "Verein steht bereits beim Spieler — vermutlich ein Regel-, kein Datenproblem"
+      : abgelehnt ? "Geprüft und abgelehnt: "
+        + ABGELEHNT.find((x) => norm(x.n) === norm(zeile.player_name) && x.by === zeile.player_by)?.grund
       : null,
     /* Fertig zum Einfügen in die jeweilige Tabelle. Die Form unterscheidet sich nur
        im Vereinsfeld: Spielvereine über ihren Schlüssel, Karrierevereine über den
