@@ -10,20 +10,10 @@ import { dirname, join } from "path";
 import { norm, deriveLastName } from "./wikidata_roster.mjs";
 import { NAME_OVERRIDES, EXCLUDED_PLAYERS } from "./name_overrides.mjs";
 import { stampFixes } from "./stamp.mjs";
+import { recToString } from "./player_record.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLAYERS_PATH = join(HERE, "..", "src", "players.js");
-
-function recToString(r) {
-  let s = `{"n": ${JSON.stringify(r.n)}, "ln": ${JSON.stringify(r.ln)}, "by": ${r.by}, "nat": ${JSON.stringify(r.nat)}, "clubs": ${JSON.stringify(r.clubs)}`;
-  if (r.t && r.t.length) s += `, "t": ${JSON.stringify(r.t)}`;
-  if (r.sl) s += `, "sl": ${r.sl}`;
-  if (r.pos) s += `, "pos": ${JSON.stringify(r.pos)}`;
-  if (r.cp && r.cp.length) s += `, "cp": ${JSON.stringify(r.cp)}`;
-  if (r.lg && r.lg.length) s += `, "lg": ${JSON.stringify(r.lg)}`;
-  if (r.span && r.span.length) s += `, "span": ${JSON.stringify(r.span)}`;
-  return s + "}";
-}
 
 const key = (p) => norm(p.n) + "|" + p.by;
 

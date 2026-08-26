@@ -11,6 +11,7 @@ import { dirname, join } from "path";
 import { CLUB_QID, norm } from "./wikidata_roster.mjs";
 import { stampDataInfo } from "./stamp.mjs";
 import { LABEL_SERVICE, cleanName } from "./wikidata_label.mjs";
+import { recToString } from "./player_record.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLAYERS_PATH = join(HERE, "..", "src", "players.js");
@@ -49,17 +50,6 @@ async function fetchClubPeriods(qid) {
     from: b.f?.value ? parseInt(b.f.value) : null,
     to: b.t?.value != null ? parseInt(b.t.value) : 0,
   }));
-}
-
-function recToString(r) {
-  let s = `{"n": ${JSON.stringify(r.n)}, "ln": ${JSON.stringify(r.ln)}, "by": ${r.by}, "nat": ${JSON.stringify(r.nat)}, "clubs": ${JSON.stringify(r.clubs)}`;
-  if (r.t && r.t.length) s += `, "t": ${JSON.stringify(r.t)}`;
-  if (r.sl) s += `, "sl": ${r.sl}`;
-  if (r.pos) s += `, "pos": ${JSON.stringify(r.pos)}`;
-  if (r.cp && r.cp.length) s += `, "cp": ${JSON.stringify(r.cp)}`;
-  if (r.lg && r.lg.length) s += `, "lg": ${JSON.stringify(r.lg)}`;
-  if (r.span && r.span.length) s += `, "span": ${JSON.stringify(r.span)}`;
-  return s + "}";
 }
 
 async function main() {

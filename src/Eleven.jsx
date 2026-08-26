@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { norm, suggestPlayers, POS_LABEL } from "./gameData.js";
+import { posName, positionsText, POS_BY_KEY } from "./positions.js";
 import { buildEleven, elevenAccepts, elevenReason } from "./eleven.js";
 import { Avatar, Emblem } from "./Emblems.jsx";
 import Pitch, { Jersey } from "./Pitch.jsx";
@@ -148,14 +149,16 @@ export default function Eleven({ onLeave }) {
           {slots.map((s, i) => {
             const p = names[i] ? byName.get(names[i]) : null;
             return (
-              <button key={i} type="button" title={`${POS_LABEL[s.pos]} · ${s.def.name}`}
+              <button key={i} type="button" title={`${posName(s.pos)} · ${s.def.name}`}
                 className={`pslot ${p ? "set" : ""} ${active === i ? "active" : ""}`}
                 style={{ left: `${s.x}%`, top: `${s.y}%` }} onClick={() => openSlot(i)}>
                 <span className="pslotFig">
                   {p ? <Avatar player={p} size={42} /> : <Jersey pos={s.pos} />}
                   <span className="pslotEm"><Emblem def={s.def} /></span>
                 </span>
-                <span className="pslotName">{p ? p.ln : POS_LABEL[s.pos]}</span>
+                {/* Auf dem Feld das Kürzel (IV, DM, RA) — der volle Name passt nicht in einen
+                    Slot und steht ohnehin im title und in der Zeile darunter. */}
+                <span className="pslotName">{p ? p.ln : POS_BY_KEY[s.pos]?.kurz || s.pos}</span>
               </button>
             );
           })}
@@ -165,7 +168,7 @@ export default function Eleven({ onLeave }) {
       {active !== null && !done && slots.length > 0 && (
         <div className="panel">
           <div className="prompt">
-            {POS_LABEL[slots[active].pos]} · <b>{slots[active].def.name}</b>
+            {posName(slots[active].pos)} · <b>{slots[active].def.name}</b>
           </div>
           <div className="inrow">
             <div className="inwrap">
@@ -177,7 +180,10 @@ export default function Eleven({ onLeave }) {
                   {suggestions.map((s, i) => (
                     <div key={s.n} className={`sugItem ${i === sugActive ? "active" : ""}`} onMouseDown={(e) => { e.preventDefault(); chooseSug(s); }}>
                       <span className="sugWho"><Avatar player={s} size={30} />{s.n}</span>
-                      <span className="sugMeta">{[s.pos, new Date().getFullYear() - s.by].filter(Boolean).join(" · ")}</span>
+                      {/* Die GENAUE Position, nicht die Gruppe: Das Feld verlangt einen
+                          Innenverteidiger, ein „ABW" in der Vorschlagsliste beantwortet
+                          die Frage also nicht. Wo nichts belegt ist, steht die Gruppe. */}
+                      <span className="sugMeta">{[positionsText(s.pp, POS_LABEL[s.pos]), new Date().getFullYear() - s.by].filter(Boolean).join(" · ")}</span>
                     </div>
                   ))}
                 </div>

@@ -3,26 +3,36 @@
    nachweislich elf VERSCHIEDENE Spieler darauf verteilen lassen (bipartites Matching). */
 import { playerMatchesHex, POS_LABEL } from "./gameData.js";
 import { CHAIN_DEFS } from "./chain.js";
+import { passtAufPosition, posName, posGruppe } from "./positions.js";
 
 export const ELEVEN_SL_MIN = 40;        // Generierungspool: garantiert eine Lösung aus bekannten Spielern
 export const ELEVEN_MIN_CANDIDATES = 8; // Mindestauswahl je Position
 
-/* Eine Formation ist nur ihre Linienfolge (von hinten nach vorne). Daraus berechnet
-   slotLayout() die Koordinaten — dadurch kostet eine neue Formation eine Zeile, und
-   mehrlinige Mittelfelder (4-2-3-1) brauchen keinen Sonderfall.
-   Alle sechs sind auf Lösbarkeit geprüft (bipartites Matching, 20/20). */
+/* Eine Formation ist ihre Linienfolge von hinten nach vorne, und jede Linie nennt
+   jetzt ECHTE Positionen statt viermal dieselbe Gruppe. Vorher hieß eine Viererkette
+   „ABW, ABW, ABW, ABW" — das ist keine Kette, sondern vier Abwehrspieler. Jetzt steht
+   dort Linksverteidiger, Innenverteidiger, Innenverteidiger, Rechtsverteidiger.
+
+   WELCHE POSITIONEN VORKOMMEN, ist gemessen und nicht gewählt. Im Pool (sl >= 40,
+   2196 Spieler) tragen nur 46 % eine belegte genaue Position; streng gefordert hätten
+   Mittelstürmer und Linksaußen KEINE einzige Bedingung mit den nötigen acht
+   Kandidaten. Deshalb greift überall der Rückfall aus positions.js: Wer keine genaue
+   Position hinterlegt hat, zählt über seine grobe Gruppe mit. Ein
+   Innenverteidiger-Feld nimmt damit 427 statt aller rund 640 Abwehrspieler des Pools
+   — deutlich schärfer als vorher, ohne jemanden auszusperren, nur weil die Wikipedia
+   zu ihm schweigt. */
 export const FORMATIONS = [
-  { name: "4-4-2",   lines: [["TW",1],["ABW",4],["MF",4],["ST",2]] },
-  { name: "4-3-3",   lines: [["TW",1],["ABW",4],["MF",3],["ST",3]] },
-  { name: "3-5-2",   lines: [["TW",1],["ABW",3],["MF",5],["ST",2]] },
-  { name: "4-2-3-1", lines: [["TW",1],["ABW",4],["MF",2],["MF",3],["ST",1]] },
-  { name: "5-3-2",   lines: [["TW",1],["ABW",5],["MF",3],["ST",2]] },
-  { name: "3-4-3",   lines: [["TW",1],["ABW",3],["MF",4],["ST",3]] },
+  { name: "4-4-2",   lines: [["TW"],["LV","IV","IV","RV"],["LM","ZM","ZM","RM"],["MS","MS"]] },
+  { name: "4-3-3",   lines: [["TW"],["LV","IV","IV","RV"],["DM","ZM","OM"],["LA","MS","RA"]] },
+  { name: "3-5-2",   lines: [["TW"],["IV","IV","IV"],["LM","DM","ZM","OM","RM"],["MS","HS"]] },
+  { name: "4-2-3-1", lines: [["TW"],["LV","IV","IV","RV"],["DM","DM"],["LA","OM","RA"],["MS"]] },
+  { name: "5-3-2",   lines: [["TW"],["LV","IV","IV","IV","RV"],["DM","ZM","OM"],["MS","HS"]] },
+  { name: "3-4-3",   lines: [["TW"],["IV","IV","IV"],["LM","DM","ZM","RM"],["LA","MS","RA"]] },
 ];
 
 // Positionsfolge einer Formation (Reihenfolge = Slot-Index, hinten nach vorne).
 export function formationPositions(f) {
-  return f.lines.flatMap(([pos, n]) => Array(n).fill(pos));
+  return f.lines.flat();
 }
 
 /* Koordinaten in Prozent: Tor unten (y groß), Sturm oben. Innerhalb einer Linie
@@ -30,11 +40,11 @@ export function formationPositions(f) {
 export function slotLayout(f) {
   const rows = f.lines.length;
   const out = [];
-  f.lines.forEach(([pos, n], li) => {
+  f.lines.forEach((linie, li) => {
     // 90 % (Torwart, im eigenen Strafraum) bis 18 % — die vorderste Linie bleibt VOR
     // dem gegnerischen Strafraum (der endet bei ~14 %), sonst stehen Stürmer im Tor.
     const y = rows > 1 ? 90 - (li / (rows - 1)) * 72 : 50;
-    for (let k = 0; k < n; k++) out.push({ pos, x: ((k + 1) / (n + 1)) * 100, y });
+    linie.forEach((pos, k) => out.push({ pos, x: ((k + 1) / (linie.length + 1)) * 100, y }));
   });
   return out;
 }
@@ -72,25 +82,40 @@ export function slotCandidates(players, pool, pos, def) {
   const out = [];
   for (const i of pool) {
     const p = players[i];
-    if (p.pos === pos && playerMatchesHex(p, def)) out.push(i);
+    if (passtAufPosition(p.pp, pos, p.pos) && playerMatchesHex(p, def)) out.push(i);
   }
   return out;
 }
 
 export function elevenAccepts(player, slot) {
   if (!player || !slot) return false;
-  return player.pos === slot.pos && playerMatchesHex(player, slot.def);
+  return passtAufPosition(player.pp, slot.pos, player.pos) && playerMatchesHex(player, slot.def);
 }
 
-/* Begründung einer Ablehnung. Der Fall „Spieler ohne hinterlegte Position" braucht
-   einen eigenen Satz: vorher stand dort „X ist undefined, gesucht ist Torwart" — das
-   las sich wie ein Fehler im Spiel und nicht wie eine Lücke im Datensatz. */
+/* Begründung einer Ablehnung. Zwei Fälle brauchen einen eigenen Satz.
+
+   OHNE POSITION: vorher stand dort „X ist undefined, gesucht ist Torwart" — das las
+   sich wie ein Fehler im Spiel und nicht wie eine Lücke im Datensatz.
+
+   FALSCHE GENAUE POSITION: Seit die Felder echte Positionen fordern, wird ein
+   Linksverteidiger auf einem Innenverteidiger-Feld abgelehnt, ein Abwehrspieler ohne
+   hinterlegte Feinposition dagegen angenommen. Das wirkt willkürlich, wenn man es
+   nicht ausspricht — deshalb nennt der Satz die Position, die wir zu ihm führen. */
 export function elevenReason(player, slot) {
   if (!player || !slot) return "";
   if (!player.pos) return `Zu ${player.n} ist keine Position hinterlegt — such dir jemand anderen.`;
-  if (player.pos !== slot.pos) return `${player.n} ist ${POS_LABEL[player.pos]}, gesucht ist ${POS_LABEL[slot.pos]}.`;
+  const gesucht = posName(slot.pos);
+  if (!passtAufPosition(player.pp, slot.pos, player.pos)) {
+    const seine = player.pp?.length
+      ? player.pp.map(posName).join(" und ")
+      : POS_LABEL[player.pos];
+    return `${player.n} ist ${seine}, gesucht ist ${gesucht}.`;
+  }
   return `${player.n} erfüllt „${slot.def.name}" nicht.`;
 }
+
+/** Die grobe Gruppe eines Feldes — für Trikotfarbe und Sortierung in der Ansicht. */
+export const slotGruppe = (pos) => posGruppe(pos) || pos;
 
 /* Bipartites Matching (Kuhn): Lassen sich allen Positionen paarweise verschiedene
    Spieler zuordnen? Acht Kandidaten je Position genügen dafür nicht — die Mengen

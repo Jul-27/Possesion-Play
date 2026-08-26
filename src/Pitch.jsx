@@ -2,6 +2,8 @@
    liegen als echte Buttons darüber. Maße in einem 100×140-Koordinatensystem, das per
    preserveAspectRatio="none" auf den Container gezogen wird; dadurch bleiben die
    Prozent-Koordinaten der Slots und die Linien immer deckungsgleich. */
+import { posGruppe } from "./positions.js";
+
 export default function Pitch() {
   return (
     <svg className="pitchSvg" viewBox="0 0 100 140" preserveAspectRatio="none" aria-hidden="true">
@@ -25,8 +27,10 @@ export default function Pitch() {
 
 /* Trikot für eine noch unbesetzte Position. Der Torwart trägt eine eigene Farbe —
    so ist die einzige Sonderposition auch ohne Text erkennbar. */
+/* `pos` ist seit den echten Positionen ein feiner Schlüssel (IV, DM, RA …). Für die
+   Trikotfarbe zählt nur, ob es der Torwart ist — der trägt bekanntlich ein anderes. */
 export function Jersey({ pos }) {
-  const gk = pos === "TW";
+  const gk = posGruppe(pos) === "TW" || pos === "TW";
   return (
     <svg className="jersey" viewBox="0 0 40 36" aria-hidden="true">
       <path

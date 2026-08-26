@@ -80,8 +80,14 @@ async function sucheArtikel(name) {
   return (await (await fetch(u, { headers: { "User-Agent": UA } })).json()).query.search.map((s) => s.title);
 }
 
+/* Das Geburtsjahr aus der Infobox. Der Feldname schwankt: die Spieler-Infobox nennt
+   es `geburtstag`, andere `geburtsdatum`, manche setzen die Vorlage {{Geburtsdatum}}.
+   Solange nur `geburtsdatum` geprüft wurde, fielen 7 % der Spieler durch die
+   Jahresprüfung und bekamen keine Position — nicht weil das Jahr fehlte, sondern
+   weil das Feld anders heißt. */
 export const geburtsjahr = (text) => {
-  const m = text.match(/geburtsdatum\s*=\s*[^\n|]*?(\d{4})/i) || text.match(/\{\{Geburtsdatum[^}]*\|(\d{4})/i);
+  const m = String(text || "").match(/geburts(?:datum|tag)\s*=\s*[^\n|]*?((?:1[89]|20)\d{2})/i)
+    || String(text || "").match(/\{\{Geburtsdatum[^}]*\|((?:1[89]|20)\d{2})/i);
   return m ? Number(m[1]) : null;
 };
 

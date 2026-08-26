@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { lookupDef } from "./gameData.js";
+import { POS_BY_KEY, posGruppe } from "./positions.js";
 import {
   FORMATIONS, formationPositions, slotLayout, formationFor, elevenPool, slotCandidates,
   hasPerfectMatching, buildEleven, elevenAccepts, elevenReason, ELEVEN_MIN_CANDIDATES,
@@ -13,8 +14,11 @@ test("Jede Formation hat elf Positionen und genau einen Torwart", () => {
     assert.equal(pos.length, 11, `${f.name} hat ${pos.length} statt 11 Positionen`);
     assert.equal(pos.filter((p) => p === "TW").length, 1, `${f.name} braucht genau einen Torwart`);
     // Der Name muss zur Linienfolge passen (ohne Torwart), sonst ist die Tabelle inkonsistent
-    const feld = f.lines.slice(1).map(([, n]) => n).join("-");
+    const feld = f.lines.slice(1).map((l) => l.length).join("-");
     assert.equal(feld, f.name, `Linien von ${f.name} ergeben ${feld}`);
+    // Jede Position muss im Vokabular stehen und zur Linie passen
+    for (const k of pos) assert.ok(POS_BY_KEY[k], `${f.name}: „${k}" gibt es nicht`);
+    assert.equal(posGruppe(pos[0]), "TW", `${f.name}: erste Position ist kein Torwart`);
   }
 });
 
@@ -57,10 +61,22 @@ test("hasPerfectMatching: leere Kandidatenliste ist unlösbar", () => {
 });
 
 test("elevenAccepts: Position und Bedingung müssen beide stimmen", () => {
-  const slot = { pos: "ST", def: lookupDef("nat", "GER") };
-  assert.equal(elevenAccepts({ pos: "ST", nat: ["GER"], clubs: [] }, slot), true);
-  assert.equal(elevenAccepts({ pos: "MF", nat: ["GER"], clubs: [] }, slot), false);
-  assert.equal(elevenAccepts({ pos: "ST", nat: ["ESP"], clubs: [] }, slot), false);
+  const slot = { pos: "MS", def: lookupDef("nat", "GER") };
+  assert.equal(elevenAccepts({ pos: "ST", pp: ["MS"], nat: ["GER"], clubs: [] }, slot), true);
+  assert.equal(elevenAccepts({ pos: "MF", pp: ["ZM"], nat: ["GER"], clubs: [] }, slot), false);
+  assert.equal(elevenAccepts({ pos: "ST", pp: ["MS"], nat: ["ESP"], clubs: [] }, slot), false);
+});
+
+/* Der Rückfall ist der Grund, warum die Felder überhaupt echte Positionen fordern
+   dürfen: nur 46 % des Pools tragen eine belegte Feinposition. Wer keine hat, zählt
+   über seine Gruppe mit — wer eine ANDERE hat, nicht. */
+test("elevenAccepts: ohne Feinposition zählt die Gruppe, eine falsche schließt aus", () => {
+  const slot = { pos: "IV", def: lookupDef("nat", "GER") };
+  const basis = { nat: ["GER"], clubs: [] };
+  assert.equal(elevenAccepts({ ...basis, pos: "ABW" }, slot), true, "Abwehrspieler ohne Detail");
+  assert.equal(elevenAccepts({ ...basis, pos: "ABW", pp: ["IV"] }, slot), true);
+  assert.equal(elevenAccepts({ ...basis, pos: "ABW", pp: ["LV"] }, slot), false, "belegt ein anderer");
+  assert.equal(elevenAccepts({ ...basis, pos: "MF" }, slot), false);
 });
 
 test("Echtdaten: das Tagesrätsel ist gültig und lösbar", async () => {
@@ -111,7 +127,19 @@ test("elevenReason: falsche Position nennt beide Positionen im Klartext", () => 
   assert.equal(elevenReason({ n: "Harry Kane", pos: "ST" }, slot), "Harry Kane ist Sturm, gesucht ist Torwart.");
 });
 
+/* Ein Linksverteidiger wird auf einem Innenverteidiger-Feld abgelehnt, ein
+   Abwehrspieler ohne Feinposition angenommen. Das wirkt willkürlich, wenn der Satz
+   nicht sagt, welche Position wir zu ihm führen. */
+test("elevenReason: nennt die belegte Feinposition, nicht die Gruppe", () => {
+  const slot = { pos: "IV", def: { name: "Deutschland", type: "nat", key: "GER" } };
+  assert.equal(elevenReason({ n: "Marcelo", pos: "ABW", pp: ["LV"] }, slot),
+    "Marcelo ist Linksverteidiger, gesucht ist Innenverteidiger.");
+  assert.equal(elevenReason({ n: "Philipp Lahm", pos: "ABW", pp: ["RV", "LV"] }, slot),
+    "Philipp Lahm ist Rechtsverteidiger und Linksverteidiger, gesucht ist Innenverteidiger.");
+});
+
 test("elevenReason: passende Position, aber Bedingung verfehlt", () => {
-  const slot = { pos: "ST", def: { name: "FC Bayern München", type: "club", key: "FCB" } };
-  assert.equal(elevenReason({ n: "Harry Kane", pos: "ST" }, slot), 'Harry Kane erfüllt „FC Bayern München" nicht.');
+  const slot = { pos: "MS", def: { name: "FC Bayern München", type: "club", key: "FCB" } };
+  const kane = { n: "Harry Kane", pos: "ST", pp: ["MS"], clubs: ["TOT"] };
+  assert.equal(elevenReason(kane, slot), `Harry Kane erfüllt „FC Bayern München" nicht.`);
 });
