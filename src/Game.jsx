@@ -13,6 +13,7 @@ import { useLeaveEndsGame } from "./usePresence.js";
 import ReportButton from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
+import WaitForOpponent from "./WaitForOpponent.jsx";
 import { merkeSpieler } from "./collection.js";
 
 export default function Game({ code, clientId, onLeave }) {
@@ -28,7 +29,6 @@ export default function Game({ code, clientId, onLeave }) {
   const [now, setNow] = useState(Date.now());
   const timeoutFired = useRef(false);
   const [showRules, setShowRules] = useState(false);
-  const [copied, setCopied] = useState(false);
   const inputRef = useRef(null);
   const [players, setPlayers] = useState(null);
   useEffect(() => { loadPlayers().then(setPlayers); }, []);
@@ -240,11 +240,6 @@ export default function Game({ code, clientId, onLeave }) {
     if (e.key === "Enter") handleSubmit();
   }
 
-  function copyShare() {
-    const link = `${window.location.origin}${window.location.pathname}?game=${code}`;
-    navigator.clipboard?.writeText(link).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
-  }
-
   if (loadErr) return (
     <div className="lobby"><div className="panel"><div className="fb err">{loadErr}</div>
       <button className="btn primary block" style={{ marginTop: 12 }} onClick={onLeave}>Zur Lobby</button></div></div>
@@ -338,19 +333,7 @@ export default function Game({ code, clientId, onLeave }) {
       {opponentLeaving && !gameOver && (<div className="fb info">Gegner offline — das Spiel endet gleich, falls er nicht zurückkommt…</div>)}
 
       {/* Warten auf Mitspieler */}
-      {status === "waiting" && (
-        <div className="overlay">
-          <div className="modal" style={{ textAlign: "center" }}>
-            <h2>Warte auf Mitspieler</h2>
-            <p>Teile diesen Code mit deinem Freund:</p>
-            <div className="code">{code}</div>
-            <div className="closeline">
-              <button className="btn primary" style={{ flex: 1, padding: "12px" }} onClick={copyShare}>{copied ? "Link kopiert ✓" : "Einladungslink kopieren"}</button>
-            </div>
-            <button className="btn ghost block" style={{ marginTop: 10 }} onClick={onLeave}>Abbrechen</button>
-          </div>
-        </div>
-      )}
+      {status === "waiting" && <WaitForOpponent code={code} onLeave={onLeave} />}
 
       {/* Abpfiff */}
       {gameOver && (

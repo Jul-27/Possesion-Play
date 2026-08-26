@@ -14,6 +14,7 @@ import { useLeaveEndsGame } from "./usePresence.js";
 import ReportButton from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
+import WaitForOpponent from "./WaitForOpponent.jsx";
 import { merkeSpieler } from "./collection.js";
 
 const sigOf = (dim, val) =>
@@ -61,7 +62,6 @@ export default function Guess({ code, clientId, onLeave }) {
   const [sugActive, setSugActive] = useState(-1);
   const [localFeedback, setLocalFeedback] = useState(null);
   const [showRules, setShowRules] = useState(false);
-  const [copied, setCopied] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => { loadPlayers().then(setPlayers); }, []);
@@ -249,10 +249,6 @@ export default function Guess({ code, clientId, onLeave }) {
     }
     if (e.key === "Enter") submitGuess();
   }
-  function copyShare() {
-    const link = `${window.location.origin}${window.location.pathname}?game=${code}`;
-    navigator.clipboard?.writeText(link).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
-  }
 
   if (loadErr) return (<div className="ppRoot"><div className="fb err" style={{ marginTop: 40 }}>{loadErr}</div><button className="btn ghost block" style={{ marginTop: 12 }} onClick={onLeave}>Zur Lobby</button></div>);
   if (!row) return <div className="ppRoot"><div className="panel" style={{ marginTop: 40 }}>Lade…</div></div>;
@@ -392,13 +388,7 @@ export default function Guess({ code, clientId, onLeave }) {
       {fb && (<div className={`fb ${fb.type}`}>{fb.text}{fb.detail && <div className="fbDetail">{fb.detail}</div>}</div>)}
       {opponentLeaving && !gameOver && (<div className="fb info">Gegner offline — das Spiel endet gleich, falls er nicht zurückkommt…</div>)}
 
-      {status === "waiting" && (
-        <div className="overlay"><div className="modal" style={{ textAlign: "center" }}>
-          <h2>Warte auf Mitspieler</h2><p>Teile diesen Code mit deinem Freund:</p><div className="code">{code}</div>
-          <div className="closeline"><button className="btn primary" style={{ flex: 1, padding: "12px" }} onClick={copyShare}>{copied ? "Link kopiert ✓" : "Einladungslink kopieren"}</button></div>
-          <button className="btn ghost block" style={{ marginTop: 10 }} onClick={onLeave}>Abbrechen</button>
-        </div></div>
-      )}
+      {status === "waiting" && <WaitForOpponent code={code} onLeave={onLeave} />}
 
       {gameOver && (
         <div className="overlay">

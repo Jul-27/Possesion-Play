@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase, getClientId, getSavedName, saveName } from "./supabaseClient.js";
 import { buildBoardSerial, buildGridSerial, buildGuessSerial, genCode, START_SECONDS } from "./gameData.js";
-import { initCarousel, CAROUSEL_SECONDS } from "./carousel.js";
+import { initCarousel } from "./carousel.js";
+import { gastPlatzBeanspruchen } from "./duelJoinClient.js";
 import { loadPlayers } from "./playersStore.js";
 import { dailyDateStr, dailyNumber } from "./dailyLogic.js";
 import { challengeState, dailyRnd } from "./dailyChallenge.js";
@@ -68,32 +69,10 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
       const myName = name.trim() || "Spieler 2";
       saveName(myName);
 
-      const { data: row, error: selErr } = await supabase.from("games").select("*").eq("code", code).maybeSingle();
-      if (selErr) throw selErr;
-      if (!row) { setError("Kein Spiel mit diesem Code gefunden."); setBusy(false); return; }
-
-      // Wiedereinstieg, falls ich schon dabei bin
-      if (row.host_id === me || row.guest_id === me) { onEnter(code); return; }
-      if (row.guest_id) { setError("Dieses Spiel ist bereits voll."); setBusy(false); return; }
-
-      // Gästeplatz beanspruchen (nur wenn noch frei -> verhindert Race)
-      const { data: upd, error: updErr } = await supabase
-        .from("games")
-        .update({ guest_id: me, status: "playing", names: { ...row.names, 2: myName },
-          clocks: { ...(row.clocks || { 1: START_SECONDS, 2: START_SECONDS, timeout: null }), started: new Date().toISOString() },
-          /* Das Karussell zählt pro Zug, nicht pro Partie: die Frist des ersten Zuges
-             beginnt erst mit dem Beitritt — sonst liefe sie ab, während der Ersteller
-             noch auf einen Gegner wartet. */
-          ...(row.board?.kind === "carousel"
-            ? { last_move: { ...(row.last_move || {}), frist: Date.now() + CAROUSEL_SECONDS * 1000 } }
-            : {}),
-          updated_at: new Date().toISOString() })
-        .eq("code", code)
-        .is("guest_id", null)
-        .select()
-        .maybeSingle();
-      if (updErr) throw updErr;
-      if (!upd) { setError("Jemand anderes ist gerade beigetreten."); setBusy(false); return; }
+      /* Dieselbe Logik wie beim Einladungslink — siehe duelJoin.js. Getrennte
+         Fassungen wären auseinandergelaufen. */
+      const { ok, fehler } = await gastPlatzBeanspruchen(code, me, myName);
+      if (!ok) { setError(fehler); setBusy(false); return; }
       onEnter(code);
     } catch (e) {
       setError("Beitritt fehlgeschlagen: " + (e.message || e));
