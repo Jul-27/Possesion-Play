@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { leseEnv, zuAusgabe, baueExport } from "./export_reports.mjs";
+import { leseEnv, zuAusgabe, baueExport, istAbgelehnt } from "./export_reports.mjs";
 import { norm } from "../src/gameData.js";
 
 const zeile = (o = {}) => ({
@@ -103,4 +103,27 @@ test("ein leerer Export ist gültig und leer, kein Fehler", () => {
   assert.deepEqual(daten.reports, []);
   assert.deepEqual(daten.extraPlayers, []);
   assert.deepEqual(daten.extraCareerClubs, []);
+});
+
+/* Eine widerlegte Meldung verschwindet nicht von selbst: der Verein steht ja gerade
+   NICHT beim Spieler, sie gilt also beim nächsten Export wieder als anwendbar.
+   Ohne die Ablehnliste würde derselbe falsche Eintrag immer wieder vorgeschlagen. */
+test("eine geprüft abgelehnte Meldung wird nicht mehr als anwendbar geführt", () => {
+  const spieler = { n: "Raheem Sterling", by: 1994, clubs: ["MCI"] };
+  const nachKey = new Map([["raheem sterling|1994", spieler]]);
+  const zeile = {
+    player_key: "raheem sterling|1994", player_name: "Raheem Sterling", player_by: 1994,
+    club_key: null, club_name: "PSV Eindhoven", reports: 1, reporters: ["x"], modes: ["hex-duell"],
+  };
+  const a = zuAusgabe(zeile, nachKey, { clubs: [], byKey: {} });
+  assert.equal(a.anwendbar, false);
+  assert.equal(a.ziel, null);
+  assert.match(a.grund, /Geprüft und abgelehnt/);
+  assert.match(a.grund, /Feyenoord/);
+});
+
+test("istAbgelehnt trifft nur das gemeldete Paar", () => {
+  assert.equal(istAbgelehnt("raheem sterling|1994", "PSV Eindhoven"), true);
+  assert.equal(istAbgelehnt("raheem sterling|1994", "Feyenoord Rotterdam"), false, "nur dieser Verein");
+  assert.equal(istAbgelehnt("harry kane|1993", "PSV Eindhoven"), false, "nur dieser Spieler");
 });

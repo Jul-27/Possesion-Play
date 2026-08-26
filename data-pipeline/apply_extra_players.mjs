@@ -60,6 +60,16 @@ export const EXTRA_PLAYERS = [
   { n: "Lothar Matthäus", by: 1961, nat: ["GER"], clubs: ["BMG", "FCB", "INT"],
     t: ["BDO", "DFB", "EM", "MBL", "MSA", "WM"], sl: 85, pos: "MF",
     cp: [["BMG", 1979, 1984], ["FCB", 1984, 1988], ["INT", 1988, 1992], ["FCB", 1992, 2000]] },
+
+  /* Zweite Ladung aus „Fehler melden" (26.08.2026). Jede Station steht in der
+     Infobox-Karrieretabelle der deutschen Wikipedia; Wikidata führt keine davon.
+     Vier der sechs sind Leihen — genau die Kategorie, die dort jahrelang fehlt. */
+  { n: "Ransford-Yeboah Königsdörffer", by: 2001, clubs: ["HSV"] },  // 2022–2026
+  { n: "Ishak Belfodil",    by: 1992, clubs: ["TSG"] },              // 2018–2021
+  { n: "Patrick Farkas",    by: 1992, clubs: ["RBS"] },              // 2017–2021
+  { n: "Sepp van den Berg", by: 2001, clubs: ["S04", "M05"] },       // 2022–2023 · 2023–2024, beide Leihe
+  { n: "Alexander Schwolow", by: 1992, clubs: ["S04"] },             // 2022–2023, Leihe
+  { n: "Guido Burgstaller", by: 1989, clubs: ["S04"] },              // 2017–2020
 ];
 
 /* Vereine, die bei einem Spieler nachweislich falsch stehen. Gegenstück zu
