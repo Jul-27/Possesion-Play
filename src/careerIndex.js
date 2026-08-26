@@ -9,6 +9,7 @@
    Der Index führt beide zusammen und bevorzugt dabei die Schreibweise aus CLUBS,
    damit „FC Bayern München" nicht zweimal mit unterschiedlicher Schreibung auftaucht. */
 import { norm, CLUBS } from "./gameData.js";
+import { kanonischerVereinsname } from "./clubNames.js";
 
 const spielerSchluessel = (p) => norm(p.n) + "|" + p.by;
 
@@ -53,7 +54,11 @@ export function createCareerIndex(players, clubs = [], byKey = {}) {
 
   for (const p of players) {
     const k = spielerSchluessel(p);
-    for (const i of byKey[k] || []) { const n = clubs[i]; if (n) merke(k, p, n); }
+    /* Über kanonischerVereinsname, weil careerClubs.js denselben Verein unter zwei
+       Namen führt: „Arsenal" (unser Spielname) und „FC Arsenal" (Wikidatas Label).
+       Ohne diese Zusammenführung zählten sie als zwei Vereine, und die
+       Verbrannte-Vereine-Regel des Karussells ließe sich damit umgehen. */
+    for (const i of byKey[k] || []) { const n = clubs[i]; if (n) merke(k, p, kanonischerVereinsname(n)); }
     /* Auch ohne Karrieredaten spielbar bleiben: die kuratierten 47 Vereine gelten
        immer. Sonst verlöre ein Spieler ohne Wikidata-Treffer alle Stationen. */
     for (const key of p.clubs || []) { const n = spielNameVonKey.get(key); if (n) merke(k, p, n); }
