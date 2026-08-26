@@ -105,7 +105,29 @@ test("überlappende Spells verschmelzen auch in der vollen Karriere", () => {
     byKey: { "x y|1990": [[1, 2005, 2015], [0, 2015, 2018], [0, 2015, 2015]] },
   };
   assert.deepEqual(careerStations(p, dated).map((s) => `${s.name} ${s.from}-${s.to}`),
-    ["Tottenham Hotspur 2005-2015", "FC Everton 2015-2018"]);
+    ["Tottenham Hotspur 2005-2015", "Everton 2015-2018"],
+    "„FC Everton“ erscheint unter dem Spielnamen „Everton“");
+});
+
+/* careerPathClubs.js führt die Wikidata-Schreibweise, das Spiel den kürzeren Namen.
+   Vor der Auflösung standen Gerrards Liverpool, Lampards Chelsea, Pirlos Milan und
+   Juventus sowie Rooneys Everton ohne Wappen da — fünf der bekanntesten Vereine
+   überhaupt. */
+test("Wikidata-Schreibweisen finden ihr Wappen und ihren Spielnamen", () => {
+  const dated = {
+    clubs: ["FC Liverpool", "FC Chelsea", "AC Milan", "Juventus Turin", "FC Everton"],
+    byKey: { "x y|1990": [[0, 2000, 2005], [1, 2005, 2008], [2, 2008, 2011], [3, 2011, 2014], [4, 2014, 2016]] },
+  };
+  const st = careerStations({ n: "X Y", by: 1990, sl: 70, cp: [] }, dated);
+  assert.deepEqual(st.map((s) => s.club), ["LIV", "CHE", "MIL", "JUV", "EVE"], "alle fünf mit Wappen");
+  assert.deepEqual(st.map((s) => s.name), ["Liverpool", "Chelsea", "AC Mailand", "Juventus", "Everton"]);
+});
+
+test("unbekannte Vereine bleiben unangetastet", () => {
+  const dated = { clubs: ["Brescia Calcio"], byKey: { "x y|1990": [[0, 2000, 2005]] } };
+  const [st] = careerStations({ n: "X Y", by: 1990, sl: 70, cp: [] }, dated);
+  assert.equal(st.name, "Brescia Calcio");
+  assert.equal(st.club, null);
 });
 
 test("Echtdaten: die volle Karriere vergrößert den Rätselpool deutlich", async () => {

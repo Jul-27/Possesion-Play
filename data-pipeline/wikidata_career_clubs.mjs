@@ -23,6 +23,7 @@
 import { readFileSync, writeFileSync } from "fs";
 import { pathToFileURL } from "url";
 import { norm, CLUBS } from "../src/gameData.js";
+import { kanonischerVereinsname } from "../src/clubNames.js";
 
 const UA = "PossessionPlay/1.0 (https://github.com/Jul-27; data enrichment)";
 const OUT = new URL("../src/careerClubs.js", import.meta.url);
@@ -254,7 +255,19 @@ async function main() {
 
   /* Die 47 Spielvereine immer mitführen: sie sind kuratiert und teils reicher als
      Wikidata (Salzburg, Matthäus, die Kader aus der Wikipedia). Sonst verlöre das
-     Karussell ausgerechnet die Stationen, die wir mühsam nachgetragen haben. */
+     Karussell ausgerechnet die Stationen, die wir mühsam nachgetragen haben.
+
+     ERST KANONISIEREN, DANN ERGÄNZEN. Genau hier entstand die Dublette: Wikidata
+     liefert „FC Liverpool", unser Spielverein heißt „Liverpool", und die Vereinigung
+     lief über den NAMEN. Beide landeten in der Datei, 4.119 Spieler trugen dadurch
+     zwei Formen desselben Vereins — und die Verbrannte-Vereine-Regel des Karussells
+     ließ sich damit umgehen. Sechs Vereine waren betroffen: Liverpool, Chelsea,
+     Arsenal, Everton, Juventus, AC Mailand. */
+  for (const [k, set] of proSpieler) {
+    const kanonisch = new Set([...set].map(kanonischerVereinsname));
+    if (kanonisch.size !== set.size) proSpieler.set(k, kanonisch);
+  }
+
   const nameVonKey = Object.fromEntries(CLUBS.map((c) => [c.key, c.name]));
   let ausSpiel = 0;
   for (const p of ziel) {

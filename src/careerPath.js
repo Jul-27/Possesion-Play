@@ -7,13 +7,13 @@
       Wikidata-Abfrage einen Spieler nicht getroffen hat; sonst wäre er plötzlich
       kein Rätsel mehr, obwohl er es vorher war. */
 import { norm, CLUBS } from "./gameData.js";
+import { clubKeyFuer, kanonischerVereinsname } from "./clubNames.js";
 
 export const CAREER_SL_MIN = 40;       // Mindest-Bekanntheit, damit ratbar
 export const CAREER_MIN_STATIONS = 3;  // mind. so viele Stationen (Rückkehr zählt eigenständig)
 
 const END = (to) => (to === 0 ? 9999 : to); // 0 = bis heute
 const NAME_VON_KEY = new Map(CLUBS.map((c) => [c.key, c.name]));
-const KEY_VON_NAME = new Map(CLUBS.map((c) => [norm(c.name), c.key]));
 const spielerSchluessel = (p) => norm(p.n) + "|" + p.by;
 
 /* Überlappende oder anschließende Spells desselben Vereins verschmelzen — Wikidata
@@ -37,8 +37,14 @@ export function careerStations(player, dated = null) {
   const roh = voll?.length
     ? voll.map(([i, from, to]) => ({ name: dated.clubs[i], from, to }))
     : (player?.cp || []).map(([key, from, to]) => ({ name: NAME_VON_KEY.get(key) || key, from, to }));
-  // Das Kürzel entscheidet nur darüber, ob ein Wappen existiert.
-  return verschmelzen(roh).map((s) => ({ ...s, club: KEY_VON_NAME.get(norm(s.name)) || null }));
+  /* Das Kürzel entscheidet darüber, ob ein Wappen existiert — und es muss die
+     Wikidata-Schreibweise mitkennen: careerPathClubs.js führt „FC Liverpool", der
+     Spielverein heißt „Liverpool". Ohne clubKeyFuer standen Gerrards Liverpool,
+     Lampards Chelsea, Pirlos Milan und Rooneys Everton ohne Wappen da. */
+  return verschmelzen(roh).map((s) => {
+    const club = clubKeyFuer(s.name);
+    return { ...s, name: kanonischerVereinsname(s.name), club };
+  });
 }
 
 /** Indizes aller Spieler, die sich als Rätsel eignen (nach dem Verschmelzen). */
