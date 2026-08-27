@@ -69,7 +69,7 @@ test("Modi haben getrennte Serien", () => {
   recordChallenge("career", true, "2026-07-25");
   assert.equal(challengeStats("career").streak, 1);
   assert.equal(challengeStats("chain"), null, "andere Modi bleiben unberührt");
-  assert.deepEqual(CHALLENGE_MODES, ["career", "odd", "chain", "hex", "heat"]);
+  assert.deepEqual(CHALLENGE_MODES, ["career", "odd", "chain", "hex", "heat", "ecken"]);
 });
 
 test("Echtdaten: dieselbe Tagesaufgabe für alle — über alle Generatoren", async () => {
