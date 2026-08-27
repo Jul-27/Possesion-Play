@@ -36,6 +36,7 @@ export const REPORT_MODES = {
      eingegangenen Meldungen tragen diesen Schlüssel, und sie sollen in der
      Auswertung weiter unter ihrem damaligen Namen erscheinen. */
   steckbrief:     { name: "Steckbrief",             art: "solo" },
+  ecken:          { name: "Sechs Ecken",            art: "solo" },
   "hex-duell":    { name: "Hex-Duell",              art: "duell" },
   "grid-duell":   { name: "Raster-Duell",           art: "duell" },
   "guess-duell":  { name: "Errate den Star",        art: "duell" },
