@@ -46,7 +46,11 @@ export default function Eleven({ onLeave }) {
   const formation = puzzle?.formation;
   /* Slot-Breite richtet sich nach der dichtesten Linie: der Abstand zweier Slots ist
      100/(n+1) % der Feldbreite — bei einer 5er-Reihe nur ~62 px auf dem Handy. */
-  const maxLine = formation ? Math.max(...formation.lines.map((l) => l[1])) : 4;
+  /* Die breiteste Reihe bestimmt, wie viel Platz ein Slot bekommt. Stand hier
+     `l[1]`, als eine Zeile noch [Position, Anzahl] war — seit sie eine Liste von
+     Positionen ist, lieferte das NaN, der Slot bekam gar keine Breite, und Kürzel
+     wie „TW" brachen buchstabenweise senkrecht um. */
+  const maxLine = formation ? Math.max(...formation.lines.map((l) => l.length)) : 4;
   const usedNames = useMemo(() => new Set(names.filter(Boolean)), [names]);
   // Namen -> Record, damit die besetzten Slots ein Foto zeigen können
   const byName = useMemo(() => {
