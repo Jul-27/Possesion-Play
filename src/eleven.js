@@ -21,12 +21,19 @@ export const ELEVEN_MIN_CANDIDATES = 8; // Mindestauswahl je Position
    Innenverteidiger-Feld nimmt damit 427 statt aller rund 640 Abwehrspieler des Pools
    — deutlich schärfer als vorher, ohne jemanden auszusperren, nur weil die Wikipedia
    zu ihm schweigt. */
+/* EINE ZEILE IST EINE HÖHE AUF DEM FELD. Deshalb darf in derselben Zeile kein
+   Sechser neben einem Zehner stehen — die beiden sind zwei Bänder voneinander
+   entfernt, und nebeneinander gezeichnet ergibt das keine Aufstellung, sondern eine
+   Reihe. „4-3-3" mit [DM, ZM, OM] in einer Zeile war genau das; daraus ist das
+   real gespielte 4-1-2-3 geworden, aus dem 3-5-2 ein 3-4-1-2.
+   Der Name einer Formation ist immer die Folge der Zeilenlängen ohne Torwart — ein
+   Test hält das fest, damit Name und Bild nicht auseinanderlaufen. */
 export const FORMATIONS = [
   { name: "4-4-2",   lines: [["TW"],["LV","IV","IV","RV"],["LM","ZM","ZM","RM"],["MS","MS"]] },
-  { name: "4-3-3",   lines: [["TW"],["LV","IV","IV","RV"],["DM","ZM","OM"],["LA","MS","RA"]] },
-  { name: "3-5-2",   lines: [["TW"],["IV","IV","IV"],["LM","DM","ZM","OM","RM"],["MS","HS"]] },
+  { name: "4-1-2-3", lines: [["TW"],["LV","IV","IV","RV"],["DM"],["ZM","ZM"],["LA","MS","RA"]] },
+  { name: "3-4-1-2", lines: [["TW"],["IV","IV","IV"],["LM","DM","DM","RM"],["OM"],["MS","HS"]] },
   { name: "4-2-3-1", lines: [["TW"],["LV","IV","IV","RV"],["DM","DM"],["LA","OM","RA"],["MS"]] },
-  { name: "5-3-2",   lines: [["TW"],["LV","IV","IV","IV","RV"],["DM","ZM","OM"],["MS","HS"]] },
+  { name: "5-3-2",   lines: [["TW"],["LV","IV","IV","IV","RV"],["DM","ZM","ZM"],["MS","HS"]] },
   { name: "3-4-3",   lines: [["TW"],["IV","IV","IV"],["LM","DM","ZM","RM"],["LA","MS","RA"]] },
 ];
 

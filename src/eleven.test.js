@@ -22,6 +22,31 @@ test("Jede Formation hat elf Positionen und genau einen Torwart", () => {
   }
 });
 
+/* Der Sechser und der Zehner sind zwei Bänder voneinander entfernt. Standen sie in
+   derselben Zeile, zeichnete das Feld sie auf gleicher Höhe — das sah aus wie eine
+   Reihe, nicht wie eine Aufstellung. */
+test("kein Sechser steht auf gleicher Höhe wie ein Zehner", () => {
+  for (const f of FORMATIONS) {
+    for (const linie of f.lines) {
+      assert.ok(!(linie.includes("DM") && linie.includes("OM")),
+        `${f.name}: DM und OM in derselben Zeile — ${linie.join(", ")}`);
+      assert.ok(!(linie.includes("ZM") && linie.includes("OM")),
+        `${f.name}: ZM und OM in derselben Zeile — ${linie.join(", ")}`);
+    }
+  }
+});
+
+/* Die Breite eines Slots wird aus der breitesten Zeile berechnet. Stand dort einmal
+   `l[1]` statt `l.length`, kam NaN heraus, der Slot bekam keine Breite, und Kürzel
+   wie „TW" brachen buchstabenweise senkrecht um. */
+test("die breiteste Zeile ist eine Zahl, keine Position", () => {
+  for (const f of FORMATIONS) {
+    const breit = Math.max(...f.lines.map((l) => l.length));
+    assert.ok(Number.isFinite(breit) && breit >= 1, `${f.name}: breiteste Zeile ist ${breit}`);
+    assert.ok(breit <= 5, `${f.name}: ${breit} Spieler in einer Zeile passen nicht nebeneinander`);
+  }
+});
+
 test("slotLayout: elf Koordinaten im Feld, keine Überlappung je Linie", () => {
   for (const f of FORMATIONS) {
     const lay = slotLayout(f);
