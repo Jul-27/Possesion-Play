@@ -246,6 +246,7 @@ const SOLO_MODI = [
   { key: "heat",     name: "Heatmap",           icon: "flame", ton: "#FB923C", text: "Combos und Hitze",      daily: true },
   { key: "hex",      name: "Hex-Training",      icon: "hex", ton: "#2DD4BF", text: "Ohne Zeitdruck",        daily: true },
   { key: "ecken",    name: "Sechs Ecken",       icon: "network", ton: "#818CF8", text: "Über Mitspieler verbinden", daily: true },
+  { key: "traumelf", name: "Traumelf",          icon: "crown", ton: "#FBBF24", text: "Draften und Saison spielen", daily: false },
   { key: "carousel", name: "Transferkarussell", icon: "carousel", ton: "#F472B6", text: "Gegen den Bot",         daily: false },
 ];
 

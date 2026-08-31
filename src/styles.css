@@ -955,3 +955,48 @@ body::after {
    ist null — das Wappen wäre unsichtbar. */
 .samClubs .emblem { width: 18px; height: 18px; }
 .samClubs i { font-style: normal; font-size: 10px; color: var(--muted); }
+
+/* ── Traumelf ─────────────────────────────────────────────────────────────────
+   Der Draft zeigt zwei Listen (Liga, Formation) und dann einen Kader, aus dem
+   gewählt wird. Alle drei sind Knopfreihen — deshalb eine gemeinsame Grundform. */
+.tmLigen, .tmFormationen { display: grid; gap: 8px; margin-top: 12px; }
+.tmFormationen { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+
+.tmLiga, .tmFormation {
+  display: flex; flex-direction: column; gap: 2px; text-align: left;
+  padding: 12px 14px; border-radius: 12px; cursor: pointer;
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--text);
+}
+.tmLiga:hover, .tmFormation:hover { border-color: var(--teal); }
+.tmLiga b, .tmFormation b { font-size: 15px; }
+.tmLiga span, .tmFormation span { font-size: 12px; color: var(--muted); }
+.tmBest { color: var(--teal) !important; }
+
+.tmZiehung { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.tmZiehung b { font-size: 17px; }
+.tmJahr { font-variant-numeric: tabular-nums; color: var(--muted); }
+
+/* Der Kader kann dreißig Namen haben — scrollbar statt seitenlang, damit der
+   „Neuer Kader"-Knopf erreichbar bleibt, ohne zu blättern. */
+.tmKader { display: grid; gap: 4px; max-height: 46vh; overflow-y: auto; }
+.tmSpieler {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  padding: 6px 10px; border-radius: 10px; cursor: pointer; text-align: left;
+  background: transparent; border: 1px solid transparent; color: var(--text);
+}
+.tmSpieler:hover { background: var(--bg-2); border-color: var(--line); }
+.tmSpielerText { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.tmSpielerText b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tmSpielerMeta { font-size: 11px; color: var(--muted); }
+.tmAushilfe { color: #FBBF24; }
+/* Tabellenziffern, damit die Klassen in der Liste untereinander fluchten. */
+.tmKlasse { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px; color: var(--teal); }
+
+.tmBilanz { display: flex; align-items: baseline; gap: 14px; margin: 6px 0 10px; }
+.tmBilanz span { font-size: 12px; color: var(--muted); }
+.tmBilanz b { font-size: 20px; color: var(--text); font-variant-numeric: tabular-nums; margin-right: 2px; }
+.tmPunkte { margin-left: auto; }
+
+.tmLehre { display: grid; gap: 5px; margin-top: 8px; }
+.tmLehreZeile { display: flex; align-items: baseline; gap: 8px; font-size: 13px; }
+.tmLehreKader { font-size: 11px; color: var(--muted); min-width: 120px; }
