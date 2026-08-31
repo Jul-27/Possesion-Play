@@ -37,6 +37,7 @@ export const REPORT_MODES = {
      Auswertung weiter unter ihrem damaligen Namen erscheinen. */
   steckbrief:     { name: "Steckbrief",             art: "solo" },
   ecken:          { name: "Sechs Ecken",            art: "solo" },
+  traumelf:       { name: "Traumelf",               art: "solo" },
   "hex-duell":    { name: "Hex-Duell",              art: "duell" },
   "grid-duell":   { name: "Raster-Duell",           art: "duell" },
   "guess-duell":  { name: "Errate den Star",        art: "duell" },

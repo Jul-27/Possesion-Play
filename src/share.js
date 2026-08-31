@@ -67,6 +67,17 @@ export const shareEleven = (num, wrong, formation) => buildShare({
 /* Heatmap: die Punktzahl ist die Kennzahl, die Dichte sagt, WIE sie zustande kam —
    70 Punkte mit Dichte 1,0 sind große Combos, mit 1,6 viel nachgeheizt. Die
    Emoji-Zeile zeigt die Hitzeverteilung der 30 Felder als Rampe. */
+/* Geteilt wird die BILANZ, nicht die Elf — sonst nimmt die Nachricht dem Empfänger
+   das Suchen ab, und genau das ist der Modus. */
+export const shareTraumelf = ({ liga, formation, b, abzeichen, paare }) => buildShare({
+  solo: "traumelf",
+  title: `👑 Traumelf · ${liga}`,
+  lines: [
+    `${formation} · ${b.siege}-${b.remis}-${b.niederlagen} · ${b.punkte} Punkte`,
+    `${abzeichen}${paare ? ` · ${paare} Verbund-Paar${paare === 1 ? "" : "e"}` : ""}`,
+  ],
+});
+
 export const shareHeat = (score, density, ramp = "") => buildShare({
   solo: "heat",
   title: `🔥 Heatmap · ${score} Punkte`,

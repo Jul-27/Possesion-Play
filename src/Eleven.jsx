@@ -117,7 +117,7 @@ export default function Eleven({ onLeave }) {
 
     const next = [...names]; next[active] = hit.n; setNames(next);
     setNameInput(""); setSugOpen(false); setActive(null); setFeedback(null);
-    merkeSpieler(player);
+    merkeSpieler(hit);
     play("ok");
   }
 
