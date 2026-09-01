@@ -6,17 +6,17 @@
    Saison wirklich ausgespielt: 34 bzw. 38 Spieltage, jedes Spiel einzeln, mit
    Toren, und die Tabelle steht nach jedem Spieltag neu.
 
-   DIE GEGNER SIND ECHT. Nicht erfunden und nicht generisch, sondern Verein-Saison-
-   Paare aus demselben Topf, aus dem gedraftet wird: Bayern 2014, Chelsea 2013,
-   Real Madrid 2012. Ihre Stärke kommt aus ihrem tatsächlichen Kader in genau dieser
-   Saison. Gemessen über den ganzen Topf:
+   DIE GEGNER SIND EINE ECHTE LIGA. Nicht erfunden, nicht generisch und seit
+   `echteLiga` auch nicht mehr zusammengewürfelt: Es sind genau die Vereine, die in
+   der betreffenden Saison wirklich in dieser Liga spielten, jeder mit der Stärke
+   seines damaligen Kaders. Die eigene Elf nimmt den Platz eines von ihnen ein,
+   damit die Liga ihre achtzehn oder zwanzig Mannschaften behält.
 
-     Bundesliga     62,4 (Werder 1996) bis 95,7 (Bayern 2014), Median 72,9
-     Premier League 64,2 (Everton 2001) bis 91,5 (Chelsea 2014), Median 78,4
-     La Liga        65,0 (Valencia 2026) bis 92,2 (Real 2013),   Median 75,5
+   Eine Zwischenstufe ließ Bayern 2014 gegen Werder 1996 antreten — unterhaltsam,
+   aber keine Liga; der Tabellenplatz sagte nichts, weil niemand wusste, wogegen er
+   errungen war. Gemessen an der Bundesliga 2025/26:
 
-   Siebzehn Gegner ergeben 34 Spieltage, neunzehn ergeben 38 — genau die echten
-   Saisonlängen, ohne einen einzigen erfundenen Verein.
+     Bayern 92,9 · Dortmund 79,4 · Leverkusen 79,1 · … · Heidenheim 60,3 · St. Pauli 59,0
 
    ECHTE MANNSCHAFTEN BEKOMMEN DEN VOLLEN VERBUND. Sie haben alle 55 Paare wirklich
    zusammen gespielt. Deshalb muss eine zusammengedraftete Elf individuell besser
