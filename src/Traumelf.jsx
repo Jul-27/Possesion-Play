@@ -39,6 +39,30 @@ const TAKT_MS = 620;     // Spieltag für Spieltag — schnell genug zum Zusehen
    Draft, der nach einem Deploy plötzlich andere Spieler enthält, wäre schlimmer als
    ein verlorener. Gespeichert wird nur das beste Ergebnis je Liga. */
 
+/* Die Formation als Bild statt als Liste von Kürzeln.
+
+   „TW · LV · IV · IV · RV · DM · DM · LA · OM · RA · MS" ist zwar vollständig, sagt
+   aber niemandem etwas — man muss elf Abkürzungen im Kopf zu einer Aufstellung
+   zusammensetzen. Die Punkte auf dem Feld zeigen dieselbe Information auf einen
+   Blick, und die Reihen sind genau die, die nachher auch gespielt werden:
+   `slotLayout` liefert hier dieselben Koordinaten wie dem großen Feld. */
+function FormationsBild({ formation }) {
+  const punkte = slotLayout(formation);
+  return (
+    <svg className="tmFormBild" viewBox="0 0 100 108" aria-hidden="true">
+      <rect x="1" y="1" width="98" height="106" rx="6" className="tmFormFeld" />
+      <line x1="1" y1="54" x2="99" y2="54" className="tmFormLinie" />
+      <circle cx="50" cy="54" r="12" className="tmFormLinie" fill="none" />
+      {/* Strafräume oben und unten — ohne sie schwebt die Elf im Nichts. */}
+      <rect x="28" y="1" width="44" height="16" className="tmFormLinie" fill="none" />
+      <rect x="28" y="91" width="44" height="16" className="tmFormLinie" fill="none" />
+      {punkte.map((s, k) => (
+        <circle key={k} cx={s.x} cy={s.y * 1.08} r="4.6" className={`tmFormPunkt ${s.pos === "TW" ? "tw" : ""}`} />
+      ))}
+    </svg>
+  );
+}
+
 export default function Traumelf({ onLeave }) {
   const [players, setPlayers] = useState(null);
   const [einsaetze, setEinsaetze] = useState(undefined);   // undefined = lädt, null = fehlt
@@ -337,8 +361,8 @@ export default function Traumelf({ onLeave }) {
             <div className="tmFormationen">
               {FORMATIONS.map((f) => (
                 <button key={f.name} className="tmFormation" onClick={() => { starte(f); play("click"); }}>
+                  <FormationsBild formation={f} />
                   <b>{f.name}</b>
-                  <span>{f.lines.flat().map((p) => POS_BY_KEY[p]?.kurz || p).join(" · ")}</span>
                 </button>
               ))}
             </div>

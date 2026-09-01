@@ -1045,3 +1045,11 @@ body::after {
 /* Eine Saisonklasse unter dem Bestwert: der Spieler war in diesem Jahr noch nicht
    oder nicht mehr auf seinem Höhepunkt. */
 .tmKlasse.gedaempft { color: var(--muted); }
+
+/* Formationsvorschau: die Aufstellung als Bild statt als Liste von Kürzeln. */
+.tmFormation { align-items: center; text-align: center; gap: 6px; }
+.tmFormBild { width: 100%; max-width: 104px; height: auto; display: block; }
+.tmFormFeld { fill: rgba(120, 160, 210, .045); stroke: var(--line); stroke-width: 1; }
+.tmFormLinie { stroke: var(--line); stroke-width: 1; fill: none; }
+.tmFormPunkt { fill: var(--teal); }
+.tmFormPunkt.tw { fill: var(--gold); }
