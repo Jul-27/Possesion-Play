@@ -24,6 +24,14 @@
 // `by` das Geburtsjahr (Schlüssel zusammen mit dem Namen), `src` die belegende QID.
 export const NAME_OVERRIDES = [
   // ── 1) QID statt Name ────────────────────────────────────────────────────
+  /* Vandalismus, der beim Ligakader-Lauf am 01.09.2026 durchkam: Diese drei QIDs
+     trugen zu dem Zeitpunkt manipulierte ENGLISCHE Labels, während die deutschen
+     sauber waren. Sie wurden dadurch als drei zusätzliche Spieler angelegt und
+     verschmelzen hier mit dem echten Datensatz. */
+  { from: "El Perrito de la C",        by: 1985, to: "Wayne Rooney",              src: "Q266613", note: "de-Label/dewiki" },
+  { from: "Juan Mata Pata",            by: 1988, to: "Juan Mata",                 src: "Q168740", note: "de-Label/dewiki" },
+  { from: "Pierre Cardin picha grande", by: 1989, to: "Pierre-Emerick Aubameyang", src: "Q44977",  note: "de-Label/dewiki" },
+
   { from: "Q106948344", by: 2001, to: "Marcel Lotka",            src: "Q106948344", note: "enwiki/dewiki-Titel" },
   { from: "Q113704154", by: 2007, to: "Lamine Yamal",            src: "Q113704154", note: "en/de-Label" },
   { from: "Q118211483", by: 2001, to: "Iñigo San Clemente",      src: "Q118211483", note: "es/eu-Label" },

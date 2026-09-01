@@ -39,6 +39,7 @@ import { dirname, join } from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import { norm } from "../src/gameData.js";
 import { CLUB_QID } from "./wikidata_roster.mjs";
+import { LIGA_VEREINE } from "../src/leagueClubs.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLAYERS_PATH = join(HERE, "..", "src", "players.js");
@@ -117,12 +118,20 @@ async function main() {
   const ziehbar = new Set(mod.PLAYERS.filter((p) => p.cp?.length && (p.sl || 0) >= 25).map((p) => schluessel(p.n, p.by)));
   console.log(`${bekannt.size} Spieler mit Vereinsstationen, davon ${ziehbar.size} ziehbar`);
 
+  /* Alle Vereine, bei denen ein Spieler eine Station haben kann: die 47
+     Spielvereine UND die 108 Ligavereine ab 2010/11. Ohne die zweiten hätten die
+     neuen Kader keine Einsatzzahlen, und die Ligadämpfung in draft.js verlöre für
+     sie ihre Verfeinerung. */
+  const qidVon = { ...CLUB_QID };
+  for (const v of Object.values(LIGA_VEREINE).flat()) if (!qidVon[v.key]) qidVon[v.key] = v.qid;
+
   const daten = {};
-  const keys = Object.keys(CLUB_QID);
+  const keys = Object.keys(qidVon);
+  console.log(`${keys.length} Vereine abzufragen`);
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i];
     let zeilen;
-    try { zeilen = await sparql(abfrage(CLUB_QID[key])); }
+    try { zeilen = await sparql(abfrage(qidVon[key])); }
     catch (e) { console.log(`  ${key}: übersprungen (${e.message})`); continue; }
     const n = baueEintraege(zeilen, key, bekannt, daten);
     console.log(`  ${key.padEnd(4)} ${String(zeilen.length).padStart(5)} Stationen mit Einsätzen · ${n} davon in unserem Bestand   (${i + 1}/${keys.length})`);

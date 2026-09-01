@@ -5,12 +5,13 @@ import { FORMATIONS, slotLayout } from "./eleven.js";
 import {
   baueZiehungen, baueKlassen, baueVerbundNetz, bewerte, obergrenze, klasseIn,
   zieh, bedientSlots, darfAufPosition, passung,
-  RESPINS, SPIELE, LIGA_NAME, PASSUNG_GENAU,
+  RESPINS, SPIELE, LIGA_NAME, PASSUNG_GENAU, DRAFT_AB_JAHR,
 } from "./draft.js";
 import {
-  TEAMS, teamStaerke, waehleGegner, simuliereSaison, tabelleNach, meineZeile,
+  echteLiga, ersetzeEinen, simuliereSaison, tabelleNach, meineZeile,
   abzeichenFuer, hoehepunkte,
 } from "./saison.js";
+import { LIGA_VEREINE, NEUESTE_SAISON, LIGA_AB_JAHR } from "./leagueClubs.js";
 import { loadPlayers } from "./playersStore.js";
 import { loadAppearances } from "./appearancesStore.js";
 import { Avatar } from "./Emblems.jsx";
@@ -24,6 +25,7 @@ import { shareTraumelf } from "./share.js";
 import ReportButton from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
+import Urkunde from "./Urkunde.jsx";
 
 const store = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -31,6 +33,8 @@ const store = {
 };
 
 const LIGEN = ["BL", "PL", "LL"];
+/* 2025 heißt 2025/26 — das Anfangsjahr steht in den Daten, gelesen wird die Saison. */
+const saisonName = (jahr) => `${jahr}/${String(jahr + 1).slice(2)}`;
 const BESTEN_KEY = "pp:traumelf:best";
 const TAKT_MS = 620;     // Spieltag für Spieltag — schnell genug zum Zusehen, langsam genug zum Lesen
 
@@ -76,6 +80,7 @@ export default function Traumelf({ onLeave }) {
   const [wahl, setWahl] = useState(null);
   const [muted, setMuted] = useState(isMuted());
   const [regeln, setRegeln] = useState(false);
+  const [urkunde, setUrkunde] = useState(false);
   const [best, setBest] = useState(() => store.get(BESTEN_KEY) || {});
 
   // Saison
@@ -89,11 +94,42 @@ export default function Traumelf({ onLeave }) {
 
   /* Ziehungen, Klassen und Netz hängen nur an der Liga — einmal bauen, nicht je Spin.
      Gemessen: 68 bis 180 ms je Liga. */
+  /* Die Vereinsliste des Drafts vereinigt beide Quellen: die 47 Spielvereine und die
+     108 Ligavereine ab 2010/11.
+
+     DIE JAHRE SIND DER HEIKLE TEIL. Der Ligaeintrag weiß, WANN ein Verein wirklich
+     erstklassig war — Kaiserslautern 2020 gehört nicht in den Bundesliga-Topf. Er
+     beginnt aber erst 2010, und wer nur ihm folgt, verliert alles davor: Zidane
+     verschwand aus La Liga, weil Real Madrid nur noch ab 2010 ziehbar war, und mit
+     ihm Ronaldinhos Barça und Bayern 2001.
+
+     Für die 47 Spielvereine haben wir Karrieredaten bis 1995 zurück, aber keine
+     Ligalisten. Dort bleiben die Jahre vor 2010 deshalb offen wie bisher; ab 2010
+     entscheidet die Ligaliste. Bei den 79 reinen Ligavereinen gilt sie allein — für
+     sie gibt es vor 2010 ohnehin keine Stationen. */
+  const vereineFuer = useMemo(() => {
+    const spielverein = new Set(CLUBS.map((c) => c.key));
+    const frueher = [];
+    for (let j = DRAFT_AB_JAHR; j < LIGA_AB_JAHR; j++) frueher.push(j);
+    const bauen = (lg) => {
+      const paare = [
+        ...CLUBS.filter((c) => c.lg === lg).map((c) => [c.key, { key: c.key, name: c.name, lg }]),
+        ...LIGA_VEREINE[lg].map((v) => [v.key, {
+          ...v, lg,
+          jahre: spielverein.has(v.key) ? [...frueher, ...v.jahre] : v.jahre,
+        }]),
+      ];
+      return [...new Map(paare).values()];
+    };
+    return Object.fromEntries(LIGEN.map((lg) => [lg, bauen(lg)]));
+  }, []);
+
   const daten = useMemo(() => {
     if (!players || !liga || einsaetze === undefined) return null;
-    const ziehungen = baueZiehungen(players, CLUBS, liga);
-    return { ziehungen, klassen: baueKlassen(players, ziehungen, einsaetze), netz: baueVerbundNetz(players, ziehungen) };
-  }, [players, liga, einsaetze]);
+    const ziehungen = baueZiehungen(players, vereineFuer[liga], liga);
+    const klassen = baueKlassen(players, ziehungen, einsaetze);
+    return { ziehungen, klassen, netz: baueVerbundNetz(players, ziehungen) };
+  }, [players, liga, einsaetze, vereineFuer]);
 
   /* Wie stark ist diese Liga? Die Töpfe sind verschieden dicht — England besteht in
      unseren Daten aus neun Großvereinen, die Bundesliga auch aus Freiburg und Mainz.
@@ -102,14 +138,20 @@ export default function Traumelf({ onLeave }) {
     if (!players || einsaetze === undefined) return {};
     const out = {};
     for (const l of LIGEN) {
-      const z = baueZiehungen(players, CLUBS, l);
+      const z = baueZiehungen(players, vereineFuer[l], l);
       if (!z.length) continue;
       const kl = baueKlassen(players, z, einsaetze);
-      const s = z.map((x) => teamStaerke(x, players, kl)).sort((a, b) => a - b);
-      out[l] = { schnitt: Math.round(s[Math.floor(s.length / 2)]), beste: s.at(-1), kader: z.length };
+      const jahr = NEUESTE_SAISON[l];
+      const tabelle = echteLiga(players, kl, LIGA_VEREINE[l], jahr);
+      const s = tabelle.map((x) => x.staerke).sort((a, b) => a - b);
+      out[l] = {
+        jahr, teams: tabelle.length, ziehungen: z.length,
+        schnitt: Math.round(s[Math.floor(s.length / 2)]),
+        beste: tabelle.slice().sort((a, b) => b.staerke - a.staerke)[0],
+      };
     }
     return out;
-  }, [players, einsaetze]);
+  }, [players, einsaetze, vereineFuer]);
 
   const slots = useMemo(() => (formation ? slotLayout(formation) : []), [formation]);
   const posListe = useMemo(() => slots.map((s) => s.pos), [slots]);
@@ -131,8 +173,15 @@ export default function Traumelf({ onLeave }) {
      hinge das Ergebnis daran, wie oft React neu zeichnet. */
   useEffect(() => {
     if (!draftFertig || !wertung || !daten || saison) return;
-    const gegner = waehleGegner(daten.ziehungen, players, daten.klassen, TEAMS[liga] - 1, `${liga}:${Date.now()}`);
-    setSaison(simuliereSaison({ meineStaerke: wertung.wertung, gegner, seed: Math.floor(Math.random() * 1e9) }));
+    const jahr = NEUESTE_SAISON[liga];
+    const alle = echteLiga(players, daten.klassen, LIGA_VEREINE[liga], jahr);
+    /* Einen Verein verdrängen: Die Liga hat achtzehn oder zwanzig Plätze, und die
+       eigene Elf braucht einen davon — sonst ginge der Spielplan nicht auf. */
+    const { gegner, ersetzt } = ersetzeEinen(alle, `${liga}:${Date.now()}`);
+    setSaison({
+      jahr, ersetzt,
+      ...simuliereSaison({ meineStaerke: wertung.wertung, gegner, seed: Math.floor(Math.random() * 1e9) }),
+    });
     setSpieltag(0);
     setLaeuft(true);
   }, [draftFertig, wertung, daten, saison, liga, players]);
@@ -311,7 +360,7 @@ export default function Traumelf({ onLeave }) {
     <div className="overlay" onClick={() => setRegeln(false)}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2>Traumelf</h2>
-        <p className="ruleP">Jeder Spin zieht einen <b>echten Verein in einer echten Saison</b>. Nimm daraus <b>einen</b> Spieler auf eine freie Position — elfmal, bis die Elf steht. Danach spielt sie eine volle Saison gegen 17 bzw. 19 andere echte Kader.</p>
+        <p className="ruleP">Jeder Spin zieht einen <b>echten Verein in einer echten Saison</b>. Nimm daraus <b>einen</b> Spieler auf eine freie Position — elfmal, bis die Elf steht. Danach spielt sie eine volle Saison in einer ECHTEN Liga — der Bundesliga 2025/26, der Premier League 2024/25 oder La Liga 2025/26 — und nimmt dort den Platz eines der Vereine ein.</p>
         <p className="ruleP">Die <b>Klasse</b> ist der Rangplatz eines Spielers unter allen ziehbaren. Sie misst Bekanntheit, nicht Können, und wird deshalb offen als Rangplatz ausgewiesen. Über 90 kommen nur eine Handvoll — und auch die nur in ihren besten Jahren: Ein 18-Jähriger und ein 37-Jähriger stehen unter ihrem eigenen Höchstwert.</p>
         <p className="ruleP">Der <b>Verbund</b> ist unser Zusatz: Für jedes Paar deiner Elf, das wirklich gleichzeitig beim selben Verein gespielt hat, steigt die Wertung. Echte Mannschaften haben ihn vollständig — deshalb musst du individuell besser sein, um mitzuhalten.</p>
         <p className="ruleP">Die Saison wird <b>Spiel für Spiel ausgespielt</b>, mit Toren und Tabelle. Das Abzeichen kommt aus dem Tabellenplatz. <b>Makellos</b> — jedes Spiel gewonnen — ist in 12.000 simulierten Saisons kein einziges Mal vorgekommen; man müsste auch gegen Bayern 2014 zweimal gewinnen.</p>
@@ -334,10 +383,13 @@ export default function Traumelf({ onLeave }) {
             {LIGEN.map((l) => (
               <button key={l} className="tmLiga" onClick={() => { setLiga(l); play("click"); }}>
                 <b>{LIGA_NAME[l]}</b>
-                <span>{TEAMS[l]} Mannschaften · {SPIELE[l]} Spieltage</span>
-                {ligaInfo[l] && (
-                  <span>Gegner im Mittel {ligaInfo[l].schnitt}, stärkster {ligaInfo[l].beste}</span>
-                )}
+                {ligaInfo[l] ? (
+                  <>
+                    <span>Saison {saisonName(ligaInfo[l].jahr)} · {ligaInfo[l].teams} Mannschaften · {(ligaInfo[l].teams - 1) * 2} Spieltage</span>
+                    <span>Stärkster Gegner {ligaInfo[l].beste.kurz} ({ligaInfo[l].beste.staerke}), Mittelfeld {ligaInfo[l].schnitt}</span>
+                    <span>{ligaInfo[l].ziehungen} ziehbare Kader</span>
+                  </>
+                ) : <span>lädt…</span>}
                 {best[l] && <span className="tmBest">Bestwert Platz {best[l].platz} · {best[l].punkte} Punkte</span>}
               </button>
             ))}
@@ -405,9 +457,15 @@ export default function Traumelf({ onLeave }) {
         {kopf}
         <div className="dailyMeta">
           <span className="dailyCount form">{formation.name}</span>
+          <span className="dailyCount">{LIGA_NAME[liga]} {saisonName(saison.jahr)}</span>
           <span className="dailyCount">Spieltag {spieltag}/{gesamt}</span>
           {meine && <span className="dailyCount">Platz {meine.platz} · {meine.punkte} P</span>}
         </div>
+        {saison.ersetzt && spieltag === 0 && (
+          <div className="fb ok" style={{ marginTop: 10 }}>
+            Deine Elf nimmt den Platz von <b>{saison.ersetzt.name}</b> ein.
+          </div>
+        )}
 
         {meinSpiel && (
           <div className={`tmSpieltag ${meinSpiel.eigene > meinSpiel.fremde ? "sieg" : meinSpiel.eigene < meinSpiel.fremde ? "pleite" : "remis"}`}>
@@ -440,7 +498,7 @@ export default function Traumelf({ onLeave }) {
               <span className="tmKarteEmoji">{abzeichen.emoji}</span>
               <div>
                 <h2 style={{ margin: 0 }}>{abzeichen.name}</h2>
-                <span className="tmSpielerMeta">{LIGA_NAME[liga]} · {formation.name} · Platz {meine.platz} von {saison.teams.length}</span>
+                <span className="tmSpielerMeta">{LIGA_NAME[liga]} {saisonName(saison.jahr)} · {formation.name} · Platz {meine.platz} von {saison.teams.length}</span>
               </div>
             </div>
 
@@ -480,10 +538,34 @@ export default function Traumelf({ onLeave }) {
               </>
             )}
 
+            {urkunde && (
+              <Urkunde
+                liga={LIGA_NAME[liga]}
+                saison={saisonName(saison.jahr)}
+                formation={formation.name}
+                abzeichen={abzeichen.name}
+                zeile={meine}
+                teams={saison.teams.length}
+                hoehen={hoehen}
+                wertung={wertung}
+                datum={new Date().toLocaleDateString("de-DE")}
+                elf={slots.map((s, k) => ({
+                  x: s.x, y: s.y, pos: s.pos,
+                  name: belegt[k] ? players[belegt[k].i].ln : "—",
+                  jahr: belegt[k]?.jahr ?? "",
+                }))}
+              />
+            )}
+
+            <div className="closeline">
+              <button className="btn ghost" style={{ flex: 1, padding: "12px" }} onClick={() => setUrkunde(!urkunde)}>
+                {urkunde ? "Urkunde ausblenden" : "Urkunde anzeigen"}
+              </button>
+            </div>
             <div className="closeline">
               <ShareButton style={{ flex: 1, padding: "12px" }}
                 text={shareTraumelf({
-                  liga: LIGA_NAME[liga], formation: formation.name, abzeichen: abzeichen.name,
+                  liga: `${LIGA_NAME[liga]} ${saisonName(saison.jahr)}`, formation: formation.name, abzeichen: abzeichen.name,
                   platz: meine.platz, teams: saison.teams.length,
                   s: meine.s, u: meine.u, n: meine.n, punkte: meine.punkte, paare: wertung.paare,
                 })} />

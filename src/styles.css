@@ -1053,3 +1053,11 @@ body::after {
 .tmFormLinie { stroke: var(--line); stroke-width: 1; fill: none; }
 .tmFormPunkt { fill: var(--teal); }
 .tmFormPunkt.tw { fill: var(--gold); }
+
+/* Die Saisonurkunde. Sie hat ein festes Seitenverhältnis und schrumpft mit der
+   Breite — auf dem Handy ist sie sonst höher als der Bildschirm. */
+.tmUrkunde { margin-top: 14px; }
+.tmUrkundeBild {
+  border-radius: 10px; overflow: hidden; border: 1px solid var(--line);
+  background: #0B1220; margin-bottom: 10px;
+}

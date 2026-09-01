@@ -22,7 +22,7 @@
    zusammen gespielt. Deshalb muss eine zusammengedraftete Elf individuell besser
    sein, um mitzuhalten — das ist kein Nachteil, sondern der Grund, warum es sich
    lohnt, aus wenigen Kadern zu draften. */
-import { klasseIn, VERBUND_MAX } from "./draft.js";
+import { klasseIn, kader, VERBUND_MAX, KLASSE_MIN } from "./draft.js";
 
 /** Mannschaften je Liga, einschließlich der eigenen. 18 -> 34 Spieltage, 20 -> 38. */
 export const TEAMS = { BL: 18, PL: 20, LL: 20 };
@@ -57,63 +57,62 @@ export function teamStaerke(ziehung, players, klassen) {
     .map((i) => klasseIn(klassen, players, i, ziehung.jahr))
     .sort((a, b) => b - a)
     .slice(0, 11);
-  if (!k.length) return 50;
+  /* AUF ELF AUFFÜLLEN. Ein dünn besetzter Kader — St. Pauli hat 2025/26 nur sieben
+     Spieler in unseren Daten — hätte sonst den Schnitt seiner sieben Bekannten und
+     stünde damit STÄRKER da als ein voller Kader mit elf. Die fehlenden Plätze
+     zählen als KLASSE_MIN, dem Boden der Skala; eine fest hingeschriebene 50 ließ
+     St. Pauli auf 59 fallen, nachdem die Skala bei 65 zu beginnen anfing. */
+  while (k.length < 11) k.push(KLASSE_MIN);
   return Math.round((k.reduce((a, b) => a + b, 0) / k.length + VERBUND_MAX) * 10) / 10;
 }
 
 /**
- * Die Gegner einer Saison — GESCHICHTET gezogen, einer aus jedem Stärkeband.
+ * Die ECHTE Liga einer Saison: genau die Vereine, die damals dabei waren, jeder mit
+ * der Stärke seines damaligen Kaders.
  *
- * Zwei Gründe gegen einfaches Losen aus dem ganzen Topf. Erstens kann dabei eine
- * Liga aus lauter Mittelmaß entstehen oder eine aus lauter Spitzenmannschaften;
- * beides ist keine Liga. Zweitens, und wichtiger: Die Ligen haben verschieden dichte
- * Töpfe — der Median liegt in der Premier League bei 78,4 und in der Bundesliga bei
- * 72,9. Gemessen holte derselbe Draft damit in der Bundesliga zu 45 % die Champions
- * League und in England nur zu 7 %. Wer die Liga wählt, soll einen Schauplatz
- * wählen, keinen Schwierigkeitsgrad.
+ * Das ersetzt das Zusammenwürfeln von Jahrgängen. Vorher trat die Traumelf gegen
+ * „Bayern 2014" und „Werder 1996" in derselben Tabelle an — unterhaltsam, aber keine
+ * Liga. Jetzt spielt sie in der Bundesliga 2025/26 gegen die achtzehn, die dort
+ * wirklich spielen.
  *
- * Geschichtet heißt: Der nach Stärke sortierte Topf wird in so viele gleich große
- * Bänder geteilt, wie Gegner gebraucht werden, und aus jedem Band kommt genau einer.
- * Die Spitze ist dann immer besetzt, der Tabellenkeller auch.
- *
- * Höchstens `maxJeVerein` Saisons desselben Vereins, sonst besteht die Premier
- * League aus neunzehn Jahrgängen von Chelsea. Die Bundesliga hat 14 Vereine im
- * Datenbestand und braucht 17 Gegner — ganz ohne Doppelung geht es also nicht.
+ * Die Kaderschwelle liegt NIEDRIGER als beim Draft: Gezogen werden soll nur, wen man
+ * kennt, aber die Stärke eines Gegners soll auch seine weniger bekannten Spieler
+ * berücksichtigen — sonst wäre ein Aufsteiger nur so stark wie seine zwei Nationalspieler.
  */
-export function waehleGegner(ziehungen, players, klassen, anzahl, seed, maxJeVerein = 4) {
-  const zufall = rng(hashStr(String(seed)));
-  const bewertet = ziehungen
-    .map((z) => ({ z, staerke: teamStaerke(z, players, klassen) }))
-    .sort((a, b) => b.staerke - a.staerke);
-  if (!bewertet.length) return [];
+export const GEGNER_SL_MIN = 5;
 
-  const jeVerein = new Map();
-  const out = [];
-  const nimm = (kandidat) => {
-    if (!kandidat) return false;
-    const { z, staerke } = kandidat;
-    if ((jeVerein.get(z.key) || 0) >= maxJeVerein) return false;
-    if (out.some((g) => g.key === z.key && g.jahr === z.jahr)) return false;
-    jeVerein.set(z.key, (jeVerein.get(z.key) || 0) + 1);
-    out.push({ name: `${z.name} ${z.jahr}`, kurz: z.name, jahr: z.jahr, key: z.key, staerke });
-    return true;
-  };
-
-  const breite = bewertet.length / anzahl;
-  for (let band = 0; band < anzahl; band++) {
-    const von = Math.floor(band * breite);
-    const bis = Math.max(von + 1, Math.floor((band + 1) * breite));
-    /* Innerhalb des Bandes so lange versuchen, bis einer die Vereinsgrenze
-       einhält — sonst rutscht die Liga bei erschöpften Bändern aus dem Tritt. */
-    let gesetzt = false;
-    for (let versuch = 0; versuch < 30 && !gesetzt; versuch++) {
-      gesetzt = nimm(bewertet[von + Math.floor(zufall() * (bis - von))]);
-    }
-    /* Band erschöpft: irgendeinen noch freien nehmen, damit die Liga voll wird. */
-    if (!gesetzt) for (const k of bewertet) if (nimm(k)) break;
-  }
-  return out;
+export function echteLiga(players, klassen, vereine, jahr, slMin = GEGNER_SL_MIN) {
+  return vereine
+    .filter((v) => v.jahre.includes(jahr))
+    .map((v) => {
+      const spieler = kader(players, v.key, jahr, slMin);
+      return {
+        key: v.key, kurz: v.name, jahr, spieler,
+        name: v.name,
+        staerke: teamStaerke({ spieler, jahr }, players, klassen),
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, "de"));
 }
+
+/**
+ * Wen verdrängt die Traumelf?
+ *
+ * Eine Liga hat achtzehn oder zwanzig Plätze, und die eigene Elf braucht einen davon
+ * — sonst wären es neunzehn Mannschaften und der Spielplan ginge nicht auf. Gewählt
+ * wird zufällig, aber deterministisch aus dem Startwert, damit dieselbe Partie
+ * dieselbe Liga hat.
+ */
+export function ersetzeEinen(liga, seed) {
+  if (!liga.length) return { gegner: [], ersetzt: null };
+  const n = hashStr(`ersetzt:${seed}`) % liga.length;
+  return { gegner: liga.filter((_, k) => k !== n), ersetzt: liga[n] };
+}
+
+/* `waehleGegner` stand hier: Es würfelte siebzehn Verein-Saison-Paare geschichtet
+   zusammen, damit die Liga eine Spitze und einen Keller hatte. Seit `echteLiga` die
+   Vereine der echten Saison liefert, wird nichts mehr gewürfelt — die Bundesliga
+   2025/26 HAT eine Spitze und einen Keller. */
 
 /* ── Spielplan ─────────────────────────────────────────────────────────────────
    Kreisverfahren: Eine Mannschaft steht fest, die übrigen rotieren. Das erzeugt eine

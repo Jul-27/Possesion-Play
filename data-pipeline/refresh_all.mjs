@@ -25,6 +25,15 @@ const CHAIN = [
   ["wikidata_positions.mjs"],     // 4) pos über die Kader
   ["backfill_positions.mjs"],     // 4b) pos für alle, die dort durchfallen (QID-Auflösung)
   ["wikidata_careers.mjs"],       // 5) cp
+  /* 5b) Welcher Verein spielte ab 2010/11 in welcher Liga — Grundlage dafür, dass die
+     Traumelf in einer ECHTEN Liga antritt statt gegen zusammengewürfelte Jahrgänge.
+     Muss vor 5c laufen, das die Vereinsliste braucht. */
+  ["wikidata_league_clubs.mjs"],
+  /* 5c) Die Kader dieser Vereine, als weitere `cp`-Einträge. NACH wikidata_careers,
+     weil es dessen Stationen ergänzt statt sie zu ersetzen — und zwingend VOR
+     apply_name_overrides: Der Lauf legt neue Spieler an, und bei dreien stand zum
+     Zeitpunkt des ersten Laufs Vandalismus im englischen Wikidata-Label. */
+  ["wikidata_league_squads.mjs"],
   ["apply_name_overrides.mjs"],   // 6) kuratierte Namen/Ausschlüsse
   /* 6b) EXTRA_PLAYERS/WRONG_CLUBS NACH den Namenskorrekturen: die Tabellen sind über
      norm(name)|by verschlüsselt und träfen auf den unkorrigierten Namen ins Leere.
@@ -52,6 +61,9 @@ const CHAIN = [
   // 7) Fotos zuletzt: der Bildindex ist über norm(name)|by verschlüsselt und muss
   //    daher die bereits korrigierten Namen sehen, sonst zeigen die Schlüssel ins Leere.
   ["wikidata_player_careers.mjs"], // 8) lg (gespielte Ligen) + span (Karriere-Spanne) — auch Nicht-Spielvereine
+  /* Einsätze je Spieler und Verein. Ganz am Ende, weil das Skript nur schreibt, wer
+     im Bestand steht — vor den Kaderläufen fehlten ihm die neuen Spieler. */
+  ["wikidata_appearances.mjs"],
   ["wikidata_images.mjs"],
   /* 9) Aktuelle Kader für „Steckbrief". Läuft NACH den Fotos, weil der Modus für
      das Tagesrätsel nur Spieler zieht, die eines haben — die Auswahl soll den
