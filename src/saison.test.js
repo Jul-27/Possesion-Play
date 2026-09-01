@@ -8,6 +8,7 @@ import {
 import { PLAYERS } from "./players.js";
 import { CLUBS } from "./gameData.js";
 import { baueZiehungen, baueKlassen, LIGA_NAME, SPIELE } from "./draft.js";
+import { EINSAETZE } from "./appearances.js";
 
 // ── Spielplan ────────────────────────────────────────────────────────────────
 
@@ -183,7 +184,7 @@ test("die Serie zählt Spiele ohne Niederlage", () => {
 test("jede Liga stellt genug Gegner, ohne dass ein Verein die Liga füllt", () => {
   for (const liga of ["BL", "PL", "LL"]) {
     const z = baueZiehungen(PLAYERS, CLUBS, liga);
-    const kl = baueKlassen(PLAYERS, z);
+    const kl = baueKlassen(PLAYERS, z, EINSAETZE);
     const gegner = waehleGegner(z, PLAYERS, kl, TEAMS[liga] - 1, `test:${liga}`);
     assert.equal(gegner.length, TEAMS[liga] - 1, `${LIGA_NAME[liga]}`);
     /* Kein Doppel: dieselbe Saison desselben Vereins darf nicht zweimal antreten. */
@@ -201,7 +202,7 @@ test("jede Liga stellt genug Gegner, ohne dass ein Verein die Liga füllt", () =
 test("jede Liga hat eine Spitze und einen Keller", () => {
   for (const liga of ["BL", "PL", "LL"]) {
     const z = baueZiehungen(PLAYERS, CLUBS, liga);
-    const kl = baueKlassen(PLAYERS, z);
+    const kl = baueKlassen(PLAYERS, z, EINSAETZE);
     for (let n = 0; n < 5; n++) {
       const s = waehleGegner(z, PLAYERS, kl, TEAMS[liga] - 1, `spread:${liga}:${n}`).map((g) => g.staerke);
       assert.ok(Math.max(...s) - Math.min(...s) > 15,
@@ -223,7 +224,7 @@ test("die Stärke eines Kaders nimmt nur die besten elf", () => {
 test("eine simulierte Saison hat realistische Zahlen", () => {
   for (const liga of ["BL", "PL", "LL"]) {
     const z = baueZiehungen(PLAYERS, CLUBS, liga);
-    const kl = baueKlassen(PLAYERS, z);
+    const kl = baueKlassen(PLAYERS, z, EINSAETZE);
     const gegner = waehleGegner(z, PLAYERS, kl, TEAMS[liga] - 1, `echt:${liga}`);
     const s = simuliereSaison({ meineStaerke: 80, gegner, seed: 5 });
     assert.equal(s.teams.length, TEAMS[liga]);
@@ -251,7 +252,7 @@ test("eine simulierte Saison hat realistische Zahlen", () => {
    Zusicherung wäre der ganze Draft davor bedeutungslos. */
 test("eine bessere Elf landet weiter oben", () => {
   const z = baueZiehungen(PLAYERS, CLUBS, "BL");
-  const kl = baueKlassen(PLAYERS, z);
+  const kl = baueKlassen(PLAYERS, z, EINSAETZE);
   const platzFuer = (staerke) => {
     let summe = 0;
     for (let n = 0; n < 25; n++) {

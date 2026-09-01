@@ -98,15 +98,168 @@ export function klassenKurve(pct) {
 /**
  * Die Grundklasse je Spieler — was er auf dem Höhepunkt seiner Laufbahn wert ist.
  * Die Klasse einer einzelnen SAISON kommt erst aus `klasseIn`.
+ *
+ * GERANGT WIRD JE POSITIONSGRUPPE, nicht über den ganzen Pool. Torhüter und
+ * Verteidiger werden nie so berühmt wie Stürmer — über alle gerangt bestanden die
+ * besten achtzehn der Bundesliga aus vierzehn Angreifern und einem einzigen
+ * Verteidiger (Lahm auf Platz 17); Kahn, Matthäus und Ballack fehlten ganz.
+ * Innerhalb der Gruppen stimmt die Reihenfolge dagegen sofort:
+ *
+ *   TW   Neuer · Kahn · Reina · ter Stegen · Lehmann
+ *   ABW  Lahm · Boateng · Hummels · Hakimi · Carvajal
+ *   MF   Özil · De Bruyne · Alonso · Matthäus · Kroos
+ *   ST   Lewandowski · Klose · Kane · Müller · Robben
+ *
+ * Die Zahl heißt damit „so gut für einen Torhüter" statt „so berühmt" — und genau
+ * so wird sie im Draft gebraucht, wo für jede Position nur ihresgleichen zur Wahl
+ * stehen.
  */
-export function baueKlassen(players, ziehungen) {
+export function baueKlassen(players, ziehungen, einsaetze = null) {
   const imPool = [...new Set(ziehungen.flatMap((z) => z.spieler))];
-  const sortiert = [...imPool].sort((a, b) => (players[a].sl || 0) - (players[b].sl || 0));
+  const ligaVereine = new Set(ziehungen.map((z) => z.key));
+  const proGruppe = new Map();
+  for (const i of imPool) {
+    const g = players[i].pos || "?";
+    if (!proGruppe.has(g)) proGruppe.set(g, []);
+    proGruppe.get(g).push(i);
+  }
+  const nation = nationsFaktoren(players, imPool);
   const klasse = new Map();
-  sortiert.forEach((i, rang) => {
-    klasse.set(i, Math.round(klassenKurve(rang / Math.max(1, sortiert.length - 1))));
-  });
+  for (const gruppe of proGruppe.values()) {
+    const ruf = new Map(gruppe.map((i) => [
+      i,
+      ((players[i].sl || 0) / nationsAusgleich(players[i], nation)) * ligaFaktor(players[i], ligaVereine, einsaetze),
+    ]));
+    gruppe.sort((a, b) => ruf.get(a) - ruf.get(b));
+    gruppe.forEach((i, rang) => {
+      klasse.set(i, Math.round(klassenKurve(rang / Math.max(1, gruppe.length - 1))));
+    });
+  }
   return klasse;
+}
+
+/* ── Die Reichweite der eigenen Wikipedia ──────────────────────────────────────
+   Die dritte Verzerrung, und die unauffälligste. Gemessen an der Median-Bekanntheit
+   im Bundesliga-Pool:
+
+     Japan 58 · Spanien 46 · Niederlande 45 · Kroatien 44 · England 40
+     Deutschland 37 · Brasilien 37 · Frankreich 35 · Argentinien 33
+
+   Japanische Spieler liegen 57 % über den deutschen. Das ist keine Fußballtatsache
+   — sechs von ihnen standen dadurch in den Spitzenlisten, Sakai und Uchida vor
+   Lizarazu und Höwedes. Es ist die Größe der japanischen Wikipedia.
+
+   NUR ZUR HÄLFTE AUSGEGLICHEN (Wurzel), denn ein Teil des Abstands ist echt: Wer
+   aus Spanien in die Bundesliga wechselt, ist ausgewählt, während der deutsche Pool
+   jeden Ergänzungsspieler enthält. Voll ausgeglichen (β = 1) rutschte Robben hinter
+   Mario Gómez — das wäre die Übertreibung in die andere Richtung. */
+export const NATION_BETA = 0.5;
+export const NATION_MIN = 8;    // unter so wenigen Spielern ist der Median Rauschen
+
+export function nationsFaktoren(players, pool) {
+  const alle = pool.map((i) => players[i].sl || 0).sort((a, b) => a - b);
+  if (!alle.length) return new Map();
+  const poolMedian = alle[Math.floor(alle.length / 2)] || 1;
+  const proNat = new Map();
+  for (const i of pool) {
+    for (const n of players[i].nat || []) {
+      if (!proNat.has(n)) proNat.set(n, []);
+      proNat.get(n).push(players[i].sl || 0);
+    }
+  }
+  const out = new Map();
+  for (const [n, werte] of proNat) {
+    if (werte.length < NATION_MIN) continue;
+    werte.sort((a, b) => a - b);
+    out.set(n, Math.pow(werte[Math.floor(werte.length / 2)] / poolMedian, NATION_BETA));
+  }
+  return out;
+}
+
+/** Der Ausgleich eines Spielers — bei mehreren Pässen der Mittelwert, sonst 1. */
+export function nationsAusgleich(player, faktoren) {
+  const f = (player.nat || []).map((n) => faktoren.get(n)).filter((x) => x > 0);
+  return f.length ? f.reduce((a, b) => a + b, 0) / f.length : 1;
+}
+
+/* ── Ruhm von anderswo ─────────────────────────────────────────────────────────
+   Bekanntheit ist KARRIEREWEIT. Sie kann nicht wissen, was jemand in DIESER Liga
+   war, und das führte zu offensichtlich falschen Ranglisten: Mesut Özil stand als
+   bester Mittelfeldspieler der Bundesliga auf 96 — mit 101 Bundesligaspielen für
+   Schalke und Bremen als Heranwachsender, während sein Ruhm von Real und Arsenal
+   stammt. Gemessen an Bundesligaspielen:
+
+     Müller 503 · Kahn 429 · Lahm 386 · Lewandowski 384 · Klose 183
+     Özil 101 · James Rodríguez 77 · Raúl 66
+
+   Der Anteil der Einsätze, die auf Vereine DIESER Liga entfallen, sagt genau das:
+   Müller 100 %, Lewandowski 74 %, Özil 26 %. Er dämpft die Bekanntheit, ersetzt sie
+   aber nicht — Einsätze messen die Rolle, nicht die Güte, und ein Stammspieler in
+   Freiburg hat dieselben 34 Spiele wie einer in München.
+
+   DER ANTEIL WIRD AUS JAHREN GERECHNET, NICHT AUS EINSÄTZEN. Der erste Versuch nahm
+   die Einsätze als Nenner und ging schief, weil Wikidata sie nur bei 69 % der
+   Stationen führt — und eine Lücke im Nenner dreht das Ergebnis um:
+
+     De Bruyne trug {WOB 52, SVW 33, NAP 18}; seine über 400 Spiele für City und
+     Chelsea fehlen. Sein Bundesliga-Anteil rechnete sich damit zu 83 %, und er
+     stand als bester Mittelfeldspieler der Liga auf 98.
+     Piqué und Eto'o hatten gar keinen Eintrag, blieben ungedämpft und führten die
+     Premier League an — mit vier bzw. einem Jahr dort.
+
+   `cp` hat dagegen jeder im Pool lückenlos, denn genau darüber kam er in seine
+   Ziehung. Und die Jahre sagen dasselbe, wo beides vorliegt: Özil 27 % gegen
+   gemessene 26 %, Lewandowski 75 % gegen 74 %, Beckham 67 % gegen 63 %. */
+export const LIGA_BODEN = 0.45;      // so viel bleibt auch bei reinem Gastspiel
+
+const spielerSchluesselFuer = (p) => norm(p.n) + "|" + p.by;
+
+/** Jahre bei Vereinen dieser Liga und bei allen bekannten Vereinen. */
+export function ligaJahre(player, ligaVereine, jetzt = 2026) {
+  let hier = 0, gesamt = 0;
+  for (const [club, von, bis] of player.cp || []) {
+    const jahre = Math.max(1, (bis === 0 ? jetzt : bis) - von);
+    gesamt += jahre;
+    if (ligaVereine.has(club)) hier += jahre;
+  }
+  return { hier, gesamt };
+}
+
+export function ligaAnteil(player, ligaVereine) {
+  const { hier, gesamt } = ligaJahre(player, ligaVereine);
+  return gesamt > 0 ? hier / gesamt : 1;
+}
+
+/* ── Stammspieler oder Gast? ───────────────────────────────────────────────────
+   Der Jahresanteil weiß nicht, ob jemand in diesen Jahren gespielt hat. Genau dafür
+   sind die Einsätze aus Wikidata da: Maya Yoshida und Atsuto Uchida tragen dank
+   japanischer Wikipedia eine Bekanntheit, die ihre 29 bzw. 104 Schalker Spiele
+   nicht decken, und standen damit über Höwedes und Lizarazu.
+
+   Gesättigt bei 120 Spielen — etwa drei volle Saisons. Darüber macht mehr keinen
+   Unterschied mehr, damit heutige Spieler nicht bestraft werden, nur weil ihre
+   Laufbahn noch läuft. FEHLT DIE ZAHL, bleibt der Faktor 1: Matthäus und Xavi
+   tragen bei keiner Station eine, und eine Datenlücke darf nichts kosten. */
+export const SPIELE_SATT = 120;
+export const SPIELE_BODEN = 0.55;
+
+export function ligaSpiele(player, ligaVereine, einsaetze) {
+  const eintrag = einsaetze?.[spielerSchluesselFuer(player)];
+  if (!eintrag) return null;
+  let n = 0;
+  for (const [club, spiele] of Object.entries(eintrag)) {
+    if (club !== "__tore" && ligaVereine.has(club)) n += spiele;
+  }
+  return n > 0 ? n : null;
+}
+
+/* Beide Achsen zusammen. Die Wurzeln dämpfen die Dämpfung: Ein Anteil von 25 % soll
+   spürbar kosten, aber keinen Spieler auf ein Viertel seines Rufs stellen. */
+export function ligaFaktor(player, ligaVereine, einsaetze) {
+  const anteil = LIGA_BODEN + (1 - LIGA_BODEN) * Math.sqrt(ligaAnteil(player, ligaVereine));
+  const spiele = ligaSpiele(player, ligaVereine, einsaetze);
+  if (spiele == null) return anteil;
+  return anteil * (SPIELE_BODEN + (1 - SPIELE_BODEN) * Math.sqrt(Math.min(1, spiele / SPIELE_SATT)));
 }
 
 /* ── Form: dieselbe Karriere, verschiedene Jahre ───────────────────────────────
