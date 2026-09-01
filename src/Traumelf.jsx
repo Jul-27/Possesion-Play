@@ -12,6 +12,7 @@ import {
   abzeichenFuer, hoehepunkte,
 } from "./saison.js";
 import { loadPlayers } from "./playersStore.js";
+import { loadAppearances } from "./appearancesStore.js";
 import { Avatar } from "./Emblems.jsx";
 import Pitch, { Jersey } from "./Pitch.jsx";
 import { play, isMuted, toggleMute } from "./sound.js";
@@ -40,6 +41,7 @@ const TAKT_MS = 620;     // Spieltag für Spieltag — schnell genug zum Zusehen
 
 export default function Traumelf({ onLeave }) {
   const [players, setPlayers] = useState(null);
+  const [einsaetze, setEinsaetze] = useState(undefined);   // undefined = lädt, null = fehlt
   const [liga, setLiga] = useState(null);
   const [formation, setFormation] = useState(null);
   const [belegt, setBelegt] = useState([]);          // je Platz { i, jahr } — das Jahr gehört dazu
@@ -59,30 +61,31 @@ export default function Traumelf({ onLeave }) {
   const meineZeileRef = useRef(null);
 
   useEffect(() => { loadPlayers().then(setPlayers); }, []);
+  useEffect(() => { loadAppearances().then((e) => setEinsaetze(e || null)); }, []);
 
   /* Ziehungen, Klassen und Netz hängen nur an der Liga — einmal bauen, nicht je Spin.
      Gemessen: 68 bis 180 ms je Liga. */
   const daten = useMemo(() => {
-    if (!players || !liga) return null;
+    if (!players || !liga || einsaetze === undefined) return null;
     const ziehungen = baueZiehungen(players, CLUBS, liga);
-    return { ziehungen, klassen: baueKlassen(players, ziehungen), netz: baueVerbundNetz(players, ziehungen) };
-  }, [players, liga]);
+    return { ziehungen, klassen: baueKlassen(players, ziehungen, einsaetze), netz: baueVerbundNetz(players, ziehungen) };
+  }, [players, liga, einsaetze]);
 
   /* Wie stark ist diese Liga? Die Töpfe sind verschieden dicht — England besteht in
      unseren Daten aus neun Großvereinen, die Bundesliga auch aus Freiburg und Mainz.
      Statt das wegzurechnen, steht es bei der Ligawahl. */
   const ligaInfo = useMemo(() => {
-    if (!players) return {};
+    if (!players || einsaetze === undefined) return {};
     const out = {};
     for (const l of LIGEN) {
       const z = baueZiehungen(players, CLUBS, l);
       if (!z.length) continue;
-      const kl = baueKlassen(players, z);
+      const kl = baueKlassen(players, z, einsaetze);
       const s = z.map((x) => teamStaerke(x, players, kl)).sort((a, b) => a - b);
       out[l] = { schnitt: Math.round(s[Math.floor(s.length / 2)]), beste: s.at(-1), kader: z.length };
     }
     return out;
-  }, [players]);
+  }, [players, einsaetze]);
 
   const slots = useMemo(() => (formation ? slotLayout(formation) : []), [formation]);
   const posListe = useMemo(() => slots.map((s) => s.pos), [slots]);
@@ -294,7 +297,7 @@ export default function Traumelf({ onLeave }) {
     </div>
   );
 
-  if (!players) return <div className="ppRoot">{kopf}<div className="qlogEmpty">Lade Spielerdaten…</div>{regelModal}</div>;
+  if (!players || einsaetze === undefined) return <div className="ppRoot">{kopf}<div className="qlogEmpty">Lade Spielerdaten…</div>{regelModal}</div>;
 
   // Schritt 1: Liga
   if (!liga) {

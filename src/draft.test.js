@@ -3,12 +3,15 @@ import assert from "node:assert/strict";
 import {
   baueZiehungen, baueKlassen, passung, darfAufPosition, verbundPaare, verbundBonus,
   bewerte, obergrenze, zieh, bedientSlots, klassenKurve, formFaktor, klasseIn,
+  ligaAnteil, ligaSpiele, ligaFaktor, LIGA_BODEN, SPIELE_SATT,
+  nationsFaktoren, nationsAusgleich, NATION_MIN,
   PASSUNG_GENAU, PASSUNG_GRUPPE, VERBUND_MAX, SPIELE, LIGA_NAME,
   DRAFT_SL_MIN, DRAFT_MIN_KADER, DRAFT_AB_JAHR,
 } from "./draft.js";
 import { PLAYERS } from "./players.js";
 import { CLUBS as ECHTE_CLUBS } from "./gameData.js";
 import { FORMATIONS, formationPositions } from "./eleven.js";
+import { EINSAETZE } from "./appearances.js";
 
 /* Ein Miniverein-Universum: zwei Ligen, drei Vereine. Der Kader von AAA 2010 ist
    vollständig (alle vier Gruppen, elf Spieler), BBB hat keinen Torwart, CCC steht in
@@ -66,15 +69,29 @@ test("zu unbekannte und gruppenlose Spieler stehen nicht im Kader", () => {
 
 // ── Klasse ───────────────────────────────────────────────────────────────────
 
-test("Klasse ist der Rangplatz auf der Klassenkurve", () => {
+test("Klasse ist der Rangplatz auf der Klassenkurve, je Positionsgruppe", () => {
   const z = baueZiehungen(P, CLUBS, "XL", 2012);
   const k = baueKlassen(P, z);
   const werte = [...k.values()];
   assert.equal(Math.min(...werte), 50);
   assert.equal(Math.max(...werte), 98);
-  /* Bekannter heißt nie schlechter — sonst wäre die Zahl nicht erklärbar. */
-  const sortiert = [...k.entries()].sort((a, b) => (P[a[0]].sl || 0) - (P[b[0]].sl || 0));
-  for (let i = 1; i < sortiert.length; i++) assert.ok(sortiert[i][1] >= sortiert[i - 1][1]);
+  /* Bekannter heißt nie schlechter — aber nur INNERHALB der Gruppe. Über alle
+     verglichen darf ein Torwart über einem bekannteren Stürmer stehen; genau das
+     ist der Zweck der Gruppenrangliste. */
+  for (const gruppe of ["TW", "ABW", "MF", "ST"]) {
+    const sortiert = [...k.entries()]
+      .filter(([i]) => P[i].pos === gruppe)
+      .sort((a, b) => (P[a[0]].sl || 0) - (P[b[0]].sl || 0));
+    for (let i = 1; i < sortiert.length; i++) {
+      assert.ok(sortiert[i][1] >= sortiert[i - 1][1], `${gruppe}: Klasse fällt bei steigender Bekanntheit`);
+    }
+    /* Jede Gruppe spannt die volle Skala auf — der beste Torwart ist so gut wie der
+       beste Stürmer, denn im Draft konkurriert er nur mit Torhütern. */
+    if (sortiert.length > 1) {
+      assert.equal(sortiert[0][1], 50, `${gruppe} beginnt bei 50`);
+      assert.equal(sortiert.at(-1)[1], 98, `${gruppe} endet bei 98`);
+    }
+  }
 });
 
 /* DER FEHLER, DEN DIESE PRÜFUNG FÄNGT: Die erste Fassung streckte den Rangplatz
@@ -115,6 +132,134 @@ test("die Form senkt Talente und Routiniers, nicht die besten Jahre", () => {
   assert.ok(klasseIn(basis, spieler, 0, 2018) > 65, "mit 18 gedämpft, aber nicht halbiert");
   assert.ok(klasseIn(basis, spieler, 0, 2018) < 85);
   assert.ok(klasseIn(basis, spieler, 0, 2038) < klasseIn(basis, spieler, 0, 2028));
+});
+
+/* DER ZWEITE STRUKTURFEHLER: Bekanntheit ist karriereweit und weiß nicht, was
+   jemand in DIESER Liga war. Mesut Özil stand als bester Mittelfeldspieler der
+   Bundesliga auf 96 — mit 101 Bundesligaspielen als Heranwachsender, während sein
+   Ruhm von Real und Arsenal stammt. */
+const ligaXL = new Set(["AAA", "BBB"]);
+const mitCp = (cp) => ({ n: "X", by: 1990, cp });
+
+test("der Ligaanteil kommt aus den Jahren, nicht aus den Einsätzen", () => {
+  assert.equal(ligaAnteil(mitCp([["AAA", 2010, 2020]]), ligaXL), 1);
+  assert.equal(ligaAnteil(mitCp([["AAA", 2010, 2015], ["CCC", 2015, 2020]]), ligaXL), 0.5);
+  /* Ein laufender Vertrag (bis === 0) zählt bis heute, sonst wäre jeder aktive
+     Spieler bei seinem jetzigen Verein mit null Jahren geführt. */
+  assert.ok(ligaAnteil(mitCp([["AAA", 2020, 0]]), ligaXL, 2026) === 1);
+  assert.equal(ligaAnteil(mitCp([]), ligaXL), 1, "ohne Stationen neutral");
+});
+
+/* Der erste Versuch nahm die EINSÄTZE als Nenner und ging an den Datenlücken
+   kaputt: De Bruyne trug nur seine Wolfsburger und Bremer Spiele, seine über 400
+   für City und Chelsea fehlten — sein Bundesliga-Anteil rechnete sich zu 83 %, und
+   er stand als bester Mittelfeldspieler der Liga auf 98. */
+test("eine Lücke in den Einsätzen kann den Anteil nicht mehr verdrehen", () => {
+  const spieler = mitCp([["AAA", 2012, 2014], ["CCC", 2014, 2026]]);
+  const luecke = { "x|1990": { AAA: 52 } };   // die zwölf Jahre bei CCC fehlen
+  assert.ok(ligaAnteil(spieler, ligaXL) < 0.2, "die Jahre kennen die Wahrheit");
+  assert.ok(ligaFaktor(spieler, ligaXL, luecke) < 0.75);
+});
+
+test("fehlende Einsatzzahlen kosten nichts", () => {
+  const treu = mitCp([["AAA", 2000, 2014]]);
+  /* Matthäus und Xavi tragen bei keiner Station eine Zahl. Wer nur Jahre hat, muss
+     genauso behandelt werden wie einer mit voller Datenlage. */
+  assert.equal(ligaSpiele(treu, ligaXL, {}), null);
+  assert.equal(ligaSpiele(treu, ligaXL, null), null);
+  assert.equal(ligaFaktor(treu, ligaXL, {}), 1, "voller Anteil, keine Zahlen — Faktor 1");
+  assert.equal(ligaFaktor(treu, ligaXL, { "x|1990": { AAA: 400 } }), 1);
+});
+
+test("wer in der Liga kaum gespielt hat, wird gedämpft", () => {
+  const treu = mitCp([["AAA", 2000, 2014]]);
+  const wenig = ligaFaktor(treu, ligaXL, { "x|1990": { AAA: 20 } });
+  const viel = ligaFaktor(treu, ligaXL, { "x|1990": { AAA: SPIELE_SATT * 2 } });
+  assert.ok(wenig < viel);
+  assert.ok(wenig >= LIGA_BODEN * 0.5, "gedämpft, nicht ausgelöscht");
+  assert.equal(viel, 1, "ab der Sättigung bringt mehr nichts — heutige Spieler sollen nicht verlieren");
+});
+
+test("ein reines Gastspiel behält einen Boden", () => {
+  const gast = mitCp([["AAA", 2015, 2016], ["CCC", 2000, 2015]]);
+  const f = ligaFaktor(gast, ligaXL, {});
+  assert.ok(f > LIGA_BODEN, "der Boden ist eine Untergrenze, kein Wert");
+  assert.ok(f < 0.7);
+});
+
+/* Die Probe an den echten Daten: Genau die Namen, die vorher falsch oben standen. */
+test("die Ligadämpfung trifft an den echten Daten die Richtigen", () => {
+  const blVereine = new Set(baueZiehungen(PLAYERS, ECHTE_CLUBS, "BL").map((z) => z.key));
+  const p = (n) => PLAYERS.find((x) => x.n === n);
+  const f = (n) => ligaFaktor(p(n), blVereine, EINSAETZE);
+  /* Müller und Kahn haben ihre ganze Laufbahn in der Bundesliga verbracht. */
+  assert.ok(f("Thomas Müller") > 0.95, `Müller ${f("Thomas Müller")}`);
+  assert.ok(f("Oliver Kahn") > 0.95, `Kahn ${f("Oliver Kahn")}`);
+  /* Özil und De Bruyne waren fast überall sonst. */
+  assert.ok(f("Mesut Özil") < 0.8, `Özil ${f("Mesut Özil")}`);
+  assert.ok(f("Kevin De Bruyne") < 0.7, `De Bruyne ${f("Kevin De Bruyne")}`);
+  assert.ok(f("Mesut Özil") < f("Robert Lewandowski"));
+  /* Lothar Matthäus trägt bei keiner Station eine Einsatzzahl — die Lücke darf ihn
+     nicht schlechter stellen als seine zwölf Bundesligajahre hergeben. */
+  assert.ok(f("Lothar Matthäus") > 0.8, `Matthäus ${f("Lothar Matthäus")}`);
+});
+
+/* DIE DRITTE VERZERRUNG: die Reichweite der eigenen Wikipedia. Gemessen liegt die
+   Median-Bekanntheit japanischer Spieler im Bundesliga-Pool bei 58, die deutscher
+   bei 37 — sechs Japaner standen dadurch in den Spitzenlisten, Sakai und Uchida vor
+   Lizarazu und Höwedes. */
+test("eine große Landes-Wikipedia wird zur Hälfte ausgeglichen", () => {
+  /* Zwei Nationen, gleich viele Spieler, aber X-Land ist doppelt so gut vertreten. */
+  const spieler = [
+    ...Array.from({ length: NATION_MIN }, (_, n) => ({ nat: ["XX"], sl: 80 + n })),
+    ...Array.from({ length: NATION_MIN }, (_, n) => ({ nat: ["YY"], sl: 40 + n })),
+  ];
+  const f = nationsFaktoren(spieler, spieler.map((_, i) => i));
+  assert.ok(f.get("XX") > 1, "die große Wikipedia wird geteilt");
+  assert.ok(f.get("YY") < 1);
+  /* Nur zur Hälfte: Der Faktor ist die Wurzel des Verhältnisses, nicht das
+     Verhältnis. Sonst verschwände auch der echte Auswahleffekt — wer aus Spanien in
+     die Bundesliga wechselt, ist ausgewählt. */
+  assert.ok(f.get("XX") < 2, `voll ausgeglichen wären es ~2, es sind ${f.get("XX").toFixed(2)}`);
+});
+
+test("zu kleine Nationen und Spieler ohne Pass bleiben unberührt", () => {
+  const spieler = [
+    ...Array.from({ length: NATION_MIN }, () => ({ nat: ["XX"], sl: 90 })),
+    { nat: ["ZZ"], sl: 200 },        // eine einzige Person — kein Median, nur Rauschen
+    { nat: [], sl: 60 },
+    { sl: 60 },
+  ];
+  const f = nationsFaktoren(spieler, spieler.map((_, i) => i));
+  assert.equal(f.get("ZZ"), undefined, `unter ${NATION_MIN} Spielern kein Ausgleich`);
+  assert.equal(nationsAusgleich({ nat: ["ZZ"], sl: 200 }, f), 1);
+  assert.equal(nationsAusgleich({ nat: [] }, f), 1);
+  assert.equal(nationsAusgleich({}, f), 1);
+});
+
+/* Die Rangliste selbst, an den Namen gemessen. Vorher bestanden die besten
+   achtzehn der Bundesliga aus vierzehn Stürmern, und Özil führte das Mittelfeld. */
+test("die Spitze jeder Positionsgruppe ergibt einen Sinn", () => {
+  const z = baueZiehungen(PLAYERS, ECHTE_CLUBS, "BL");
+  const k = baueKlassen(PLAYERS, z, EINSAETZE);
+  const besterVon = (gruppe) =>
+    PLAYERS[[...k.entries()].filter(([i]) => PLAYERS[i].pos === gruppe).sort((a, b) => b[1] - a[1])[0][0]].n;
+  assert.equal(besterVon("TW"), "Manuel Neuer");
+  assert.equal(besterVon("ST"), "Robert Lewandowski");
+  /* Ohne Gruppenrangliste stand hier gar kein Verteidiger in den Top 18 und im
+     Mittelfeld führte Özil. */
+  assert.equal(besterVon("ABW"), "Philipp Lahm");
+  assert.equal(besterVon("MF"), "Lothar Matthäus");
+
+  /* Und die Namen, die vorher FALSCH oben standen, dürfen nicht zurückkommen. */
+  const rang = (name) => {
+    const gruppe = PLAYERS.find((p) => p.n === name).pos;
+    return [...k.entries()].filter(([i]) => PLAYERS[i].pos === gruppe)
+      .sort((a, b) => b[1] - a[1]).findIndex(([i]) => PLAYERS[i].n === name) + 1;
+  };
+  assert.ok(rang("Kevin De Bruyne") > 8, `De Bruyne steht auf Platz ${rang("Kevin De Bruyne")} der BL-Mittelfeldspieler`);
+  assert.ok(rang("Gotoku Sakai") > 8, `Sakai steht auf Platz ${rang("Gotoku Sakai")} der BL-Verteidiger`);
+  assert.ok(rang("Atsuto Uchida") > 8, `Uchida steht auf Platz ${rang("Atsuto Uchida")}`);
 });
 
 // ── Passung ──────────────────────────────────────────────────────────────────
@@ -259,7 +404,7 @@ test("alle drei Ligen haben genug Ziehungen", () => {
 test("ein Draft läuft in keiner Liga und keiner Formation in eine Sackgasse", () => {
   for (const liga of ["BL", "PL", "LL"]) {
     const ziehungen = baueZiehungen(PLAYERS, ECHTE_CLUBS, liga);
-    const klassen = baueKlassen(PLAYERS, ziehungen);
+    const klassen = baueKlassen(PLAYERS, ziehungen, EINSAETZE);
     for (const formation of FORMATIONS) {
       const slots = formationPositions(formation);
       const belegt = slots.map(() => null);
