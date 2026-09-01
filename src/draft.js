@@ -67,17 +67,86 @@ export function baueZiehungen(players, clubs, liga, jetzt = 2026) {
 }
 
 /* ── Klasse ────────────────────────────────────────────────────────────────────
-   Der Rangplatz im Pool, auf 50 bis 99 gestreckt. Bewusst NICHT die rohe
+   Der Rangplatz im Pool, umgerechnet auf 50 bis 98. Bewusst NICHT die rohe
    Bekanntheit: die reicht von 1 bis über 200 und würde von Messi allein beherrscht.
-   Als Rangplatz ist die Zahl außerdem erklärbar — „besser als 87 % des Pools". */
+   Als Rangplatz ist die Zahl außerdem erklärbar — „besser als 99 % des Pools".
+
+   DIE KURVE IST DER GANZE PUNKT. Eine erste Fassung streckte den Rangplatz LINEAR
+   auf 50 bis 99 — dadurch lagen per Konstruktion 19 % des Pools über 90, in der
+   Bundesliga 195 Spieler, und die Spitze war ein Plateau aus elf Namen auf 99.
+   Mario Balotelli stand auf 98. Eine Bewertung, die ein Fünftel aller Spieler zur
+   Weltklasse erklärt, sagt nichts mehr aus.
+
+   Die Stützstellen unten bilden ab, wie Fußballkader wirklich aussehen: viele
+   Solide, wenige Stars, eine Handvoll Ausnahmespieler. Über 90 kommt nur das
+   oberste halbe Prozent — in der Bundesliga sechs Spieler. */
+const KLASSEN_KURVE = [
+  [0.00, 50], [0.50, 58], [0.80, 65], [0.93, 73],
+  [0.975, 81], [0.99, 87], [0.998, 93], [1.00, 98],
+];
+
+/** Perzentil (0 bis 1) auf die Klassenskala, linear zwischen den Stützstellen. */
+export function klassenKurve(pct) {
+  const p = Math.max(0, Math.min(1, pct));
+  for (let n = 1; n < KLASSEN_KURVE.length; n++) {
+    const [p0, k0] = KLASSEN_KURVE[n - 1], [p1, k1] = KLASSEN_KURVE[n];
+    if (p <= p1) return k0 + ((p - p0) / (p1 - p0)) * (k1 - k0);
+  }
+  return 98;
+}
+
+/**
+ * Die Grundklasse je Spieler — was er auf dem Höhepunkt seiner Laufbahn wert ist.
+ * Die Klasse einer einzelnen SAISON kommt erst aus `klasseIn`.
+ */
 export function baueKlassen(players, ziehungen) {
   const imPool = [...new Set(ziehungen.flatMap((z) => z.spieler))];
   const sortiert = [...imPool].sort((a, b) => (players[a].sl || 0) - (players[b].sl || 0));
   const klasse = new Map();
   sortiert.forEach((i, rang) => {
-    klasse.set(i, Math.round(50 + (49 * rang) / Math.max(1, sortiert.length - 1)));
+    klasse.set(i, Math.round(klassenKurve(rang / Math.max(1, sortiert.length - 1))));
   });
   return klasse;
+}
+
+/* ── Form: dieselbe Karriere, verschiedene Jahre ───────────────────────────────
+   Bekanntheit gilt für die GANZE Laufbahn. Ohne Korrektur wäre der 38-jährige
+   Auslaufmodell-Lewandowski so stark wie der von 2014, und ein 17-jähriger, der
+   zweimal eingewechselt wurde, trüge den Ruhm seiner späteren Jahre.
+
+   WAS DIESE KURVE KANN UND WAS NICHT: Sie kennt das Alter, nicht die Leistung —
+   dazu haben wir keine Daten, `t` führt Titel ohne Jahreszahl. Sie trifft deshalb
+   die häufigen Fälle (Talent am Anfang, Routinier am Ende) und irrt bei den
+   Ausnahmen: Haalands 41 Tore mit 21 sind ihr genauso wenig bekannt wie
+   Lewandowskis Rekordsaison mit 32. Das Plateau ist bewusst breit — von 21 bis 32
+   voller Wert —, damit sie nur dort eingreift, wo sie sicher ist. */
+const FORM_KURVE = [
+  [16, 0.58], [18, 0.72], [19, 0.82], [20, 0.91], [21, 1.00],
+  [32, 1.00], [33, 0.96], [34, 0.91], [35, 0.85], [36, 0.78], [39, 0.62],
+];
+
+export function formFaktor(alter) {
+  if (!Number.isFinite(alter)) return 1;
+  if (alter <= FORM_KURVE[0][0]) return FORM_KURVE[0][1];
+  for (let n = 1; n < FORM_KURVE.length; n++) {
+    const [a0, f0] = FORM_KURVE[n - 1], [a1, f1] = FORM_KURVE[n];
+    if (alter <= a1) return f0 + ((alter - a0) / (a1 - a0)) * (f1 - f0);
+  }
+  return FORM_KURVE[FORM_KURVE.length - 1][1];
+}
+
+/**
+ * Die Klasse eines Spielers in EINER Saison.
+ *
+ * Die Form wirkt nur auf den Teil ÜBER 50, nicht auf die ganze Zahl: 50 ist der
+ * Boden der Skala, kein Können, das ein Talent noch nicht hätte. Ein 18-Jähriger
+ * mit Grundklasse 90 steht bei 79, nicht bei 65.
+ */
+export function klasseIn(basis, players, i, jahr) {
+  const grund = basis.get(i) ?? 50;
+  const by = players[i]?.by;
+  if (!by || !jahr) return grund;
+  return Math.round(50 + (grund - 50) * formFaktor(jahr - by));
 }
 
 /* ── Positionspassung ──────────────────────────────────────────────────────────
@@ -168,21 +237,24 @@ export const verbundBonus = (paare) => Math.min(VERBUND_MAX, Math.round(Math.sqr
 
 /**
  * Die Wertung einer Elf.
- * @param elf     Spielerindizes je Slot, gleiche Reihenfolge wie die Formation
+ *
+ * @param elf     je Slot `{ i, jahr }` oder null — das JAHR gehört dazu, weil ein
+ *                Spieler in verschiedenen Saisons verschieden stark ist. Wer nur den
+ *                Index führte, bekäme für Lewandowski 2014 und 2026 dieselbe Zahl.
  * @param slots   Positionsschlüssel je Slot
  */
 export function bewerte(elf, slots, players, klassen, netz) {
   let summe = 0;
-  const je = elf.map((i, k) => {
-    if (i == null) return null;
-    const kl = klassen.get(i) ?? 50;
-    const pa = passung(players[i], slots[k]);
+  const je = elf.map((e, k) => {
+    if (e == null) return null;
+    const kl = klasseIn(klassen, players, e.i, e.jahr);
+    const pa = passung(players[e.i], slots[k]);
     const wert = kl * pa;
     summe += wert;
-    return { i, klasse: kl, passung: pa, wert: Math.round(wert * 10) / 10 };
+    return { i: e.i, jahr: e.jahr, klasse: kl, passung: pa, wert: Math.round(wert * 10) / 10 };
   });
   const schnitt = elf.length ? summe / elf.length : 0;
-  const paare = verbundPaare(elf.filter((i) => i != null), netz);
+  const paare = verbundPaare(elf.filter((e) => e != null).map((e) => e.i), netz);
   const bonus = verbundBonus(paare);
   return {
     je,
@@ -206,13 +278,32 @@ export function bewerte(elf, slots, players, klassen, netz) {
 
    Dazu kommt der volle Verbund. Beides zugleich zu holen — die stärksten Spieler UND
    lauter Mitspieler — ist praktisch ausgeschlossen, und genau dort soll die makellose
-   Saison liegen. */
-export function obergrenze(slots, players, klassen) {
+   Saison liegen.
+
+   Gerechnet wird mit der BESTEN ziehbaren Saison je Spieler, nicht mit der
+   Grundklasse: Lewandowskis Grundklasse gäbe es nur, wenn auch eine Ziehung aus
+   seinen besten Jahren im Topf liegt. Was nicht gezogen werden kann, darf die Marke
+   nicht anheben. */
+export function obergrenze(slots, players, klassen, ziehungen) {
+  /* Beste ziehbare Saison je Spieler. Ohne `ziehungen` bleibt es bei der
+     Grundklasse — die Tests nutzen das für kleine, handgebaute Fälle. */
+  const beste = new Map();
+  if (ziehungen) {
+    for (const z of ziehungen) {
+      for (const i of z.spieler) {
+        const k = klasseIn(klassen, players, i, z.jahr);
+        if (k > (beste.get(i) ?? 0)) beste.set(i, k);
+      }
+    }
+  } else {
+    for (const [i, k] of klassen) beste.set(i, k);
+  }
+
   /* Knappste Position zuerst: Sonst nähme der Torwart-Slot einen Spieler weg, den
      nur er brauchen kann, und die knappe Position ginge leer aus. */
   const kandidaten = slots.map((pos) => {
     const liste = [];
-    for (const [i, kl] of klassen) {
+    for (const [i, kl] of beste) {
       const pa = passung(players[i], pos);
       if (pa) liste.push({ i, wert: kl * pa });
     }
@@ -229,69 +320,12 @@ export function obergrenze(slots, players, klassen) {
   return Math.round((summe / slots.length + VERBUND_MAX) * 10) / 10;
 }
 
-export const WERTUNG_UNTEN = 55;   // darunter ist jede Elf gleich chancenlos
-
-/* Diese Obergrenze setzt freie Auswahl aus dem ganzen Pool voraus. Ein Draft sieht
-   aber nur elf zufällige Kader — gemessen erreicht bestes Spiel davon 94 bis 98 %.
-   Genau diese Lücke ist der Preis des Zufalls, und um sie wird die Marke gesenkt.
-   Ohne die Senkung wäre die makellose Saison rechnerisch unerreichbar; mit ihr liegt
-   sie am äußersten Rand sehr guten Spiels. */
-export const DRAFT_ERREICHBAR = 0.92;
-export const saisonMarke = (obergr) =>
-  WERTUNG_UNTEN + (obergr - WERTUNG_UNTEN) * DRAFT_ERREICHBAR;
-
-/* ── Saison ────────────────────────────────────────────────────────────────────
-   Aus der Wertung wird eine Bilanz. Das ist eine SPIELWERTUNG, keine Prognose —
-   nichts an unseren Daten sagt voraus, wie eine Mannschaft abschneidet. Die Kurve
-   ist so gelegt, dass eine makellose Saison nur mit einer nahezu perfekten Elf
-   erreichbar ist und ein durchschnittlicher Draft im Mittelfeld landet.
-
-   Der Exponent ist der Regler: Er drückt die Siegquote im unteren Bereich, damit
-   eine mittelmäßige Elf nicht schon halbe Meisterschaften einfährt. */
-export function bilanz(wertung, spiele, obergr) {
-  /* Gemessen an je 60 simulierten Partien mit einem Automaten, der stets den
-     bestbewerteten passenden Spieler nahm:
-       feste Spanne 46 -> makellos in 34 von 60 Partien, viel zu häufig
-       feste Spanne 49 -> makellos in 0 von 180, ein unerreichbares Abzeichen
-     Beides falsch, und mit EINER festen Spanne auch nicht zu beheben, weil die Ligen
-     unterschiedlich hohe Decken haben. Deshalb wird gegen die erreichbare Obergrenze
-     der jeweiligen Liga und Formation gerechnet. */
-  const oben = saisonMarke(obergr || 106);
-  const roh = Math.max(0, Math.min(1, (wertung - WERTUNG_UNTEN) / Math.max(1, oben - WERTUNG_UNTEN)));
-  const quote = Math.pow(roh, 1.8);
-
-  /* DIE PUNKTZAHL FÜHRT, Siege und Remis werden aus ihr abgeleitet. Andersherum
-     — beide getrennt gerundet — war die Bilanz nicht monoton: Eine minimal bessere
-     Elf verlor ein Unentschieden, ohne einen Sieg dazuzugewinnen, und stand mit
-     weniger Punkten da. Ein Test über die ganze Wertungsspanne fängt das. */
-  const punkte = Math.round(spiele * 3 * quote);
-
-  /* Unentschieden häufen sich im Mittelfeld und verschwinden zur Spitze hin — eine
-     makellose Saison hat keine. */
-  const wunschRemis = Math.round(spiele * 0.34 * Math.max(0, 1 - Math.abs(quote - 0.42) / 0.58));
-  /* Aus Punkten und Wunsch die Siege: Sie müssen die Punktzahl exakt tragen
-     (3·Siege + Remis = Punkte) und dürfen zusammen die Saison nicht sprengen. */
-  const minSiege = Math.max(0, Math.ceil((punkte - spiele) / 2));
-  const maxSiege = Math.floor(punkte / 3);
-  const siege = Math.min(maxSiege, Math.max(minSiege, Math.round((punkte - wunschRemis) / 3)));
-  const remis = punkte - siege * 3;
-  return { siege, remis, niederlagen: spiele - siege - remis, punkte, spiele };
-}
-
-/* Abzeichen als Anteil der erreichbaren Punkte — so gilt dieselbe Leiter für 34 und
-   38 Spiele. „Makellos" ist der Gegenpart zum 38-0-0 des Vorbilds. */
-export const ABZEICHEN = [
-  { key: "makellos",  name: "Makellos",         pruef: (b) => b.siege === b.spiele },
-  { key: "unbesiegt", name: "Unbesiegt",        pruef: (b) => b.niederlagen === 0 },
-  { key: "rekord",    name: "Rekordmeister",    pruef: (b) => b.punkte >= b.spiele * 3 * 0.87 },
-  { key: "meister",   name: "Meister",          pruef: (b) => b.punkte >= b.spiele * 3 * 0.74 },
-  { key: "cl",        name: "Champions League", pruef: (b) => b.punkte >= b.spiele * 3 * 0.60 },
-  { key: "el",        name: "Europa League",    pruef: (b) => b.punkte >= b.spiele * 3 * 0.50 },
-  { key: "mitte",     name: "Mittelfeld",       pruef: (b) => b.punkte >= b.spiele * 3 * 0.36 },
-  { key: "abstieg",   name: "Abstiegskampf",    pruef: () => true },
-];
-
-export const abzeichenFuer = (b) => ABZEICHEN.find((a) => a.pruef(b));
+/* Die Bilanz einer Saison steht NICHT mehr hier. Bis eben rechnete `bilanz` aus der
+   Wertung direkt Siege, Unentschieden und Punkte — eine Kurve mit Exponent,
+   kalibriert an 1.350 simulierten Drafts. Das ergab eine Zahl, aber kein Spiel.
+   Jetzt wird die Saison in `saison.js` wirklich ausgespielt: 34 bzw. 38 Spieltage
+   gegen echte Verein-Saison-Paare, jedes Ergebnis einzeln, und das Abzeichen kommt
+   aus dem Tabellenplatz statt aus einem Punkteanteil. */
 
 /* ── Ziehung ───────────────────────────────────────────────────────────────────
    Die Spins eines Tages sind NICHT zufällig, sondern aus dem Datum abgeleitet —

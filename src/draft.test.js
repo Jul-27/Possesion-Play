@@ -2,8 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   baueZiehungen, baueKlassen, passung, darfAufPosition, verbundPaare, verbundBonus,
-  bewerte, obergrenze, saisonMarke, bilanz, abzeichenFuer, ABZEICHEN, zieh, bedientSlots,
-  PASSUNG_GENAU, PASSUNG_GRUPPE, VERBUND_MAX, WERTUNG_UNTEN, SPIELE, LIGA_NAME,
+  bewerte, obergrenze, zieh, bedientSlots, klassenKurve, formFaktor, klasseIn,
+  PASSUNG_GENAU, PASSUNG_GRUPPE, VERBUND_MAX, SPIELE, LIGA_NAME,
   DRAFT_SL_MIN, DRAFT_MIN_KADER, DRAFT_AB_JAHR,
 } from "./draft.js";
 import { PLAYERS } from "./players.js";
@@ -66,15 +66,55 @@ test("zu unbekannte und gruppenlose Spieler stehen nicht im Kader", () => {
 
 // ── Klasse ───────────────────────────────────────────────────────────────────
 
-test("Klasse ist der Rangplatz, gestreckt auf 50 bis 99", () => {
+test("Klasse ist der Rangplatz auf der Klassenkurve", () => {
   const z = baueZiehungen(P, CLUBS, "XL", 2012);
   const k = baueKlassen(P, z);
   const werte = [...k.values()];
   assert.equal(Math.min(...werte), 50);
-  assert.equal(Math.max(...werte), 99);
+  assert.equal(Math.max(...werte), 98);
   /* Bekannter heißt nie schlechter — sonst wäre die Zahl nicht erklärbar. */
   const sortiert = [...k.entries()].sort((a, b) => (P[a[0]].sl || 0) - (P[b[0]].sl || 0));
   for (let i = 1; i < sortiert.length; i++) assert.ok(sortiert[i][1] >= sortiert[i - 1][1]);
+});
+
+/* DER FEHLER, DEN DIESE PRÜFUNG FÄNGT: Die erste Fassung streckte den Rangplatz
+   linear auf 50 bis 99 — damit lagen 19 % des Pools über 90 und Mario Balotelli
+   stand auf 98. Die Kurve muss die Spitze knapp halten. */
+test("die Klassenkurve lässt nur die äußerste Spitze über 90", () => {
+  assert.equal(Math.round(klassenKurve(0)), 50);
+  assert.equal(Math.round(klassenKurve(1)), 98);
+  assert.ok(klassenKurve(0.5) < 60, "der Median liegt unten, nicht in der Mitte der Skala");
+  assert.ok(klassenKurve(0.9) < 72, "auch die besten 10 % sind noch keine Weltklasse");
+  assert.ok(klassenKurve(0.99) < 90, "das oberste Prozent reicht noch nicht für 90");
+  assert.ok(klassenKurve(0.999) > 90);
+  /* Steigend über den ganzen Bereich, sonst wäre ein Rangplatz mehr wert als der
+     nächsthöhere. */
+  let vorher = -1;
+  for (let p = 0; p <= 1; p += 0.001) {
+    const k = klassenKurve(p);
+    assert.ok(k >= vorher, `Kurve fällt bei ${p.toFixed(3)}`);
+    vorher = k;
+  }
+});
+
+/* Bekanntheit gilt karriereweit. Ohne die Formkurve wäre ein 17-Jähriger mit zwei
+   Einwechslungen so stark wie derselbe Spieler zehn Jahre später. */
+test("die Form senkt Talente und Routiniers, nicht die besten Jahre", () => {
+  assert.equal(formFaktor(21), 1);
+  assert.equal(formFaktor(28), 1);
+  assert.equal(formFaktor(32), 1);
+  assert.ok(formFaktor(17) < 0.7, "mit 17 ist niemand auf seinem Höhepunkt");
+  assert.ok(formFaktor(19) < 0.9);
+  assert.ok(formFaktor(36) < 0.8);
+  assert.ok(formFaktor(40) < formFaktor(36), "nach 39 geht es nicht wieder hinauf");
+  /* Die Form wirkt nur auf den Teil ÜBER 50 — 50 ist der Boden der Skala, kein
+     Können, das einem Talent fehlte. */
+  const basis = new Map([[0, 90]]);
+  const spieler = [{ by: 2000 }];
+  assert.equal(klasseIn(basis, spieler, 0, 2028), 90, "mit 28 die volle Grundklasse");
+  assert.ok(klasseIn(basis, spieler, 0, 2018) > 65, "mit 18 gedämpft, aber nicht halbiert");
+  assert.ok(klasseIn(basis, spieler, 0, 2018) < 85);
+  assert.ok(klasseIn(basis, spieler, 0, 2038) < klasseIn(basis, spieler, 0, 2028));
 });
 
 // ── Passung ──────────────────────────────────────────────────────────────────
@@ -130,23 +170,39 @@ test("der Verbundbonus wächst, aber gedeckelt", () => {
 
 // ── Wertung ──────────────────────────────────────────────────────────────────
 
+/* Die Elf führt je Platz `{ i, jahr }`. Ohne das Jahr bekäme Lewandowski 2014 und
+   2026 dieselbe Zahl, und die ganze Formkurve liefe ins Leere. */
+const auf = (...paare) => paare.map(([i, jahr]) => (i == null ? null : { i, jahr }));
+
 test("die Wertung ist der Klassenschnitt plus Verbund", () => {
-  const players = [{ pos: "ABW", pp: ["IV"] }, { pos: "ABW", pp: ["IV"] }];
+  const players = [{ pos: "ABW", pp: ["IV"], by: 1990 }, { pos: "ABW", pp: ["IV"], by: 1990 }];
   const klassen = new Map([[0, 90], [1, 70]]);
-  const ohne = bewerte([0, 1], ["IV", "IV"], players, klassen, netzAus([]));
+  const elf = auf([0, 2018], [1, 2018]);   // beide 28, also volle Form
+  const ohne = bewerte(elf, ["IV", "IV"], players, klassen, netzAus([]));
   assert.equal(ohne.klasseSchnitt, 80);
   assert.equal(ohne.paare, 0);
   assert.equal(ohne.wertung, 80);
-  const mit = bewerte([0, 1], ["IV", "IV"], players, klassen, netzAus([[0, 1]]));
+  const mit = bewerte(elf, ["IV", "IV"], players, klassen, netzAus([[0, 1]]));
   assert.equal(mit.paare, 1);
   assert.equal(mit.wertung, Math.round((80 + verbundBonus(1)) * 10) / 10);
 });
 
+test("dieselbe Elf ist in schlechten Jahren weniger wert", () => {
+  const players = [{ pos: "ABW", pp: ["IV"], by: 1990 }];
+  const klassen = new Map([[0, 90]]);
+  const jung = bewerte(auf([0, 2008]), ["IV"], players, klassen, netzAus([])).wertung;
+  const reif = bewerte(auf([0, 2018]), ["IV"], players, klassen, netzAus([])).wertung;
+  const alt = bewerte(auf([0, 2028]), ["IV"], players, klassen, netzAus([])).wertung;
+  assert.equal(reif, 90);
+  assert.ok(jung < reif, "mit 18 noch nicht");
+  assert.ok(alt < reif, "mit 38 nicht mehr");
+});
+
 test("ein Spieler auf einer fremden Feinposition wird abgewertet", () => {
-  const players = [{ pos: "ABW", pp: ["IV"] }];
+  const players = [{ pos: "ABW", pp: ["IV"], by: 1990 }];
   const klassen = new Map([[0, 100]]);
-  assert.equal(bewerte([0], ["IV"], players, klassen, netzAus([])).je[0].wert, 100);
-  assert.equal(bewerte([0], ["LV"], players, klassen, netzAus([])).je[0].wert, 92);
+  assert.equal(bewerte(auf([0, 2018]), ["IV"], players, klassen, netzAus([])).je[0].wert, 100);
+  assert.equal(bewerte(auf([0, 2018]), ["LV"], players, klassen, netzAus([])).je[0].wert, 92);
 });
 
 // ── Obergrenze ───────────────────────────────────────────────────────────────
@@ -163,65 +219,6 @@ test("die Obergrenze stellt jeden Spieler nur einmal auf", () => {
   const klassen = new Map([[0, 99], [1, 50]]);
   const o = obergrenze(["IV", "LV"], players, klassen);
   assert.equal(o, Math.round(((99 + 50) / 2 + VERBUND_MAX) * 10) / 10);
-});
-
-test("die Saisonmarke liegt unter der Obergrenze, aber über der Untergrenze", () => {
-  const o = 106;
-  assert.ok(saisonMarke(o) < o);
-  assert.ok(saisonMarke(o) > WERTUNG_UNTEN);
-});
-
-// ── Saison ───────────────────────────────────────────────────────────────────
-
-test("die Bilanz geht auf", () => {
-  for (const w of [40, 60, 80, 95, 104, 130]) {
-    for (const spiele of [34, 38]) {
-      const b = bilanz(w, spiele, 106);
-      assert.equal(b.siege + b.remis + b.niederlagen, spiele, `Wertung ${w}`);
-      assert.equal(b.punkte, b.siege * 3 + b.remis);
-      assert.ok(b.siege >= 0 && b.remis >= 0 && b.niederlagen >= 0);
-    }
-  }
-});
-
-test("mehr Wertung heißt nie weniger Punkte", () => {
-  let vorher = -1;
-  for (let w = WERTUNG_UNTEN - 10; w <= 115; w += 0.5) {
-    const p = bilanz(w, 38, 106).punkte;
-    assert.ok(p >= vorher, `bei Wertung ${w} fiel die Punktzahl`);
-    vorher = p;
-  }
-});
-
-test("unter der Untergrenze gibt es keinen Sieg, an der Marke gibt es nur Siege", () => {
-  assert.equal(bilanz(WERTUNG_UNTEN, 38, 106).siege, 0);
-  assert.equal(bilanz(WERTUNG_UNTEN - 20, 38, 106).siege, 0);
-  assert.equal(bilanz(saisonMarke(106), 38, 106).siege, 38);
-  assert.equal(bilanz(999, 34, 106).siege, 34);
-});
-
-/* Die Ligen haben verschieden viele Spieltage — die Leistung darf davon nicht
-   abhängen, sonst wäre dieselbe Elf in der Bundesliga schlechter als in England.
-   Geprüft wird der PUNKTEANTEIL, nicht das Abzeichen: 34 und 38 Spiele runden
-   verschieden, und dicht an einer Schwelle kippt das Abzeichen davon unweigerlich.
-   Ein voller Rang Unterschied wäre ein Fehler, ein halber Punkt ist die Arithmetik. */
-test("dieselbe Wertung bringt in jeder Liga denselben Punkteanteil", () => {
-  const stufen = ABZEICHEN.map((a) => a.key);
-  for (let w = 60; w <= 105; w += 0.5) {
-    const bl = bilanz(w, SPIELE.BL, 106);
-    const pl = bilanz(w, SPIELE.PL, 106);
-    const anteil = (b) => b.punkte / (b.spiele * 3);
-    assert.ok(Math.abs(anteil(bl) - anteil(pl)) < 0.01,
-      `Wertung ${w}: ${(anteil(bl) * 100).toFixed(1)} % gegen ${(anteil(pl) * 100).toFixed(1)} %`);
-    const abstand = Math.abs(stufen.indexOf(abzeichenFuer(bl).key) - stufen.indexOf(abzeichenFuer(pl).key));
-    assert.ok(abstand <= 1, `Wertung ${w}: ${abzeichenFuer(bl).name} gegen ${abzeichenFuer(pl).name}`);
-  }
-});
-
-test("Abzeichen werden von oben nach unten geprüft", () => {
-  assert.equal(abzeichenFuer({ siege: 38, remis: 0, niederlagen: 0, punkte: 114, spiele: 38 }).key, "makellos");
-  assert.equal(abzeichenFuer({ siege: 30, remis: 8, niederlagen: 0, punkte: 98, spiele: 38 }).key, "unbesiegt");
-  assert.equal(abzeichenFuer({ siege: 0, remis: 0, niederlagen: 38, punkte: 0, spiele: 38 }).key, "abstieg");
 });
 
 // ── Ziehen ───────────────────────────────────────────────────────────────────
@@ -272,36 +269,22 @@ test("ein Draft läuft in keiner Liga und keiner Formation in eine Sackgasse", (
         let z = null;
         for (let versuch = 0; versuch < 200 && !z; versuch++) {
           const kandidat = zieh(ziehungen, `${liga}#${formation.name}#${runde}#${versuch}`, gezogen);
-          if (bedientSlots(kandidat, PLAYERS, slots, belegt)) z = kandidat;
+          if (bedientSlots(kandidat, PLAYERS, slots, belegt.map((e) => (e ? e.i : null)))) z = kandidat;
           else gezogen.push(`${kandidat.key}|${kandidat.jahr}`);
         }
         assert.ok(z, `${LIGA_NAME[liga]} / ${formation.name}: keine brauchbare Ziehung in Runde ${runde + 1}`);
         gezogen.push(`${z.key}|${z.jahr}`);
+        const drin = new Set(belegt.filter(Boolean).map((e) => e.i));
         const wahl = z.spieler
-          .filter((i) => !belegt.includes(i))
+          .filter((i) => !drin.has(i))
           .map((i) => ({ i, k: slots.findIndex((pos, k) => belegt[k] == null && darfAufPosition(PLAYERS[i], pos)) }))
           .filter((x) => x.k >= 0)
           .sort((a, b) => (klassen.get(b.i) || 0) - (klassen.get(a.i) || 0))[0];
-        belegt[wahl.k] = wahl.i;
+        belegt[wahl.k] = { i: wahl.i, jahr: z.jahr };
       }
-      assert.ok(belegt.every((i) => i != null), `${LIGA_NAME[liga]} / ${formation.name} blieb unvollständig`);
+      assert.ok(belegt.every((e) => e != null), `${LIGA_NAME[liga]} / ${formation.name} blieb unvollständig`);
       const w = bewerte(belegt, slots, PLAYERS, klassen, { nachbarn: new Map() });
-      assert.ok(w.wertung > WERTUNG_UNTEN, `${LIGA_NAME[liga]} / ${formation.name}: Wertung ${w.wertung}`);
-    }
-  }
-});
-
-test("die makellose Saison ist in jeder Liga erreichbar, aber nicht geschenkt", () => {
-  for (const liga of ["BL", "PL", "LL"]) {
-    const ziehungen = baueZiehungen(PLAYERS, ECHTE_CLUBS, liga);
-    const klassen = baueKlassen(PLAYERS, ziehungen);
-    for (const formation of FORMATIONS) {
-      const o = obergrenze(formationPositions(formation), PLAYERS, klassen);
-      const marke = saisonMarke(o);
-      /* Erreichbar: Die Marke muss unter der besten überhaupt aufstellbaren Elf
-         liegen. Nicht geschenkt: deutlich über dem, was Mittelmaß hergibt. */
-      assert.ok(marke < o, `${LIGA_NAME[liga]} / ${formation.name}: Marke ${marke} über der Obergrenze ${o}`);
-      assert.ok(marke > 85, `${LIGA_NAME[liga]} / ${formation.name}: Marke ${marke} zu niedrig`);
+      assert.ok(w.wertung > 60, `${LIGA_NAME[liga]} / ${formation.name}: Wertung ${w.wertung}`);
     }
   }
 });
