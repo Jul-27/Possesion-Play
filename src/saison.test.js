@@ -1,14 +1,34 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  rng, teamStaerke, waehleGegner, spielplan, simuliereSpiel, simuliereSaison,
+  rng, teamStaerke, spielplan, simuliereSpiel, simuliereSaison,
   tabelleNach, meineZeile, abzeichenFuer, hoehepunkte, spieltageFuer,
+  echteLiga, ersetzeEinen, GEGNER_SL_MIN,
   TEAMS, TOR_BASIS, STAERKE_SKALA,
 } from "./saison.js";
+import { LIGA_VEREINE, NEUESTE_SAISON, LIGA_AB_JAHR } from "./leagueClubs.js";
 import { PLAYERS } from "./players.js";
 import { CLUBS } from "./gameData.js";
-import { baueZiehungen, baueKlassen, LIGA_NAME, SPIELE } from "./draft.js";
+import { baueZiehungen, baueKlassen, LIGA_NAME, SPIELE, DRAFT_AB_JAHR } from "./draft.js";
 import { EINSAETZE } from "./appearances.js";
+
+
+/* Die Vereinsliste des Drafts wie in der Ansicht: Spielvereine plus Ligavereine. */
+const ligaVereineFuer = (lg) => {
+  const spielverein = new Set(CLUBS.map((c) => c.key));
+  const frueher = [];
+  for (let j = DRAFT_AB_JAHR; j < LIGA_AB_JAHR; j++) frueher.push(j);
+  const paare = [
+    ...CLUBS.filter((c) => c.lg === lg).map((c) => [c.key, { key: c.key, name: c.name, lg }]),
+    ...LIGA_VEREINE[lg].map((v) => [v.key, { ...v, lg, jahre: spielverein.has(v.key) ? [...frueher, ...v.jahre] : v.jahre }]),
+  ];
+  return [...new Map(paare).values()];
+};
+const klassenFuer = (lg) => baueKlassen(PLAYERS, baueZiehungen(PLAYERS, ligaVereineFuer(lg), lg), EINSAETZE);
+const gegnerFuer = (lg, seed) => {
+  const alle = echteLiga(PLAYERS, klassenFuer(lg), LIGA_VEREINE[lg], NEUESTE_SAISON[lg]);
+  return ersetzeEinen(alle, seed).gegner;
+};
 
 // ── Spielplan ────────────────────────────────────────────────────────────────
 
@@ -183,31 +203,20 @@ test("die Serie zählt Spiele ohne Niederlage", () => {
 
 test("jede Liga stellt genug Gegner, ohne dass ein Verein die Liga füllt", () => {
   for (const liga of ["BL", "PL", "LL"]) {
-    const z = baueZiehungen(PLAYERS, CLUBS, liga);
-    const kl = baueKlassen(PLAYERS, z, EINSAETZE);
-    const gegner = waehleGegner(z, PLAYERS, kl, TEAMS[liga] - 1, `test:${liga}`);
+    const gegner = gegnerFuer(liga, `test:${liga}`);
     assert.equal(gegner.length, TEAMS[liga] - 1, `${LIGA_NAME[liga]}`);
-    /* Kein Doppel: dieselbe Saison desselben Vereins darf nicht zweimal antreten. */
-    const paare = gegner.map((g) => `${g.key}|${g.jahr}`);
-    assert.equal(new Set(paare).size, paare.length, `${LIGA_NAME[liga]}: doppelte Mannschaft`);
-    /* Höchstens vier Jahrgänge eines Vereins — sonst besteht England aus Chelsea. */
-    const jeVerein = new Map();
-    for (const g of gegner) jeVerein.set(g.key, (jeVerein.get(g.key) || 0) + 1);
-    assert.ok(Math.max(...jeVerein.values()) <= 4, `${LIGA_NAME[liga]}: ein Verein zu oft`);
+    const keys = gegner.map((g) => g.key);
+    assert.equal(new Set(keys).size, keys.length, `${LIGA_NAME[liga]}: ein Verein doppelt`);
   }
 });
 
-/* Der Grund für die geschichtete Ziehung: Ohne sie kann eine Liga aus lauter
-   Mittelmaß bestehen. Die Spitze und der Keller müssen immer besetzt sein. */
+/* Eine Liga braucht Gefälle: Meister und Aufsteiger dürfen nicht gleich stark sein. */
 test("jede Liga hat eine Spitze und einen Keller", () => {
   for (const liga of ["BL", "PL", "LL"]) {
-    const z = baueZiehungen(PLAYERS, CLUBS, liga);
-    const kl = baueKlassen(PLAYERS, z, EINSAETZE);
-    for (let n = 0; n < 5; n++) {
-      const s = waehleGegner(z, PLAYERS, kl, TEAMS[liga] - 1, `spread:${liga}:${n}`).map((g) => g.staerke);
-      assert.ok(Math.max(...s) - Math.min(...s) > 15,
-        `${LIGA_NAME[liga]} Lauf ${n}: nur ${(Math.max(...s) - Math.min(...s)).toFixed(1)} Punkte Spannweite`);
-    }
+    const kl = klassenFuer(liga);
+    const s = echteLiga(PLAYERS, kl, LIGA_VEREINE[liga], NEUESTE_SAISON[liga]).map((v) => v.staerke);
+    const spanne = Math.max(...s) - Math.min(...s);
+    assert.ok(spanne > 18, `${LIGA_NAME[liga]}: nur ${spanne.toFixed(1)} Punkte Spannweite`);
   }
 });
 
@@ -225,7 +234,7 @@ test("eine simulierte Saison hat realistische Zahlen", () => {
   for (const liga of ["BL", "PL", "LL"]) {
     const z = baueZiehungen(PLAYERS, CLUBS, liga);
     const kl = baueKlassen(PLAYERS, z, EINSAETZE);
-    const gegner = waehleGegner(z, PLAYERS, kl, TEAMS[liga] - 1, `echt:${liga}`);
+    const gegner = gegnerFuer(liga, `echt:${liga}`);
     const s = simuliereSaison({ meineStaerke: 80, gegner, seed: 5 });
     assert.equal(s.teams.length, TEAMS[liga]);
     assert.equal(s.spieltage.length, SPIELE[liga]);
@@ -256,7 +265,7 @@ test("eine bessere Elf landet weiter oben", () => {
   const platzFuer = (staerke) => {
     let summe = 0;
     for (let n = 0; n < 25; n++) {
-      const gegner = waehleGegner(z, PLAYERS, kl, TEAMS.BL - 1, `rang:${n}`);
+      const gegner = gegnerFuer("BL", `rang:${n}`);
       const s = simuliereSaison({ meineStaerke: staerke, gegner, seed: n * 13 + 1 });
       summe += meineZeile(tabelleNach(s.teams, s.spieltage)).platz;
     }
@@ -269,4 +278,74 @@ test("eine bessere Elf landet weiter oben", () => {
   assert.ok(mittel > stark + 2, `mittel ${mittel.toFixed(1)} gegen stark ${stark.toFixed(1)}`);
   assert.ok(schwach > 14, "ein blinder Draft gehört nach unten");
   assert.ok(stark < 5, "ein sehr guter Draft gehört nach oben");
+});
+
+// ── Die echte Liga ───────────────────────────────────────────────────────────
+
+/* Der Kern des Umbaus: Die Traumelf tritt nicht mehr gegen zusammengewürfelte
+   Jahrgänge an („Bayern 2014" gegen „Werder 1996" in einer Tabelle), sondern in der
+   Liga einer echten Saison gegen genau die Vereine, die damals dabei waren. */
+test("jede Liga stellt in ihrer neuesten Saison eine vollständige Tabelle", () => {
+  for (const lg of ["BL", "PL", "LL"]) {
+    const jahr = NEUESTE_SAISON[lg];
+    const z = baueZiehungen(PLAYERS, CLUBS, lg);
+    const kl = baueKlassen(PLAYERS, z, EINSAETZE);
+    const tabelle = echteLiga(PLAYERS, kl, LIGA_VEREINE[lg], jahr);
+    assert.equal(tabelle.length, TEAMS[lg], `${LIGA_NAME[lg]} ${jahr}: ${tabelle.length} statt ${TEAMS[lg]} Vereine`);
+    /* Jeder Verein braucht eine belastbare Stärke — ein Kader ohne Spieler stünde
+       auf dem Boden der Skala und wäre in jedem Spiel chancenlos. */
+    for (const v of tabelle) {
+      assert.ok(v.staerke > 50, `${v.name}: Stärke ${v.staerke}`);
+      /* Sechs, nicht elf: Ein frisch aufgestiegener Verein hat in unseren Daten
+         manchmal nur eine Handvoll Spieler — St. Pauli 2025/26 hat neun. Dafür
+         füllt `teamStaerke` auf elf auf, statt den Schnitt der wenigen zu nehmen. */
+      assert.ok(v.spieler.length >= 6, `${v.name}: nur ${v.spieler.length} Spieler`);
+    }
+    /* Und eine Liga braucht Gefälle: Meister und Aufsteiger dürfen nicht gleich
+       stark sein. */
+    const s = tabelle.map((v) => v.staerke);
+    assert.ok(Math.max(...s) - Math.min(...s) > 12, `${LIGA_NAME[lg]}: nur ${(Math.max(...s) - Math.min(...s)).toFixed(1)} Punkte Spannweite`);
+  }
+});
+
+test("die stärksten Vereine sind die, die man erwartet", () => {
+  const kl = baueKlassen(PLAYERS, baueZiehungen(PLAYERS, CLUBS, "BL"), EINSAETZE);
+  const tabelle = echteLiga(PLAYERS, kl, LIGA_VEREINE.BL, NEUESTE_SAISON.BL)
+    .sort((a, b) => b.staerke - a.staerke);
+  assert.equal(tabelle[0].name, "FC Bayern München");
+  assert.ok(tabelle.slice(0, 4).some((v) => v.name === "Borussia Dortmund"));
+});
+
+/* Ein dünner Kader darf nicht STÄRKER dastehen als ein voller. Ohne das Auffüllen
+   auf elf hätte ein Aufsteiger mit sieben bekannten Spielern den Schnitt seiner
+   sieben Bekannten — und stünde damit über einem vollen Kader. */
+test("ein dünner Kader wird auf elf aufgefüllt", () => {
+  const players = Array.from({ length: 12 }, () => ({ by: 1990 }));
+  const klassen = new Map(players.map((_, i) => [i, 90]));
+  const voll = teamStaerke({ spieler: players.map((_, i) => i), jahr: 2018 }, players, klassen);
+  const duenn = teamStaerke({ spieler: [0, 1, 2], jahr: 2018 }, players, klassen);
+  assert.ok(duenn < voll, `dünn ${duenn} müsste unter voll ${voll} liegen`);
+});
+
+test("die Traumelf verdrängt genau einen Verein", () => {
+  const liga = Array.from({ length: 18 }, (_, i) => ({ key: `K${i}`, name: `Verein ${i}`, staerke: 70 }));
+  const { gegner, ersetzt } = ersetzeEinen(liga, "test");
+  assert.equal(gegner.length, 17);
+  assert.ok(ersetzt);
+  assert.ok(!gegner.some((g) => g.key === ersetzt.key));
+  /* Deterministisch: dieselbe Partie hat dieselbe Liga. */
+  assert.equal(ersetzeEinen(liga, "test").ersetzt.key, ersetzt.key);
+  assert.notEqual(ersetzeEinen(liga, "anders").ersetzt.key, undefined);
+  assert.deepEqual(ersetzeEinen([], "test"), { gegner: [], ersetzt: null });
+});
+
+test("mit der eigenen Elf ist die Liga wieder vollzählig", () => {
+  for (const lg of ["BL", "PL", "LL"]) {
+    const kl = baueKlassen(PLAYERS, baueZiehungen(PLAYERS, CLUBS, lg), EINSAETZE);
+    const alle = echteLiga(PLAYERS, kl, LIGA_VEREINE[lg], NEUESTE_SAISON[lg]);
+    const { gegner } = ersetzeEinen(alle, `${lg}:1`);
+    const s = simuliereSaison({ meineStaerke: 80, gegner, seed: 3 });
+    assert.equal(s.teams.length, TEAMS[lg]);
+    assert.equal(s.spieltage.length, spieltageFuer(TEAMS[lg]));
+  }
 });

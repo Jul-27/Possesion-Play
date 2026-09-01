@@ -40,6 +40,28 @@ const jahrIn = (cp, key, jahr) =>
   (cp || []).some(([c, von, bis]) => c === key && von <= jahr && jahr <= (bis === 0 ? 2026 : bis));
 
 /**
+ * Der Kader eines Vereins in einem Jahr — Spielerindizes.
+ *
+ * Eigenständig, weil ihn zwei ganz verschiedene Stellen brauchen: die Ziehungen des
+ * Drafts und die Stärke der echten Ligagegner in `saison.js`.
+ */
+export function kader(players, clubKey, jahr, slMin = DRAFT_SL_MIN) {
+  const out = [];
+  for (let i = 0; i < players.length; i++) {
+    const p = players[i];
+    if ((p.sl || 0) < slMin || !p.pos) continue;
+    if (jahrIn(p.cp, clubKey, jahr)) out.push(i);
+  }
+  return out;
+}
+
+/** Trägt der Kader alle vier Positionsgruppen? Sonst ist der Spin verschenkt. */
+export const vollstaendig = (spieler, players) => {
+  const gruppen = new Set(spieler.map((i) => players[i].pos));
+  return ["TW", "ABW", "MF", "ST"].every((g) => gruppen.has(g));
+};
+
+/**
  * Alle ziehbaren Verein-Saison-Paare einer Liga.
  *
  * Eine Ziehung muss ELF bekannte Spieler haben UND alle vier Positionsgruppen —
@@ -50,16 +72,15 @@ export function baueZiehungen(players, clubs, liga, jetzt = 2026) {
   const vereine = clubs.filter((c) => c.lg === liga);
   const out = [];
   for (const v of vereine) {
+    /* `jahre` grenzt ein, WANN der Verein wirklich in dieser Liga spielte. Ohne die
+       Angabe wird wie bisher der ganze Zeitraum durchprobiert — sonst verschwänden
+       die 47 Spielvereine aus den Jahren, für die wir keine Ligalisten haben. */
+    const jahre = v.jahre || null;
     for (let jahr = DRAFT_AB_JAHR; jahr <= jetzt; jahr++) {
-      const spieler = [];
-      for (let i = 0; i < players.length; i++) {
-        const p = players[i];
-        if ((p.sl || 0) < DRAFT_SL_MIN || !p.pos) continue;
-        if (jahrIn(p.cp, v.key, jahr)) spieler.push(i);
-      }
+      if (jahre && !jahre.includes(jahr)) continue;
+      const spieler = kader(players, v.key, jahr);
       if (spieler.length < DRAFT_MIN_KADER) continue;
-      const gruppen = new Set(spieler.map((i) => players[i].pos));
-      if (!["TW", "ABW", "MF", "ST"].every((g) => gruppen.has(g))) continue;
+      if (!vollstaendig(spieler, players)) continue;
       out.push({ key: v.key, name: v.name, jahr, spieler });
     }
   }
@@ -67,7 +88,7 @@ export function baueZiehungen(players, clubs, liga, jetzt = 2026) {
 }
 
 /* ── Klasse ────────────────────────────────────────────────────────────────────
-   Der Rangplatz im Pool, umgerechnet auf 50 bis 98. Bewusst NICHT die rohe
+   Der Rangplatz im Pool, umgerechnet auf 65 bis 96. Bewusst NICHT die rohe
    Bekanntheit: die reicht von 1 bis über 200 und würde von Messi allein beherrscht.
    Als Rangplatz ist die Zahl außerdem erklärbar — „besser als 99 % des Pools".
 
@@ -78,12 +99,26 @@ export function baueZiehungen(players, clubs, liga, jetzt = 2026) {
    Weltklasse erklärt, sagt nichts mehr aus.
 
    Die Stützstellen unten bilden ab, wie Fußballkader wirklich aussehen: viele
-   Solide, wenige Stars, eine Handvoll Ausnahmespieler. Über 90 kommt nur das
-   oberste halbe Prozent — in der Bundesliga sechs Spieler. */
+   Solide, wenige Stars, eine Handvoll Ausnahmespieler. Gerechnet auf den Pool:
+
+     ab 85  das oberste Vierzigstel — die Stars
+     ab 90  etwa ein halbes Prozent — die Besten der Besten
+     ab 92  das oberste Fünftel eines Prozents
+
+   Die Skala beginnt bei 65 und nicht bei 50: Wer es überhaupt in einen Kader der
+   drei größten Ligen geschafft hat, ist Profi. Die Spanne ist dadurch enger, und
+   der Unterschied zwischen einem Ergänzungsspieler und einem Star muss aus der
+   Kurve kommen, nicht aus der Skalenbreite. */
 const KLASSEN_KURVE = [
-  [0.00, 50], [0.50, 58], [0.80, 65], [0.93, 73],
-  [0.975, 81], [0.99, 87], [0.998, 93], [1.00, 98],
+  [0.00, 65], [0.50, 70], [0.80, 75], [0.93, 80],
+  [0.975, 85], [0.99, 88], [0.998, 92], [1.00, 96],
 ];
+
+/* Boden und Decke der Skala, damit niemand sie anderswo als Zahl hinschreibt. Genau
+   das war schon einmal ein Fehler: `teamStaerke` füllte dünne Kader mit 50 auf, und
+   als die Skala von 50 auf 65 stieg, stand St. Pauli mit 59 unter dem Boden. */
+export const KLASSE_MIN = KLASSEN_KURVE[0][1];
+export const KLASSE_MAX = KLASSEN_KURVE.at(-1)[1];
 
 /** Perzentil (0 bis 1) auf die Klassenskala, linear zwischen den Stützstellen. */
 export function klassenKurve(pct) {
@@ -241,7 +276,7 @@ export function ligaAnteil(player, ligaVereine) {
    Laufbahn noch läuft. FEHLT DIE ZAHL, bleibt der Faktor 1: Matthäus und Xavi
    tragen bei keiner Station eine, und eine Datenlücke darf nichts kosten. */
 export const SPIELE_SATT = 120;
-export const SPIELE_BODEN = 0.55;
+export const SPIELE_BODEN = 0.42;   // wenige Einsätze sollen spürbar kosten
 
 export function ligaSpiele(player, ligaVereine, einsaetze) {
   const eintrag = einsaetze?.[spielerSchluesselFuer(player)];
@@ -253,12 +288,25 @@ export function ligaSpiele(player, ligaVereine, einsaetze) {
   return n > 0 ? n : null;
 }
 
+/* Wikidata führt die Einsatzzahl nur bei 69 % der Stationen — Matthäus und Xavi
+   tragen gar keine. Sie deshalb wie „null Spiele" zu behandeln, hieße Datenlücken
+   zu bestrafen statt Randfiguren. Wo die Zahl fehlt, wird sie aus den JAHREN
+   geschätzt, die immer vorliegen: Ein Stammspieler kommt auf etwa dreißig Spiele je
+   Saison, gerechnet wird mit fünfundzwanzig. Damit bleibt ein Zwölfjahresmann oben
+   und ein Einjahresgast unten, ohne dass die Lücke selbst etwas kostet. */
+export const SPIELE_JE_JAHR = 25;
+
+export function ligaSpieleGeschaetzt(player, ligaVereine, einsaetze) {
+  const echt = ligaSpiele(player, ligaVereine, einsaetze);
+  if (echt != null) return echt;
+  return ligaJahre(player, ligaVereine).hier * SPIELE_JE_JAHR;
+}
+
 /* Beide Achsen zusammen. Die Wurzeln dämpfen die Dämpfung: Ein Anteil von 25 % soll
    spürbar kosten, aber keinen Spieler auf ein Viertel seines Rufs stellen. */
 export function ligaFaktor(player, ligaVereine, einsaetze) {
   const anteil = LIGA_BODEN + (1 - LIGA_BODEN) * Math.sqrt(ligaAnteil(player, ligaVereine));
-  const spiele = ligaSpiele(player, ligaVereine, einsaetze);
-  if (spiele == null) return anteil;
+  const spiele = ligaSpieleGeschaetzt(player, ligaVereine, einsaetze);
   return anteil * (SPIELE_BODEN + (1 - SPIELE_BODEN) * Math.sqrt(Math.min(1, spiele / SPIELE_SATT)));
 }
 

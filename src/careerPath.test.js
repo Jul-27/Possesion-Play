@@ -136,7 +136,14 @@ test("Echtdaten: die volle Karriere vergrößert den Rätselpool deutlich", asyn
   const dated = { clubs: CAREER_PATH_CLUBS, byKey: CAREER_PATH_BY_KEY };
   const ohne = careerCandidates(PLAYERS).length;
   const mit = careerCandidates(PLAYERS, dated).length;
-  assert.ok(mit > ohne * 2, `Pool sollte deutlich wachsen: ${ohne} -> ${mit}`);
+  /* Der Faktor stand auf 2, als `cp` nur die 47 Spielvereine kannte. Seit die
+     Ligakader ab 2010/11 drin sind (13.210 zusätzliche Stationen), trägt `cp` allein
+     schon 1.034 statt gut 700 Spieler — beide Pools sind gewachsen, der relative
+     Zugewinn ist dadurch kleiner geworden. Geprüft wird deshalb beides: dass die
+     vollen Karrieren immer noch spürbar draufpacken UND dass der Pool absolut groß
+     genug bleibt. Letzteres schlägt an, wenn ein Datenlauf etwas kaputt macht. */
+  assert.ok(mit > ohne * 1.5, `Pool sollte deutlich wachsen: ${ohne} -> ${mit}`);
+  assert.ok(mit > 1500, `Pool zu klein: ${mit}`);
   const g = PLAYERS.find((p) => p.n === "İlkay Gündoğan");
   const namen = careerStations(g, dated).map((s) => s.name);
   assert.ok(namen.includes("1. FC Nürnberg"), `Nürnberg fehlt: ${namen.join(", ")}`);

@@ -73,8 +73,8 @@ test("Klasse ist der Rangplatz auf der Klassenkurve, je Positionsgruppe", () => 
   const z = baueZiehungen(P, CLUBS, "XL", 2012);
   const k = baueKlassen(P, z);
   const werte = [...k.values()];
-  assert.equal(Math.min(...werte), 50);
-  assert.equal(Math.max(...werte), 98);
+  assert.equal(Math.min(...werte), 65);
+  assert.equal(Math.max(...werte), 96);
   /* Bekannter heißt nie schlechter — aber nur INNERHALB der Gruppe. Über alle
      verglichen darf ein Torwart über einem bekannteren Stürmer stehen; genau das
      ist der Zweck der Gruppenrangliste. */
@@ -88,8 +88,8 @@ test("Klasse ist der Rangplatz auf der Klassenkurve, je Positionsgruppe", () => 
     /* Jede Gruppe spannt die volle Skala auf — der beste Torwart ist so gut wie der
        beste Stürmer, denn im Draft konkurriert er nur mit Torhütern. */
     if (sortiert.length > 1) {
-      assert.equal(sortiert[0][1], 50, `${gruppe} beginnt bei 50`);
-      assert.equal(sortiert.at(-1)[1], 98, `${gruppe} endet bei 98`);
+      assert.equal(sortiert[0][1], 65, `${gruppe} beginnt bei 65`);
+      assert.equal(sortiert.at(-1)[1], 96, `${gruppe} endet bei 96`);
     }
   }
 });
@@ -98,12 +98,15 @@ test("Klasse ist der Rangplatz auf der Klassenkurve, je Positionsgruppe", () => 
    linear auf 50 bis 99 — damit lagen 19 % des Pools über 90 und Mario Balotelli
    stand auf 98. Die Kurve muss die Spitze knapp halten. */
 test("die Klassenkurve lässt nur die äußerste Spitze über 90", () => {
-  assert.equal(Math.round(klassenKurve(0)), 50);
-  assert.equal(Math.round(klassenKurve(1)), 98);
-  assert.ok(klassenKurve(0.5) < 60, "der Median liegt unten, nicht in der Mitte der Skala");
-  assert.ok(klassenKurve(0.9) < 72, "auch die besten 10 % sind noch keine Weltklasse");
+  /* Die Skala läuft von 65 bis 96: Wer es in einen Kader der drei größten Ligen
+     geschafft hat, ist Profi — 50 wäre kein Rating, sondern eine Beleidigung. */
+  assert.equal(Math.round(klassenKurve(0)), 65);
+  assert.equal(Math.round(klassenKurve(1)), 96);
+  assert.ok(klassenKurve(0.5) < 72, "der Median liegt unten, nicht in der Mitte der Skala");
+  assert.ok(klassenKurve(0.9) < 79, "auch die besten 10 % sind noch keine Weltklasse");
+  assert.ok(klassenKurve(0.975) >= 85, "ab dem obersten Vierzigstel beginnen die Stars");
   assert.ok(klassenKurve(0.99) < 90, "das oberste Prozent reicht noch nicht für 90");
-  assert.ok(klassenKurve(0.999) > 90);
+  assert.ok(klassenKurve(0.999) > 90, "über 90 nur die Besten der Besten");
   /* Steigend über den ganzen Bereich, sonst wäre ein Rangplatz mehr wert als der
      nächsthöhere. */
   let vorher = -1;
@@ -167,6 +170,9 @@ test("fehlende Einsatzzahlen kosten nichts", () => {
      genauso behandelt werden wie einer mit voller Datenlage. */
   assert.equal(ligaSpiele(treu, ligaXL, {}), null);
   assert.equal(ligaSpiele(treu, ligaXL, null), null);
+  /* Vierzehn Jahre in der Liga: Die Schätzung aus den Jahren erreicht die Sättigung,
+     also kostet die fehlende Zahl nichts. Genau das ist der Zweck — Matthäus und
+     Xavi tragen keine, sind aber keine Randfiguren. */
   assert.equal(ligaFaktor(treu, ligaXL, {}), 1, "voller Anteil, keine Zahlen — Faktor 1");
   assert.equal(ligaFaktor(treu, ligaXL, { "x|1990": { AAA: 400 } }), 1);
 });
@@ -180,11 +186,16 @@ test("wer in der Liga kaum gespielt hat, wird gedämpft", () => {
   assert.equal(viel, 1, "ab der Sättigung bringt mehr nichts — heutige Spieler sollen nicht verlieren");
 });
 
-test("ein reines Gastspiel behält einen Boden", () => {
+test("ein reines Gastspiel wird deutlich gedämpft, aber nicht ausgelöscht", () => {
   const gast = mitCp([["AAA", 2015, 2016], ["CCC", 2000, 2015]]);
   const f = ligaFaktor(gast, ligaXL, {});
-  assert.ok(f > LIGA_BODEN, "der Boden ist eine Untergrenze, kein Wert");
-  assert.ok(f < 0.7);
+  /* Ein Jahr von sechzehn: kleiner Anteil UND wenige geschätzte Spiele. Beide
+     Achsen greifen, deshalb liegt der Faktor unter dem Anteilsboden allein. */
+  assert.ok(f > 0.2, `zu hart: ${f}`);
+  assert.ok(f < LIGA_BODEN, `zu milde: ${f}`);
+  /* Wer genauso lange da war, aber nur in dieser Liga, muss klar darüber liegen. */
+  const treu = mitCp([["AAA", 2000, 2016]]);
+  assert.ok(ligaFaktor(treu, ligaXL, {}) > f * 2);
 });
 
 /* Die Probe an den echten Daten: Genau die Namen, die vorher falsch oben standen. */
