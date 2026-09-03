@@ -23,8 +23,33 @@ export const COMP_QID = {
   DFB:"Q150880", FAC:"Q11151", CDR:"Q483794", CIT:"Q169918",
 };
 
+/* Buchstaben, die lateinisch AUSSEHEN, aber griechisch oder kyrillisch sind. Sie
+   kommen in Wikidata-Labels vor — teils Tippfehler, teils Vandalismus — und machen
+   einen Namen für jeden Vergleich unauffindbar.
+
+   GEMESSEN: Arda Gülers englisches Label begann mit einem griechischen Alpha
+   („Αrda Güler", U+0391). Der Schlüssel „αrda guler" traf unseren „arda guler"
+   nicht, und er verlor Meisterschaft und Champions League — obwohl beide Seiten
+   auf dem Bildschirm identisch aussehen. */
+const HOMOGLYPHEN = {
+  "\u0391": "A", "\u0392": "B", "\u0395": "E", "\u0396": "Z", "\u0397": "H",
+  "\u0399": "I", "\u039A": "K", "\u039C": "M", "\u039D": "N", "\u039F": "O",
+  "\u03A1": "P", "\u03A4": "T", "\u03A5": "Y", "\u03A7": "X", "\u03BF": "o",
+  "\u0410": "A", "\u0412": "B", "\u0415": "E", "\u041A": "K", "\u041C": "M",
+  "\u041D": "H", "\u041E": "O", "\u0420": "P", "\u0421": "C", "\u0422": "T",
+  "\u0423": "Y", "\u0425": "X", "\u0430": "a", "\u0435": "e", "\u043E": "o",
+  "\u0440": "p", "\u0441": "c", "\u0443": "y", "\u0445": "x",
+};
+
 export function norm(s) {
-  return String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+  return String(s)
+    /* Geschützte und schmale Leerzeichen zuerst — zwei unserer eigenen Namen tragen
+       sie, und „Ezequiel\u00A0Fernández" ist sonst ein anderer Name als der mit
+       gewöhnlichem Leerzeichen. */
+    .replace(/[\u00A0\u2007\u202F\u200B-\u200D]/g, " ")
+    .replace(/[\u0391-\u03BF\u0410-\u0445]/g, (c) => HOMOGLYPHEN[c] || c)
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 // Kuratierte, vom Owner bestätigte Fakten, die Wikidata (noch) nicht liefert.
@@ -94,7 +119,7 @@ for (let y = 1890; y < 2032; y += 4) WINDOWS.push([y, y + 4]);
 async function fetchHonourPlayers(qid) {
   const out = [];
   for (const [from, to] of WINDOWS) {
-    const q = `SELECT DISTINCT ?pLabel ?by WHERE {
+    const q = `SELECT DISTINCT ?pLabel ?deLabel ?by WHERE {
       ?season wdt:P3450 wd:${qid} ; wdt:P1346 ?winner ; (wdt:P580|wdt:P585) ?ss .
       FILTER( YEAR(?ss) >= ${from} && YEAR(?ss) < ${to} )
       OPTIONAL { ?season wdt:P582 ?se. }
@@ -105,13 +130,35 @@ async function fetchHonourPlayers(qid) {
       # fehlten z. B. die Leverkusen-Meister 2023/24 (Wirtz, Boniface) komplett.
       ?winner wdt:P831? ?club .
       ?p p:P54 ?st . ?st ps:P54 ?club ; pq:P580 ?cs .
+      # „UNBEKANNTER WERT" IST KEIN DATUM. Wikidata kennt neben „kein Wert" auch
+      # „unbekannter Wert"; der kommt als anonymer Knoten zurück — die Variable ist
+      # also GEBUNDEN, aber YEAR() scheitert daran, der Filter wird falsch und die
+      # ganze Zeile fällt weg. Der Spieler verlor damit JEDEN Titel dieses Vereins.
+      # Gemessen: 50 Stationen betroffen — Rüdiger bei Real (La Liga fehlte), Gnabry
+      # bei Bayern (eine Meisterschaft statt sieben, Champions League gar nicht),
+      # Andrich bei Leverkusen. Geprüft an La Liga 2020–2026: 194 Spieler ohne, 198
+      # mit der Korrektur. Die Prüfung steht im ÄUSSEREN Filter und nicht im
+      # OPTIONAL: Dort kostete es so viel, dass WDQS in den Zeitausfall lief.
       OPTIONAL { ?st pq:P582 ?ce. }
       ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d . BIND(YEAR(?d) AS ?by)
-      FILTER( YEAR(?cs) <= YEAR(COALESCE(?se, ?ss)) && (!BOUND(?ce) || YEAR(?ce) >= YEAR(?ss)) )
+      # ZWEI LABEL STATT EINEM. Wir gleichen über Namen ab, und die ENGLISCHEN Labels
+      # werden in Wikidata regelmäßig manipuliert: André Onana hieß dort „Andrcu
+      # Onana", Wayne Rooney „El Perrito de la C", Juan Mata „Juan Mata Pata". Wer so
+      # umbenannt ist, findet keinen Anschluss an unseren Bestand und verliert JEDEN
+      # Titel. Das deutsche Label war in allen beobachteten Fällen sauber, also zählt
+      # ein Treffer auf einer der beiden Schreibweisen.
+      OPTIONAL { ?p rdfs:label ?deLabel . FILTER(LANG(?deLabel) = "de") }
+      FILTER( YEAR(?cs) <= YEAR(COALESCE(?se, ?ss)) && (!BOUND(?ce) || !isLiteral(?ce) || YEAR(?ce) >= YEAR(?ss)) )
       ${LABEL_SERVICE}
     }`;
     const rows = await sparql(q);
-    for (const b of rows) out.push({ name: cleanName(b.pLabel?.value), by: b.by?.value ? parseInt(b.by.value) : null });
+    for (const b of rows) {
+      out.push({
+        name: cleanName(b.pLabel?.value),
+        deName: cleanName(b.deLabel?.value),
+        by: b.by?.value ? parseInt(b.by.value) : null,
+      });
+    }
     await sleep(700);
   }
   return out;
@@ -129,10 +176,15 @@ async function main() {
     catch (e) { throw new Error(`${key} (${qid}) fehlgeschlagen: ${e.message} — Abbruch, damit kein Titel verloren geht.`); }
     let c = 0;
     for (const r of rows) {
-      if (!r.name || !r.by) continue;
-      const k = norm(r.name) + "|" + r.by;
-      if (!hon.has(k)) hon.set(k, new Set());
-      hon.get(k).add(key); c++;
+      if (!r.by) continue;
+      /* Beide Schreibweisen eintragen: Der Bestand kennt den Spieler unter einer von
+         beiden, und welche das ist, wissen wir hier nicht. */
+      for (const n of new Set([r.name, r.deName].filter(Boolean))) {
+        const k = norm(n) + "|" + r.by;
+        if (!hon.has(k)) hon.set(k, new Set());
+        hon.get(k).add(key);
+      }
+      if (r.name || r.deName) c++;
     }
     console.log(`  ${key} (${qid}): ${rows.length} Zeilen, ${c} Zuordnungen`);
     await sleep(1300);
