@@ -1061,3 +1061,59 @@ body::after {
   border-radius: 10px; overflow: hidden; border: 1px solid var(--line);
   background: #0B1220; margin-bottom: 10px;
 }
+
+/* ── Karriere ─────────────────────────────────────────────────────────────────
+   Ein textbasierter Modus: Die Oberfläche muss Zahlen und Entscheidungen zeigen,
+   nicht ein Spielfeld. */
+.karAnlage { display: grid; gap: 10px; margin-top: 12px; }
+.karAnlage label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.karWahlreihe { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-top: 8px; }
+.karWahl {
+  display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; text-align: left;
+  border-radius: 10px; cursor: pointer; background: var(--bg-2);
+  border: 1px solid var(--line); color: var(--text);
+}
+.karWahl.an { border-color: var(--teal); background: rgba(34, 211, 238, .10); }
+.karWahl span { font-size: 11px; color: var(--muted); }
+
+.karKopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 10px 0; }
+.karWer { display: flex; align-items: center; gap: 10px; }
+.karNummer {
+  display: grid; place-items: center; width: 38px; height: 38px; border-radius: 9px;
+  background: var(--bg-2); border: 1px solid var(--line);
+  font-weight: 800; font-variant-numeric: tabular-nums;
+}
+.karWer b { display: block; font-size: 15px; }
+.karMeta { display: block; font-size: 11px; color: var(--muted); }
+/* Der Overall ist die Zahl, auf die alles hinausläuft — entsprechend groß. */
+.karOverall { font-size: 34px; font-weight: 800; color: var(--gold); font-variant-numeric: tabular-nums; line-height: 1; }
+
+.karVerein { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.karVerein .emblem { width: 26px; height: 26px; }
+.karVerein b { font-size: 14px; }
+
+.karBalken { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+.karBalken > div { display: flex; flex-direction: column; gap: 3px; }
+.karBalken span { font-size: 10px; color: var(--muted); letter-spacing: .4px; }
+.karBar { height: 5px; border-radius: 3px; background: var(--bg-3); overflow: hidden; }
+.karBar i { display: block; height: 100%; background: var(--acc); }
+
+.karSaison { padding: 8px 0; border-bottom: 1px solid var(--line-soft); }
+.karSaison:last-child { border-bottom: 0; }
+.karSaisonKopf { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.karZahlen { display: flex; gap: 14px; margin-top: 4px; font-size: 12px; color: var(--muted); }
+.karZahlen b { color: var(--text); font-size: 15px; font-variant-numeric: tabular-nums; margin-right: 3px; }
+.karTitelZeile { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.karTitel { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(250, 204, 21, .13); color: var(--gold); }
+
+.karWahlen { display: grid; gap: 8px; margin-top: 10px; }
+.karEntscheidung {
+  display: flex; flex-direction: column; gap: 3px; padding: 11px 13px; text-align: left;
+  border-radius: 11px; cursor: pointer; background: var(--bg-2);
+  border: 1px solid var(--line); color: var(--text);
+}
+.karEntscheidung:hover { border-color: var(--teal); }
+.karEntscheidung b { font-size: 14px; }
+
+.karVitrine { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.karPokal { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(250, 204, 21, .12); color: var(--gold); border: 1px solid rgba(250, 204, 21, .25); }

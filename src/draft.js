@@ -356,10 +356,20 @@ export function formFaktor(alter) {
  * mit Grundklasse 90 steht bei 79, nicht bei 65.
  */
 export function klasseIn(basis, players, i, jahr) {
-  const grund = basis.get(i) ?? 50;
+  /* KLASSE_MIN und nicht 50: Beide Zahlen standen hier fest, als die Skala noch bei
+     50 begann. Nach der Umstellung auf 65 richtete das zwei Schäden an.
+
+     Erstens zählte jeder Spieler, der gar nicht in der Klassenkarte steht, als 50 —
+     und `echteLiga` bildet Kader ab sl 5, während die Karte erst ab DRAFT_SL_MIN
+     gefüllt ist. Heidenheim stand dadurch bei 60,5, unter dem eigenen Skalenboden.
+
+     Zweitens drehte die Formkurve um 50: Ein Talent mit Grundklasse 65 fiel mit
+     sechzehn auf 59, also ebenfalls unter den Boden. Der Boden ist der schlechteste
+     Wert der Skala — schlechter darf niemand werden. */
+  const grund = basis.get(i) ?? KLASSE_MIN;
   const by = players[i]?.by;
   if (!by || !jahr) return grund;
-  return Math.round(50 + (grund - 50) * formFaktor(jahr - by));
+  return Math.round(KLASSE_MIN + (grund - KLASSE_MIN) * formFaktor(jahr - by));
 }
 
 /* ── Positionspassung ──────────────────────────────────────────────────────────

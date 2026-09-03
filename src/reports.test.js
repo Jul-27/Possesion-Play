@@ -30,15 +30,15 @@ test("jeder Spielverein ist über seinen Namen auflösbar", () => {
 });
 
 /* Die Schlüssel wandern unverändert in die Datenbank — ein Tippfehler wäre in der
-   Auswertung nicht mehr von einem echten Modus zu unterscheiden. Vierzehn Modi sind
-   spielbar, „daily" ist der fünfzehnte: der abgelöste Daily-Star, dessen bereits
+   Auswertung nicht mehr von einem echten Modus zu unterscheiden. Fünfzehn Modi sind
+   spielbar, „daily" ist der sechzehnte: der abgelöste Daily-Star, dessen bereits
    eingegangene Meldungen weiter unter ihrem damaligen Namen erscheinen sollen. */
 test("alle Spielmodi sind erfasst und eindeutig", () => {
   const keys = Object.keys(REPORT_MODES);
-  assert.equal(keys.length, 15);
-  assert.equal(new Set(keys).size, 15);
+  assert.equal(keys.length, 16);
+  assert.equal(new Set(keys).size, 16);
   assert.equal(keys.filter((k) => isDuel(k)).length, 4, "vier Duell-Modi");
-  assert.equal(keys.filter((k) => !isDuel(k)).length, 11, "zehn Solo-/Tagesmodi plus den abgelösten");
+  assert.equal(keys.filter((k) => !isDuel(k)).length, 12, "elf Solo-/Tagesmodi plus den abgelösten");
   for (const k of keys) assert.ok(REPORT_MODES[k].name, `${k} braucht einen Namen`);
 });
 

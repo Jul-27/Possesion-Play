@@ -38,6 +38,7 @@ export const REPORT_MODES = {
   steckbrief:     { name: "Steckbrief",             art: "solo" },
   ecken:          { name: "Sechs Ecken",            art: "solo" },
   traumelf:       { name: "Traumelf",               art: "solo" },
+  karriere:       { name: "Karriere",               art: "solo" },
   "hex-duell":    { name: "Hex-Duell",              art: "duell" },
   "grid-duell":   { name: "Raster-Duell",           art: "duell" },
   "guess-duell":  { name: "Errate den Star",        art: "duell" },

@@ -127,12 +127,15 @@ test("die Form senkt Talente und Routiniers, nicht die besten Jahre", () => {
   assert.ok(formFaktor(19) < 0.9);
   assert.ok(formFaktor(36) < 0.8);
   assert.ok(formFaktor(40) < formFaktor(36), "nach 39 geht es nicht wieder hinauf");
-  /* Die Form wirkt nur auf den Teil ÜBER 50 — 50 ist der Boden der Skala, kein
-     Können, das einem Talent fehlte. */
+  /* Die Form wirkt nur auf den Teil ÜBER dem Skalenboden — der Boden ist der
+     schlechteste Wert der Skala, kein Können, das einem Talent fehlte. Stand hier
+     eine feste 50, fiel ein Talent mit Grundklasse 65 auf 59. */
   const basis = new Map([[0, 90]]);
   const spieler = [{ by: 2000 }];
   assert.equal(klasseIn(basis, spieler, 0, 2028), 90, "mit 28 die volle Grundklasse");
-  assert.ok(klasseIn(basis, spieler, 0, 2018) > 65, "mit 18 gedämpft, aber nicht halbiert");
+  assert.ok(klasseIn(basis, spieler, 0, 2018) > 78, "mit 18 gedämpft, aber nicht halbiert");
+  /* Niemand fällt unter den Boden, auch nicht mit sechzehn und Grundklasse 65. */
+  assert.ok(klasseIn(new Map([[0, 65]]), spieler, 0, 2016) >= 65, "unter den Skalenboden geht es nicht");
   assert.ok(klasseIn(basis, spieler, 0, 2018) < 85);
   assert.ok(klasseIn(basis, spieler, 0, 2038) < klasseIn(basis, spieler, 0, 2028));
 });
