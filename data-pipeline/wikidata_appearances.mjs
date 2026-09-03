@@ -40,6 +40,7 @@ import { fileURLToPath, pathToFileURL } from "url";
 import { norm } from "../src/gameData.js";
 import { CLUB_QID } from "./wikidata_roster.mjs";
 import { LIGA_VEREINE } from "../src/leagueClubs.js";
+import { DRAFT_SL_MIN } from "../src/draft.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLAYERS_PATH = join(HERE, "..", "src", "players.js");
@@ -112,10 +113,11 @@ async function main() {
   /* Nur Spieler mit `cp` sind überhaupt ziehbar — für alle anderen wäre die Zahl
      totes Gewicht in einer Datei, die der Browser lädt. */
   const bekannt = new Set(mod.PLAYERS.filter((p) => p.cp?.length).map((p) => schluessel(p.n, p.by)));
-  /* Geschrieben wird nur, wer auch gezogen werden kann — dieselbe Schwelle wie
-     DRAFT_SL_MIN in src/draft.js. Abgefragt wird trotzdem breiter, weil die Grenze
-     sich verschieben kann und ein zweiter Wikidata-Lauf teuer ist. */
-  const ziehbar = new Set(mod.PLAYERS.filter((p) => p.cp?.length && (p.sl || 0) >= 25).map((p) => schluessel(p.n, p.by)));
+  /* Geschrieben wird nur, wer auch gezogen werden kann. Die Schwelle wird aus
+     draft.js IMPORTIERT und nicht abgeschrieben: Sie stand hier als 25, und als
+     DRAFT_SL_MIN auf 18 sank, fehlten allen Spielern dazwischen die Einsatzzahlen.
+     Abgefragt wird trotzdem breiter, weil ein zweiter Wikidata-Lauf teuer ist. */
+  const ziehbar = new Set(mod.PLAYERS.filter((p) => p.cp?.length && (p.sl || 0) >= DRAFT_SL_MIN).map((p) => schluessel(p.n, p.by)));
   console.log(`${bekannt.size} Spieler mit Vereinsstationen, davon ${ziehbar.size} ziehbar`);
 
   /* Alle Vereine, bei denen ein Spieler eine Station haben kann: die 47
