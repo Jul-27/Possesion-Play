@@ -76,6 +76,17 @@ export const shareTraumelf = ({ liga, formation, abzeichen, platz, teams, s, u, 
   ],
 });
 
+/* Karriere: Das Urteil ist die Kennzahl, die Titel sind der Beleg. Höchstens fünf
+   davon — eine Nachricht mit siebzehn Zeilen liest niemand. */
+export const shareKarriere = ({ name, stufe, saisons, tore, vorlagen, overall, titel = [] }) => buildShare({
+  solo: "karriere",
+  title: `🧭 Karriere · ${name} — ${stufe}`,
+  lines: [
+    `${saisons} Saisons · ${tore} Tore · ${vorlagen} Vorlagen · Höchstwert ${overall}`,
+    titel.length ? titel.slice(0, 5).join(" · ") + (titel.length > 5 ? ` · +${titel.length - 5}` : "") : "ohne Titel",
+  ],
+});
+
 /* Heatmap: die Punktzahl ist die Kennzahl, die Dichte sagt, WIE sie zustande kam —
    70 Punkte mit Dichte 1,0 sind große Combos, mit 1,6 viel nachgeheizt. Die
    Emoji-Zeile zeigt die Hitzeverteilung der 30 Felder als Rampe. */

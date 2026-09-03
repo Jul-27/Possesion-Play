@@ -247,6 +247,7 @@ const SOLO_MODI = [
   { key: "hex",      name: "Hex-Training",      icon: "hex", ton: "#2DD4BF", text: "Ohne Zeitdruck",        daily: true },
   { key: "ecken",    name: "Sechs Ecken",       icon: "network", ton: "#818CF8", text: "Über Mitspieler verbinden", daily: true },
   { key: "traumelf", name: "Traumelf",          icon: "crown", ton: "#FBBF24", text: "Draften und Saison spielen", daily: false },
+  { key: "karriere", name: "Karriere",          icon: "route", ton: "#34D399", text: "Vom Talent zur Legende", daily: false },
   { key: "carousel", name: "Transferkarussell", icon: "carousel", ton: "#F472B6", text: "Gegen den Bot",         daily: false },
 ];
 

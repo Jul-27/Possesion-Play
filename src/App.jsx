@@ -13,6 +13,7 @@ import CarouselDuel from "./CarouselDuel.jsx";
 import Heatmap from "./Heatmap.jsx";
 import SechsEcken from "./SechsEcken.jsx";
 import Traumelf from "./Traumelf.jsx";
+import Karriere from "./Karriere.jsx";
 import Collection from "./Collection.jsx";
 import Eleven from "./Eleven.jsx";
 import Stats from "./Stats.jsx";
@@ -193,6 +194,7 @@ export default function App() {
   if (solo === "heat") return <Heatmap onLeave={leave} />;
   if (solo === "ecken") return <SechsEcken onLeave={leave} />;
   if (solo === "traumelf") return <Traumelf onLeave={leave} />;
+  if (solo === "karriere") return <Karriere onLeave={leave} />;
   if (solo === "sammlung") return <Collection onLeave={leave} />;
   return code
     ? <GameRouter code={code} clientId={clientId} onLeave={leave} />
