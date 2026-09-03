@@ -271,9 +271,11 @@ test("eine bessere Elf landet weiter oben", () => {
     }
     return summe / 25;
   };
-  const schwach = platzFuer(63);   // gemessener Median eines blinden Drafts
-  const mittel = platzFuer(75);
-  const stark = platzFuer(86);     // nahe dem besten, was ein Draft hergibt
+  /* Gemessen auf der Skala 65–96: Ein blind zusammengeklickter Draft landet im
+     Median bei 73,5 (67,8 bis 79,1), ein gierig gespielter bei 85,4 (78 bis 92,8). */
+  const schwach = platzFuer(72);
+  const mittel = platzFuer(80);
+  const stark = platzFuer(90);
   assert.ok(schwach > mittel + 2, `blind ${schwach.toFixed(1)} gegen mittel ${mittel.toFixed(1)}`);
   assert.ok(mittel > stark + 2, `mittel ${mittel.toFixed(1)} gegen stark ${stark.toFixed(1)}`);
   assert.ok(schwach > 14, "ein blinder Draft gehört nach unten");

@@ -27,7 +27,19 @@
 import { norm } from "./gameData.js";
 import { passtAufPosition, posGruppe } from "./positions.js";
 
-export const DRAFT_SL_MIN = 25;      // unter dieser Bekanntheit kennt sie niemand
+/* Ab dieser Bekanntheit darf ein Spieler gezogen werden.
+
+   STAND AUF 25 UND SCHLOSS DAMIT HALBE LIGEN AUS. Eine Ziehung verlangt elf solche
+   Spieler UND alle vier Positionsgruppen; daran scheiterten zwölf von 32
+   Bundesligavereinen vollständig — Heidenheim, St. Pauli, Bochum, Nürnberg,
+   Paderborn und weitere waren NIE ziehbar. Union Berlin hatte zwar zehn bis sechzehn
+   bekannte Spieler, aber in keinem Jahr alle vier Gruppen. In La Liga fehlten elf von
+   35 Vereinen, darunter Osasuna, Leganés und Cádiz.
+
+   Bei 18 sind es Bundesliga 25 von 32, Premier League 38 von 41, La Liga 33 von 35.
+   Noch tiefer bringt kaum mehr Vereine, dafür immer mehr Namen, die niemand kennt —
+   und der Draft lebt davon, dass man die Auswahl einordnen kann. */
+export const DRAFT_SL_MIN = 18;
 export const DRAFT_MIN_KADER = 11;   // so viele bekannte Spieler muss eine Ziehung haben
 export const DRAFT_AB_JAHR = 1995;   // davor wird die Datenlage je Saison zu dünn
 export const RESPINS = 1;            // ein Neuwurf je Partie — bei uns ohne Werbung
@@ -542,13 +554,19 @@ function hashStr(s) {
 export function zieh(ziehungen, seed, gezogen = []) {
   const frei = ziehungen.filter((z) => !gezogen.includes(`${z.key}|${z.jahr}`));
   const liste = frei.length ? frei : ziehungen;
-  /* Gewichtet nach Kadertiefe: ein Kader mit 40 bekannten Spielern bietet für jede
-     offene Stelle etwas an, einer mit elf fast nie. */
-  const gewicht = liste.map((z) => Math.min(40, z.spieler.length));
-  const summe = gewicht.reduce((a, b) => a + b, 0);
-  let w = (hashStr(seed) / 4294967296) * summe;
-  for (let i = 0; i < liste.length; i++) { w -= gewicht[i]; if (w <= 0) return liste[i]; }
-  return liste[liste.length - 1];
+  /* JEDE ZIEHUNG IST GLEICH WAHRSCHEINLICH. Vorher wurde nach Kadertiefe gewichtet,
+     damit ein Spin nicht ins Leere läuft — ein Kader mit vierzig bekannten Spielern
+     bedient jede offene Stelle, einer mit elf selten. Das war überflüssig, weil die
+     Ansicht ohnehin so lange weiterzieht, bis ein Kader eine offene Stelle bedienen
+     kann; der Spieler merkt von einem verworfenen Spin nichts.
+
+     Es hatte aber eine Nebenwirkung, die den Modus verengte: Bayern hatte je Saison
+     vierzig Spieler und 31 ziehbare Jahrgänge, Union Berlin elf und zwei. Beides
+     multiplizierte sich, und man sah praktisch nur die immer gleichen Großvereine.
+     Ohne Gewichtung entscheidet nur noch, wie viele Saisons ein Verein erstklassig
+     war — und das ist genau der Unterschied, den es geben soll. */
+  const n = hashStr(seed) % liste.length;
+  return liste[n];
 }
 
 /** Kann dieser Kader mindestens eine der noch offenen Stellen besetzen? */
