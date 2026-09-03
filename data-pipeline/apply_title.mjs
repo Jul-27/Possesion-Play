@@ -57,9 +57,18 @@ const titleQuery = (qid, from, to) => `SELECT DISTINCT ?pLabel ?by WHERE {
   OPTIONAL { ?season wdt:P582 ?se. }
   ?winner wdt:P831? ?club .
   ?p p:P54 ?st . ?st ps:P54 ?club ; pq:P580 ?cs .
+  # „UNBEKANNTER WERT" IST KEIN DATUM. Wikidata kennt neben „kein Wert" auch
+  # „unbekannter Wert"; der kommt als anonymer Knoten zurück — die Variable ist
+  # also GEBUNDEN, aber YEAR() scheitert daran, der Filter wird falsch und die
+  # ganze Zeile fällt weg. Der Spieler verlor damit JEDEN Titel dieses Vereins.
+  # Gemessen: 50 Stationen betroffen — Rüdiger bei Real (La Liga fehlte), Gnabry
+  # bei Bayern (eine Meisterschaft statt sieben, Champions League gar nicht),
+  # Andrich bei Leverkusen. Geprüft an La Liga 2020–2026: 194 Spieler ohne, 198
+  # mit der Korrektur. Die Prüfung steht im ÄUSSEREN Filter und nicht im
+  # OPTIONAL: Dort kostete es so viel, dass WDQS in den Zeitausfall lief.
   OPTIONAL { ?st pq:P582 ?ce. }
   ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d . BIND(YEAR(?d) AS ?by)
-  FILTER( YEAR(?cs) <= YEAR(COALESCE(?se, ?ss)) && (!BOUND(?ce) || YEAR(?ce) >= YEAR(?ss)) )
+  FILTER( YEAR(?cs) <= YEAR(COALESCE(?se, ?ss)) && (!BOUND(?ce) || !isLiteral(?ce) || YEAR(?ce) >= YEAR(?ss)) )
   ${LABEL_SERVICE}
 }`;
 
