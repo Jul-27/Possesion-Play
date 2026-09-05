@@ -103,6 +103,26 @@ test("auch die kuratierten Sieger folgen der Regel", () => {
   assert.equal(zuFrueh[0].t, undefined, "wer 2011 ging, auch nicht");
 });
 
+/* Wikidata kennt Arsenals FA-Cup-Sieg 2004/05 nicht als Saison mit Sieger — die Lücke
+   fiel auf, weil van Persie den Pokal real gewann. Sie steht jetzt kuratiert drin. */
+test("Arsenals FA-Cup-Sieg 2005 zählt für den Kader von damals", async () => {
+  const { PLAYERS } = await import("../src/players.js");
+  const von = (n) => new Set(PLAYERS.find((p) => p.n === n)?.t || []);
+  for (const n of ["Thierry Henry", "Robin van Persie", "Dennis Bergkamp", "Patrick Vieira", "Jens Lehmann"])
+    assert.ok(von(n).has("FAC"), `${n}: FA Cup 2004/05 mit Arsenal`);
+});
+
+/* DER FEHLER, DEN DAS FÄNGT: „ARS" ist Arsenal — der Schlüssel unterscheidet nicht
+   zwischen Männern und Frauen. Drei Spielerinnen von Arsenal Women haben eine
+   ARS-Station und bekamen über cp den Männer-FA-Cup zugeschrieben. */
+test("Spielerinnen bekommen keine Männertitel über die Vereinsstation", () => {
+  const frau = [{ n: "Jayne Ludlow", by: 1979, cp: [["ARS", 2000, 2013]] }];
+  const mann = [{ n: "Thierry Henry", by: 1977, cp: [["ARS", 1999, 2007]] }];
+  applyGapWinners(frau); applyGapWinners(mann);
+  assert.equal(frau[0].t, undefined, "Arsenal Women gewann keinen Männer-FA-Cup");
+  assert.deepEqual(mann[0].t, ["FAC"]);
+});
+
 /* ── Die Titel selbst ────────────────────────────────────────────────────────
    DER FEHLER, DEN DIESE PRÜFUNG FÄNGT: Ein Enddatum vom Typ „unbekannter Wert"
    kommt als anonymer Knoten zurück. Die Variable ist damit GEBUNDEN, aber YEAR()

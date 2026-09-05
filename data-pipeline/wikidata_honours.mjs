@@ -68,10 +68,27 @@ export const HONOUR_OVERRIDES = {
 export const GAP_WINNERS = {
   DFB: [[2009, "FCB"], [2011, "BVB"], [2012, "FCB"], [2013, "FCB"],
         [2023, "B04"], [2024, "VFB"], [2025, "FCB"]],
-  FAC: [[2003, "MUN"]], // FA Cup 2003/04 — Manchester United (Wikidata-Lücke)
+  /* FA Cup 2003/04 (United) und 2004/05 (Arsenal, im Elfmeterschießen gegen United).
+     Wikidata führt für beide Endspiele gar keine Saison mit Sieger — aufgefallen, weil
+     van Persie den Pokal 2005 real gewann, unsere Quelle davon aber nichts weiß. */
+  FAC: [[2003, "MUN"], [2004, "ARS"]],
   CDR: [[2024, "BAR"], [2022, "RMA"]], // Copa del Rey 2024/25 (Barça), 2022/23 (Real)
   MBL: [[2022, "FCB"]],                // Bundesliga 2022/23 (Bayern)
 };
+
+/* DER VEREINSSCHLÜSSEL KENNT KEIN GESCHLECHT. „ARS" steht für Arsenal, und im Bestand
+   liegen auch Spielerinnen von Arsenal Women mit einer ARS-Station. Über cp allein
+   bekämen sie den Männer-FA-Cup zugeschrieben — alle unsere Honour-Keys sind
+   Männerwettbewerbe.
+
+   Wikidata weiß es (P21), unser Bestand führt das Feld nicht. Deshalb steht es hier
+   als kuratierte Ausnahme: abgefragt, nicht geraten. Geprüft wurden alle 43 Spieler,
+   die der Arsenal-Eintrag unten trifft — 40 Männer, diese drei nicht. */
+export const KEINE_MAENNERTITEL = new Set([
+  "amber hearn|1984",   // Arsenal Women
+  "ciara grant|1978",   // Arsenal Women
+  "jayne ludlow|1979",  // Arsenal Women
+]);
 
 const gapEnd = (to) => (to === 0 ? 9999 : to);
 
@@ -87,6 +104,7 @@ export function applyGapWinners(players) {
   for (const [key, seasons] of Object.entries(GAP_WINNERS)) {
     for (const [year, club] of seasons) {
       for (const p of players) {
+        if (KEINE_MAENNERTITEL.has(norm(p.n) + "|" + p.by)) continue;
         if (!(p.cp || []).some(([k, f, t]) => k === club && imZeitraum(f, t, year))) continue;
         const set = new Set(p.t || []);
         if (!set.has(key)) { set.add(key); p.t = [...set].sort(); added++; }
