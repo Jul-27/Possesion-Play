@@ -63,8 +63,8 @@ export const HONOUR_OVERRIDES = {
 };
 
 // Saison-Sieger, die Wikidata (noch) nicht als P1346 führt (Owner-bestätigt).
-// Honour-Key -> [[Saisonstartjahr, Club-Key], ...]; angewandt über cp-Überlappung
-// (gleiche Semantik wie die Wikidata-Query: from <= saison+1 && ende >= saison).
+// Honour-Key -> [[Saisonstartjahr, Club-Key], ...]; angewandt über cp mit derselben
+// Regel wie ZEITFILTER: von <= Saisonstart && bis >= Saisonende.
 export const GAP_WINNERS = {
   DFB: [[2009, "FCB"], [2011, "BVB"], [2012, "FCB"], [2013, "FCB"],
         [2023, "B04"], [2024, "VFB"], [2025, "FCB"]],
@@ -74,12 +74,20 @@ export const GAP_WINNERS = {
 };
 
 const gapEnd = (to) => (to === 0 ? 9999 : to);
+
+/* Dieselbe Regel wie ZEITFILTER, nur in JavaScript und auf cp angewandt: Die Station
+   muss im Startjahr der Saison bestehen und bis in deren Endjahr reichen. Hier steht
+   sie als eigene Funktion, damit ein Test sie prüfen kann — die SPARQL-Fassung lässt
+   sich nur gegen das Netz prüfen, diese hier gegen Ibrahimović auf dem Papier. */
+export const imZeitraum = (von, bis, saisonStart, saisonEnde = saisonStart + 1) =>
+  von <= saisonStart && gapEnd(bis) >= saisonEnde;
+
 export function applyGapWinners(players) {
   let added = 0;
   for (const [key, seasons] of Object.entries(GAP_WINNERS)) {
     for (const [year, club] of seasons) {
       for (const p of players) {
-        if (!(p.cp || []).some(([k, f, t]) => k === club && f <= year + 1 && gapEnd(t) >= year)) continue;
+        if (!(p.cp || []).some(([k, f, t]) => k === club && imZeitraum(f, t, year))) continue;
         const set = new Set(p.t || []);
         if (!set.has(key)) { set.add(key); p.t = [...set].sort(); added++; }
       }
@@ -87,6 +95,31 @@ export function applyGapWinners(players) {
   }
   return added;
 }
+
+/* WAR DER SPIELER IN DIESER SAISON WIRKLICH DA?
+   Beide Seiten sind in Wikidata nur JAHRESGENAU: eine Saison hat ein Start- und ein
+   Endjahr (2008/2009), eine Station ein Von- und ein Bis-Jahr (2009–2010). Die alte
+   Fassung fragte, ob sich die beiden Zeiträume IRGENDWIE überschneiden — und weil ein
+   gemeinsames Kalenderjahr dafür reichte, zählte jeder Sommerwechsel doppelt: wer im
+   Juli 2009 kam, bekam den Titel vom Mai 2009 mit, und wer im Juli 2024 ging, bekam
+   den der Saison 2024/25 dazu.
+
+   GEMESSEN an den beiden gemeldeten Fällen:
+     Ibrahimović · Champions League · Barcelona 2008/09 (kam erst 2009), Inter 2009/10
+       (ging 2009), Barcelona 2010/11 (ging 2010) — drei Titel, keiner davon seiner.
+     Mbappé · Champions League · Real 2023/24 (kam 2024), PSG 2024/25 (ging 2024).
+   Beide haben die Champions League nie gewonnen.
+
+   Richtig ist deshalb nicht Überschneidung, sondern UMSCHLIESSUNG: Die Station muss
+   im Startjahr der Saison schon bestehen und mindestens bis in deren Endjahr reichen.
+   Die beiden Jahre waren schlicht vertauscht.
+
+   Warum das Endjahr über COALESCE läuft: Turniere ohne P582 (Weltmeisterschaft,
+   Europameisterschaft) finden IM Startjahr statt. Für sie muss `>= ?ss` gelten, sonst
+   verlöre jeder seinen Titel, der danach zurücktritt — Lahm etwa beendete seine
+   Länderspiellaufbahn 2014 direkt nach dem Turnier. */
+export const ZEITFILTER =
+  "FILTER( YEAR(?cs) <= YEAR(?ss) && (!BOUND(?ce) || !isLiteral(?ce) || YEAR(?ce) >= YEAR(COALESCE(?se, ?ss))) )";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -148,7 +181,7 @@ async function fetchHonourPlayers(qid) {
       # Titel. Das deutsche Label war in allen beobachteten Fällen sauber, also zählt
       # ein Treffer auf einer der beiden Schreibweisen.
       OPTIONAL { ?p rdfs:label ?deLabel . FILTER(LANG(?deLabel) = "de") }
-      FILTER( YEAR(?cs) <= YEAR(COALESCE(?se, ?ss)) && (!BOUND(?ce) || !isLiteral(?ce) || YEAR(?ce) >= YEAR(?ss)) )
+      ${ZEITFILTER}
       ${LABEL_SERVICE}
     }`;
     const rows = await sparql(q);
@@ -158,6 +191,66 @@ async function fetchHonourPlayers(qid) {
         deName: cleanName(b.deLabel?.value),
         by: b.by?.value ? parseInt(b.by.value) : null,
       });
+    }
+    await sleep(700);
+  }
+  return out;
+}
+
+/* ── NACHFASSEN ÜBER DEN WIKIPEDIA-ARTIKEL ───────────────────────────────────
+   Der Abgleich oben läuft über Labels, und Labels sind der wackligste Teil von
+   Wikidata: Messi und Mbappé tragen derzeit WEDER ein deutsches NOCH ein englisches
+   Label, obwohl ihre Einträge 133 Sprachversionen verlinken. Für den additiven Lauf
+   war das nur eine Lücke; für einen Lauf, der Titel auch ENTFERNEN darf, wäre es eine
+   Katastrophe: „kein Treffer" hieße „keine Titel".
+
+   Der Sitelink auf die deutsche Wikipedia ist die stabilere Kennung — dort heißt der
+   Artikel „Kylian Mbappé", auch wenn das Wikidata-Label leer ist. Ihn in die große
+   Abfrage einzubauen war nicht möglich (gemessen: HTTP 502 nach 21 s); als eigene,
+   kleine Abfrage über eine Namensliste kostet er 1,2 s für vier Spieler.
+
+   Zwei Schritte, weil sie zwei verschiedene Fragen beantworten: `findeUeberWikipedia`
+   klärt, ob wir den Spieler ÜBERHAUPT sicher identifizieren — nur dann dürfen wir
+   seine Titel anfassen. `holeTitelFuer` liefert dann die Titel, notfalls die leere
+   Menge. */
+const stueckeln = (liste, n) => Array.from({ length: Math.ceil(liste.length / n) }, (_, i) => liste.slice(i * n, i * n + n));
+
+/** Namen -> Menge der sicher identifizierten "norm|by"-Schlüssel. */
+export async function findeUeberWikipedia(namen, chunk = 120) {
+  const gefunden = new Set();
+  for (const teil of stueckeln([...new Set(namen)], chunk)) {
+    const q = `SELECT DISTINCT ?name ?by WHERE {
+      VALUES ?name { ${teil.map((n) => JSON.stringify(n) + "@de").join(" ")} }
+      ?art schema:about ?p ; schema:isPartOf <https://de.wikipedia.org/> ; schema:name ?name .
+      ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d . BIND(YEAR(?d) AS ?by)
+    }`;
+    for (const b of await sparql(q)) gefunden.add(norm(b.name.value) + "|" + b.by.value);
+    await sleep(700);
+  }
+  return gefunden;
+}
+
+/** Namen -> Map "norm|by" -> Set(Honour-Keys), über den Wikipedia-Artikel gefunden. */
+export async function holeTitelFuer(namen, chunk = 60) {
+  const out = new Map();
+  const vonQid = Object.fromEntries(Object.entries(COMP_QID).map(([k, q]) => [q, k]));
+  for (const teil of stueckeln([...new Set(namen)], chunk)) {
+    const q = `SELECT DISTINCT ?name ?comp ?by WHERE {
+      VALUES ?name { ${teil.map((n) => JSON.stringify(n) + "@de").join(" ")} }
+      ?art schema:about ?p ; schema:isPartOf <https://de.wikipedia.org/> ; schema:name ?name .
+      ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d . BIND(YEAR(?d) AS ?by)
+      VALUES ?comp { ${Object.values(COMP_QID).map((x) => "wd:" + x).join(" ")} }
+      ?season wdt:P3450 ?comp ; wdt:P1346 ?winner ; (wdt:P580|wdt:P585) ?ss .
+      OPTIONAL { ?season wdt:P582 ?se. }
+      ?winner wdt:P831? ?club .
+      ?p p:P54 ?st . ?st ps:P54 ?club ; pq:P580 ?cs .
+      OPTIONAL { ?st pq:P582 ?ce. }
+      ${ZEITFILTER}
+    }`;
+    for (const b of await sparql(q)) {
+      const k = norm(b.name.value) + "|" + b.by.value;
+      if (!out.has(k)) out.set(k, new Set());
+      out.get(k).add(vonQid[b.comp.value.split("/").pop()]);
     }
     await sleep(700);
   }
@@ -198,13 +291,52 @@ async function main() {
      38 real gewonnene Titel bei 20 Spielern still gelöscht. Wenn der Lauf nur dazu
      dient, neu aufgenommene Spieler zu versorgen, ist additiv die richtige Wahl. */
   const additiv = process.argv.includes("--additiv");
-  console.log(additiv ? "  Modus: additiv (vorhandene t bleiben erhalten)" : "  Modus: t wird neu gesetzt");
-  let withT = 0;
-  for (const p of players) {
-    const keys = hon.get(norm(p.n) + "|" + p.by);
-    if (keys && keys.size) { p.t = [...new Set([...(additiv ? p.t || [] : []), ...keys])].sort(); withT++; }
-    else if (!additiv) delete p.t;
+  /* --korrigiere: additiv, ABER bei Spielern, die wir sicher identifiziert haben,
+     werden falsche Titel auch entfernt. „Sicher identifiziert" heißt: Der Lauf oben
+     hat sie getroffen, oder das Nachfassen über die Wikipedia hat sie gefunden. Wen
+     wir nicht sicher wiedererkennen, den fassen wir nicht an. */
+  const korrigiere = process.argv.includes("--korrigiere");
+  console.log(korrigiere ? "  Modus: korrigierend (falsche Titel werden entfernt, unbekannte Spieler bleiben unberührt)"
+    : additiv ? "  Modus: additiv (vorhandene t bleiben erhalten)" : "  Modus: t wird neu gesetzt");
+
+  const EIGENE = new Set(Object.keys(COMP_QID));
+  /* EL, BDO, CA und EM kommen aus wikidata_honours_extra.mjs. Dieser Lauf weiß nichts
+     über sie und darf sie deshalb auch im Korrekturmodus nicht anrühren. */
+  const fremde = (p) => (p.t || []).filter((k) => !EIGENE.has(k));
+
+  let sicher = hon;
+  if (korrigiere) {
+    /* Wer Titel trägt, den dieser Lauf nicht gefunden hat, ist der Verdachtsfall:
+       entweder sind die Titel falsch, oder sein Label ist kaputt. Das trennt nur die
+       Wikipedia. */
+    const offen = players.filter((p) => (p.t || []).some((k) => EIGENE.has(k)) && !hon.has(norm(p.n) + "|" + p.by));
+    console.log(`  Nachfassen über Wikipedia: ${offen.length} Spieler mit Titeln ohne Treffer`);
+    const namen = offen.map((p) => p.n);
+    const erkannt = await findeUeberWikipedia(namen);
+    const nach = await holeTitelFuer(offen.filter((p) => erkannt.has(norm(p.n) + "|" + p.by)).map((p) => p.n));
+    console.log(`  davon eindeutig wiedererkannt: ${[...erkannt].length} · mit Titeln: ${nach.size}`);
+    sicher = new Map(hon);
+    for (const p of offen) {
+      const k = norm(p.n) + "|" + p.by;
+      if (erkannt.has(k)) sicher.set(k, nach.get(k) || new Set());
+    }
   }
+
+  let withT = 0, entfernt = 0, unberuehrt = 0;
+  for (const p of players) {
+    const k = norm(p.n) + "|" + p.by;
+    const keys = sicher.get(k);
+    if (korrigiere) {
+      if (!keys) { if ((p.t || []).some((x) => EIGENE.has(x))) unberuehrt++; continue; }
+      const vorher = (p.t || []).filter((x) => EIGENE.has(x));
+      entfernt += vorher.filter((x) => !keys.has(x)).length;
+      const neu = [...new Set([...fremde(p), ...keys])].sort();
+      if (neu.length) { p.t = neu; withT++; } else delete p.t;
+    } else if (keys && keys.size) {
+      p.t = [...new Set([...(additiv ? p.t || [] : []), ...keys])].sort(); withT++;
+    } else if (!additiv) delete p.t;
+  }
+  if (korrigiere) console.log(`  ${entfernt} falsche Titel entfernt · ${unberuehrt} Spieler nicht wiedererkannt und deshalb unberührt`);
 
   // Wikidata-Sieger-Lücken über cp schließen
   console.log(`  GAP_WINNERS: ${applyGapWinners(players)} Zuordnungen`);

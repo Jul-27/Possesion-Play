@@ -13,6 +13,7 @@ import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
 import { stampDataInfo } from "./stamp.mjs";
 import { LABEL_SERVICE, cleanName } from "./wikidata_label.mjs";
+import { ZEITFILTER } from "./wikidata_honours.mjs";
 import { recToString } from "./player_record.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -84,7 +85,7 @@ async function fetchHonourPlayers(qid) {
       # OPTIONAL: Dort kostete es so viel, dass WDQS in den Zeitausfall lief.
       OPTIONAL { ?st pq:P582 ?ce. }
       ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d . BIND(YEAR(?d) AS ?by)
-      FILTER( YEAR(?cs) <= YEAR(COALESCE(?se, ?ss)) && (!BOUND(?ce) || !isLiteral(?ce) || YEAR(?ce) >= YEAR(?ss)) )
+      ${ZEITFILTER}
       ${LABEL_SERVICE}
     }`;
     const rows = await sparql(q);

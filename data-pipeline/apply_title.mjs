@@ -20,7 +20,7 @@
 import { readFileSync, writeFileSync } from "fs";
 import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
-import { COMP_QID } from "./wikidata_honours.mjs";
+import { COMP_QID, ZEITFILTER } from "./wikidata_honours.mjs";
 import { norm } from "./wikidata_roster.mjs";
 import { recToString } from "./add_clubs.mjs";
 import { stampDataInfo } from "./stamp.mjs";
@@ -68,7 +68,7 @@ const titleQuery = (qid, from, to) => `SELECT DISTINCT ?pLabel ?by WHERE {
   # OPTIONAL: Dort kostete es so viel, dass WDQS in den Zeitausfall lief.
   OPTIONAL { ?st pq:P582 ?ce. }
   ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d . BIND(YEAR(?d) AS ?by)
-  FILTER( YEAR(?cs) <= YEAR(COALESCE(?se, ?ss)) && (!BOUND(?ce) || !isLiteral(?ce) || YEAR(?ce) >= YEAR(?ss)) )
+  ${ZEITFILTER}
   ${LABEL_SERVICE}
 }`;
 
