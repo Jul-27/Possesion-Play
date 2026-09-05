@@ -20,7 +20,7 @@
 import { readFileSync, writeFileSync } from "fs";
 import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
-import { COMP_QID } from "./wikidata_honours.mjs";
+import { COMP_QID, ZEITFILTER, START_GENAUIGKEIT } from "./wikidata_honours.mjs";
 import { norm } from "./wikidata_roster.mjs";
 import { recToString } from "./add_clubs.mjs";
 import { stampDataInfo } from "./stamp.mjs";
@@ -56,7 +56,8 @@ const titleQuery = (qid, from, to) => `SELECT DISTINCT ?pLabel ?by WHERE {
   FILTER( YEAR(?ss) >= ${from} && YEAR(?ss) < ${to} )
   OPTIONAL { ?season wdt:P582 ?se. }
   ?winner wdt:P831? ?club .
-  ?p p:P54 ?st . ?st ps:P54 ?club ; pq:P580 ?cs .
+  ?p p:P54 ?st . ?st ps:P54 ?club .
+  ${START_GENAUIGKEIT}
   # „UNBEKANNTER WERT" IST KEIN DATUM. Wikidata kennt neben „kein Wert" auch
   # „unbekannter Wert"; der kommt als anonymer Knoten zurück — die Variable ist
   # also GEBUNDEN, aber YEAR() scheitert daran, der Filter wird falsch und die
@@ -68,7 +69,7 @@ const titleQuery = (qid, from, to) => `SELECT DISTINCT ?pLabel ?by WHERE {
   # OPTIONAL: Dort kostete es so viel, dass WDQS in den Zeitausfall lief.
   OPTIONAL { ?st pq:P582 ?ce. }
   ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d . BIND(YEAR(?d) AS ?by)
-  FILTER( YEAR(?cs) <= YEAR(COALESCE(?se, ?ss)) && (!BOUND(?ce) || !isLiteral(?ce) || YEAR(?ce) >= YEAR(?ss)) )
+  ${ZEITFILTER}
   ${LABEL_SERVICE}
 }`;
 

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { norm } from "./wikidata_honours.mjs";
+import { norm, imZeitraum, applyGapWinners } from "./wikidata_honours.mjs";
 
 test("players.js: t-Honours sind gültige Keys + Stichproben", async () => {
   const players = (await import("../src/players.js")).PLAYERS;
@@ -52,6 +52,57 @@ test("gewöhnliche Namen bleiben unangetastet", () => {
   assert.equal(norm("Xherdan Shaqiri"), "xherdan shaqiri");
 });
 
+/* ── Wer war in dieser Saison wirklich da? ───────────────────────────────────
+   DER FEHLER, DEN DIESE PRÜFUNGEN FANGEN: Saison und Vereinsstation sind in Wikidata
+   beide nur jahresgenau. Gefragt wurde, ob sie sich IRGENDWIE überschneiden — ein
+   gemeinsames Kalenderjahr reichte. Damit zählte jeder Sommerwechsel doppelt: wer im
+   Juli kam, bekam den Titel vom Mai davor, wer im Juli ging, den der Saison danach.
+
+   Gemeldet vom Eigentümer: Ibrahimović und Mbappé standen als Champions-League-Sieger
+   in den Daten. Beide haben sie nie gewonnen. */
+test("wer nach dem Finale kommt, hat den Titel nicht gewonnen", () => {
+  /* Ibrahimović kam 2009 zu Barcelona. Barça gewann die Champions League 2008/09 —
+     das Finale war im Mai 2009, sechs Wochen vor seinem Wechsel. */
+  assert.equal(imZeitraum(2009, 2010, 2008), false, "Barça 2008/09 gehört ihm nicht");
+  /* Die Saison, die er wirklich mitspielte. */
+  assert.equal(imZeitraum(2009, 2010, 2009), true, "La Liga 2009/10 dagegen schon");
+});
+
+test("wer im Sommer davor geht, hat den Titel nicht gewonnen", () => {
+  /* Mbappé verließ PSG 2024. PSG gewann die Champions League 2024/25. */
+  assert.equal(imZeitraum(2018, 2024, 2024), false, "PSG 2024/25 gehört ihm nicht");
+  /* Sein letztes Jahr dort. */
+  assert.equal(imZeitraum(2018, 2024, 2023), true, "Ligue 1 2023/24 dagegen schon");
+  /* Und der Normalfall: Wer im Sommer NACH dem Titel geht, hat ihn gewonnen. */
+  assert.equal(imZeitraum(2020, 2025, 2024), true);
+});
+
+/* Turniere ohne Enddatum finden IM Startjahr statt. Ohne den Sonderfall verlöre jeder
+   seinen Titel, der danach zurücktritt — Lahm beendete seine Länderspiellaufbahn 2014
+   direkt nach dem Weltmeistertitel. */
+test("ein Turnier im selben Jahr zählt auch beim Abschied danach", () => {
+  assert.equal(imZeitraum(2004, 2014, 2014, 2014), true, "WM 2014, Rücktritt 2014");
+  assert.equal(imZeitraum(2015, 0, 2014, 2014), false, "wer erst 2015 anfing, war nicht dabei");
+});
+
+test("ein offenes Vertragsende reicht bis heute", () => {
+  assert.equal(imZeitraum(2020, 0, 2025), true);
+  assert.equal(imZeitraum(2026, 0, 2025), false, "aber nicht rückwärts");
+});
+
+/* Die kuratierten Lücken ahmten die Query nach und erbten damit denselben Fehler. */
+test("auch die kuratierten Sieger folgen der Regel", () => {
+  /* Dortmund steht mit genau einem Pokalsieg in der Liste: 2011/12, Finale Mai 2012.
+     Bayern taugt hier nicht als Beispiel — die stehen viermal drin. */
+  const bei = (von, bis) => [{ n: "X", by: 1990, cp: [["BVB", von, bis]] }];
+  const dabei = bei(2011, 2015); applyGapWinners(dabei);
+  assert.deepEqual(dabei[0].t, ["DFB"]);
+  const zuSpaet = bei(2012, 2015); applyGapWinners(zuSpaet);
+  assert.equal(zuSpaet[0].t, undefined, "wer 2012 kam, war im Finale nicht dabei");
+  const zuFrueh = bei(2008, 2011); applyGapWinners(zuFrueh);
+  assert.equal(zuFrueh[0].t, undefined, "wer 2011 ging, auch nicht");
+});
+
 /* ── Die Titel selbst ────────────────────────────────────────────────────────
    DER FEHLER, DEN DIESE PRÜFUNG FÄNGT: Ein Enddatum vom Typ „unbekannter Wert"
    kommt als anonymer Knoten zurück. Die Variable ist damit GEBUNDEN, aber YEAR()
@@ -71,4 +122,22 @@ test("Titel, die an einem unbekannten Vertragsende hingen, sind da", async () =>
   assert.ok(von("Arda Güler").has("MLL"), "Güler: La Liga mit Real");
   /* Und die Gegenprobe: Wer nichts gewonnen hat, bekommt auch nichts. */
   assert.equal(von("Rüdiger Ziehl").size, 0);
+});
+
+/* Die zweite Meldung des Eigentümers, im Bestand festgehalten: Beide standen als
+   Champions-League-Sieger da, weil ein Sommerwechsel als Saisonüberschneidung galt. */
+test("wer im Sommer wechselte, trägt den Titel der Nachbarsaison nicht", async () => {
+  const { PLAYERS } = await import("../src/players.js");
+  const von = (n) => new Set(PLAYERS.find((p) => p.n === n)?.t || []);
+  const zlatan = von("Zlatan Ibrahimović");
+  assert.ok(!zlatan.has("CL"), "Barça gewann Mai 2009, er kam im Juli");
+  assert.ok(!zlatan.has("FAC"), "United gewann Mai 2016, er kam im Juli");
+  assert.ok(zlatan.has("MLL") && zlatan.has("MSA"), "seine echten Meisterschaften bleiben");
+  const mbappe = von("Kylian Mbappé");
+  assert.ok(!mbappe.has("CL"), "PSG gewann 2024/25, da war er bei Real");
+  assert.ok(!mbappe.has("MLL"), "Reals Titel 2023/24 lag vor seiner Ankunft");
+  assert.ok(mbappe.has("ML1") && mbappe.has("WM"), "Ligue 1 und die WM bleiben");
+  /* Der Winterwechsel, den die Jahresregel allein gekostet hätte: Beckham kam am
+     31.01.2013 zu PSG und wurde im Mai mit ihnen Meister. */
+  assert.ok(von("David Beckham").has("ML1"), "Beckham: Ligue 1 2012/13 nach Winterwechsel");
 });
