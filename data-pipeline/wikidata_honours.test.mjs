@@ -123,3 +123,21 @@ test("Titel, die an einem unbekannten Vertragsende hingen, sind da", async () =>
   /* Und die Gegenprobe: Wer nichts gewonnen hat, bekommt auch nichts. */
   assert.equal(von("Rüdiger Ziehl").size, 0);
 });
+
+/* Die zweite Meldung des Eigentümers, im Bestand festgehalten: Beide standen als
+   Champions-League-Sieger da, weil ein Sommerwechsel als Saisonüberschneidung galt. */
+test("wer im Sommer wechselte, trägt den Titel der Nachbarsaison nicht", async () => {
+  const { PLAYERS } = await import("../src/players.js");
+  const von = (n) => new Set(PLAYERS.find((p) => p.n === n)?.t || []);
+  const zlatan = von("Zlatan Ibrahimović");
+  assert.ok(!zlatan.has("CL"), "Barça gewann Mai 2009, er kam im Juli");
+  assert.ok(!zlatan.has("FAC"), "United gewann Mai 2016, er kam im Juli");
+  assert.ok(zlatan.has("MLL") && zlatan.has("MSA"), "seine echten Meisterschaften bleiben");
+  const mbappe = von("Kylian Mbappé");
+  assert.ok(!mbappe.has("CL"), "PSG gewann 2024/25, da war er bei Real");
+  assert.ok(!mbappe.has("MLL"), "Reals Titel 2023/24 lag vor seiner Ankunft");
+  assert.ok(mbappe.has("ML1") && mbappe.has("WM"), "Ligue 1 und die WM bleiben");
+  /* Der Winterwechsel, den die Jahresregel allein gekostet hätte: Beckham kam am
+     31.01.2013 zu PSG und wurde im Mai mit ihnen Meister. */
+  assert.ok(von("David Beckham").has("ML1"), "Beckham: Ligue 1 2012/13 nach Winterwechsel");
+});

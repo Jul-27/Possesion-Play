@@ -117,9 +117,27 @@ export function applyGapWinners(players) {
    Warum das Endjahr über COALESCE läuft: Turniere ohne P582 (Weltmeisterschaft,
    Europameisterschaft) finden IM Startjahr statt. Für sie muss `>= ?ss` gelten, sonst
    verlöre jeder seinen Titel, der danach zurücktritt — Lahm etwa beendete seine
-   Länderspiellaufbahn 2014 direkt nach dem Turnier. */
+   Länderspiellaufbahn 2014 direkt nach dem Turnier.
+
+   DER WINTERWECHSEL. Die Jahresregel kostet einen Fall, den sie nicht kosten darf:
+   Beckham kam am 31.01.2013 zu PSG und wurde im Mai mit ihnen Meister — sein Startjahr
+   2013 liegt aber nach dem Saisonstartjahr 2012. Wikidata schreibt zu jedem Datum
+   dazu, WIE genau es ist (9 = nur das Jahr, 11 = auf den Tag). Nur bei taggenauen
+   Angaben dürfen wir wirklich rechnen; die vielen „2003-01-01" sind Platzhalter für
+   „irgendwann 2003" und würden jeden Vergleich in die Irre führen.
+
+   Deshalb die Ausnahme: Ein taggenauer Wechsel MITTEN in die laufende Saison zählt.
+   Für das Ende gibt es keine solche Ausnahme — wer im Winter geht, hat den Titel im
+   Mai nicht gewonnen, und Beckhams Vertragsende (16.05.2013) fällt ohnehin ins
+   Endjahr der Saison.
+
+   GEMESSEN über vier Wettbewerbe: 19 solcher Winterwechsel gegenüber rund 900
+   Zeitangaben, die nur das Jahr kennen. */
+export const START_GENAUIGKEIT =
+  "?st pqv:P580 [ wikibase:timeValue ?cs ; wikibase:timePrecision ?csP ] .";
 export const ZEITFILTER =
-  "FILTER( YEAR(?cs) <= YEAR(?ss) && (!BOUND(?ce) || !isLiteral(?ce) || YEAR(?ce) >= YEAR(COALESCE(?se, ?ss))) )";
+  "FILTER( ( YEAR(?cs) <= YEAR(?ss) || ( ?csP >= 10 && ?cs <= COALESCE(?se, ?ss) ) )"
+  + " && (!BOUND(?ce) || !isLiteral(?ce) || YEAR(?ce) >= YEAR(COALESCE(?se, ?ss))) )";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -162,7 +180,8 @@ async function fetchHonourPlayers(qid) {
       # der Sieger direkt der Verein (kein P831) und ?club = ?winner. Ohne diese Brücke
       # fehlten z. B. die Leverkusen-Meister 2023/24 (Wirtz, Boniface) komplett.
       ?winner wdt:P831? ?club .
-      ?p p:P54 ?st . ?st ps:P54 ?club ; pq:P580 ?cs .
+      ?p p:P54 ?st . ?st ps:P54 ?club .
+      ${START_GENAUIGKEIT}
       # „UNBEKANNTER WERT" IST KEIN DATUM. Wikidata kennt neben „kein Wert" auch
       # „unbekannter Wert"; der kommt als anonymer Knoten zurück — die Variable ist
       # also GEBUNDEN, aber YEAR() scheitert daran, der Filter wird falsch und die
@@ -230,20 +249,23 @@ export async function findeUeberWikipedia(namen, chunk = 120) {
   return gefunden;
 }
 
-/** Namen -> Map "norm|by" -> Set(Honour-Keys), über den Wikipedia-Artikel gefunden. */
-export async function holeTitelFuer(namen, chunk = 60) {
+/** Namen -> Map "norm|by" -> Set(Honour-Keys), über den Wikipedia-Artikel gefunden.
+    `comps` ist die Wettbewerbstabelle; wikidata_honours_extra.mjs reicht seine eigene
+    herein, damit die Europa League nach derselben Regel geprüft wird. */
+export async function holeTitelFuer(namen, comps = COMP_QID, chunk = 60) {
   const out = new Map();
-  const vonQid = Object.fromEntries(Object.entries(COMP_QID).map(([k, q]) => [q, k]));
+  const vonQid = Object.fromEntries(Object.entries(comps).map(([k, q]) => [q, k]));
   for (const teil of stueckeln([...new Set(namen)], chunk)) {
     const q = `SELECT DISTINCT ?name ?comp ?by WHERE {
       VALUES ?name { ${teil.map((n) => JSON.stringify(n) + "@de").join(" ")} }
       ?art schema:about ?p ; schema:isPartOf <https://de.wikipedia.org/> ; schema:name ?name .
       ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d . BIND(YEAR(?d) AS ?by)
-      VALUES ?comp { ${Object.values(COMP_QID).map((x) => "wd:" + x).join(" ")} }
+      VALUES ?comp { ${Object.values(comps).map((x) => "wd:" + x).join(" ")} }
       ?season wdt:P3450 ?comp ; wdt:P1346 ?winner ; (wdt:P580|wdt:P585) ?ss .
       OPTIONAL { ?season wdt:P582 ?se. }
       ?winner wdt:P831? ?club .
-      ?p p:P54 ?st . ?st ps:P54 ?club ; pq:P580 ?cs .
+      ?p p:P54 ?st . ?st ps:P54 ?club .
+      ${START_GENAUIGKEIT}
       OPTIONAL { ?st pq:P582 ?ce. }
       ${ZEITFILTER}
     }`;

@@ -13,7 +13,8 @@ import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
 import { stampDataInfo } from "./stamp.mjs";
 import { LABEL_SERVICE, cleanName } from "./wikidata_label.mjs";
-import { ZEITFILTER } from "./wikidata_honours.mjs";
+import { ZEITFILTER, START_GENAUIGKEIT, findeUeberWikipedia, holeTitelFuer,
+         norm as normHon } from "./wikidata_honours.mjs";
 import { recToString } from "./player_record.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -73,7 +74,8 @@ async function fetchHonourPlayers(qid) {
       ?season wdt:P3450 wd:${qid} ; wdt:P1346 ?winner ; wdt:P580 ?ss .
       FILTER( YEAR(?ss) >= ${from} && YEAR(?ss) < ${to} )
       OPTIONAL { ?season wdt:P582 ?se. }
-      ?p p:P54 ?st . ?st ps:P54 ?winner ; pq:P580 ?cs .
+      ?p p:P54 ?st . ?st ps:P54 ?winner .
+      ${START_GENAUIGKEIT}
       # „UNBEKANNTER WERT" IST KEIN DATUM. Wikidata kennt neben „kein Wert" auch
       # „unbekannter Wert"; der kommt als anonymer Knoten zurück — die Variable ist
       # also GEBUNDEN, aber YEAR() scheitert daran, der Filter wird falsch und die
@@ -136,6 +138,33 @@ async function main() {
   const players = mod.PLAYERS.map((p) => ({ ...p, clubs: [...(p.clubs || [])], nat: [...(p.nat || [])] }));
   const counts = { BDO: 0, EM: 0, CA: 0, EL: 0 };
   let touched = 0;
+
+  /* --korrigiere: NUR die Europa League. Sie ist der einzige Wettbewerb hier, der über
+     den Jahreswechsel läuft — und damit der einzige, den der vertauschte Zeitfilter
+     falsch zuordnen konnte (gemessen: EL 19 von 19 Saisons über den Jahreswechsel, EM
+     0 von 18, Copa América 1 von 47). Der Ballon d'Or hängt an gar keinem Zeitraum.
+
+     Wie im Basis-Skript gilt: Entfernt wird nur bei Spielern, die wir sicher
+     wiedererkennen — über diesen Lauf oder über den deutschen Wikipedia-Artikel. */
+  if (process.argv.includes("--korrigiere")) {
+    const hatEL = (p) => (p.t || []).includes("EL");
+    const offen = players.filter((p) => hatEL(p) && !hon.get(norm(p.n) + "|" + p.by)?.has("EL"));
+    console.log(`  EL-Korrektur: ${offen.length} Spieler mit EL ohne Treffer in diesem Lauf`);
+    const erkannt = await findeUeberWikipedia(offen.map((p) => p.n));
+    const sicher = offen.filter((p) => erkannt.has(normHon(p.n) + "|" + p.by));
+    /* Kleine Pakete: Mit 60 Namen je Abfrage lief WDQS in den Zeitausfall, obwohl es
+       nur um einen einzigen Wettbewerb geht. */
+    const nach = await holeTitelFuer(sicher.map((p) => p.n), { EL: EXPECT.EL.qid }, 20);
+    let weg = 0;
+    for (const p of sicher) {
+      if (nach.get(normHon(p.n) + "|" + p.by)?.has("EL")) continue;
+      p.t = (p.t || []).filter((k) => k !== "EL");
+      if (!p.t.length) delete p.t;
+      weg++;
+    }
+    console.log(`  ${sicher.length} wiedererkannt · ${weg} falsche EL entfernt · ${offen.length - sicher.length} unberührt`);
+  }
+
   for (const p of players) {
     const extra = hon.get(norm(p.n) + "|" + p.by);
     if (!extra || !extra.size) continue;
