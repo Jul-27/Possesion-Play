@@ -1,385 +1,362 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as K from "./karriere.js";
-import { KLASSE_MIN, KLASSE_MAX } from "./draft.js";
 
-/* Eine kleine Welt mit bekannter Rangfolge: drei Ligen, sieben Vereine. */
-const ROH = [
-  { key: "AAA", name: "Spitze A", lg: "XL" },
-  { key: "BBB", name: "Mitte A", lg: "XL" },
-  { key: "CCC", name: "Keller A", lg: "XL" },
-  { key: "DDD", name: "Spitze B", lg: "YL" },
-  { key: "EEE", name: "Keller B", lg: "YL" },
-  { key: "FFF", name: "Ohne Daten", lg: "YL" },
-  { key: "GGG", name: "Einzelverein", lg: "ZL" },
+/* Eine kleine Welt mit bekannten Stärken: zwei Länder, je zwei Spielklassen. */
+const LIGEN = [
+  { key: "XL",  name: "Erste X",  land: "XXX", stufe: 1, plaetze: 18 },
+  { key: "XL2", name: "Zweite X", land: "XXX", stufe: 2, plaetze: 18 },
+  { key: "YL",  name: "Erste Y",  land: "YYY", stufe: 1, plaetze: 20 },
 ];
-const STAERKE = { AAA: 96, BBB: 84, CCC: 74, DDD: 92, EEE: 76, GGG: 88 };
-const welt = K.baueWelt(ROH, (v) => STAERKE[v.key] ?? NaN);
-const vonKey = (key) => welt.vereine.find((v) => v.key === key);
+const VEREINE = [
+  { key: "SPI", name: "Spitze",     qid: "Q1", lg: "XL"  },
+  { key: "MIT", name: "Mittelmaß",  qid: "Q2", lg: "XL"  },
+  { key: "KEL", name: "Keller",     qid: "Q3", lg: "XL"  },
+  { key: "ZWA", name: "Zweite A",   qid: "Q4", lg: "XL2" },
+  { key: "ZWB", name: "Zweite B",   qid: "Q5", lg: "XL2" },
+  { key: "AUS", name: "Ausland",    qid: "Q6", lg: "YL"  },
+  { key: "OHN", name: "Ohne Daten", qid: "Q7", lg: "XL"  },
+];
+const STAERKE = { SPI: 93, MIT: 84, KEL: 74, ZWA: 88, ZWB: 71, AUS: 91 };
+const welt = K.baueWelt((v) => STAERKE[v.key] ?? NaN, VEREINE, LIGEN);
+const v = (key) => welt.vereine.find((x) => x.key === key);
 
-const spieler = (o) => K.neueKarriere({ name: "Test", nation: "GER", nummer: 9, pos: "ST", verein: vonKey("BBB"), seed: 1, ...o });
-
-// ── Welt ─────────────────────────────────────────────────────────────────────
-
-test("das Niveau ist die Mannschaftsstärke ohne den Verbund", () => {
-  /* Sonst verglichen wir einen Spielerwert mit einem Mannschaftswert: `teamStaerke`
-     enthält den vollen Verbundbonus, den eine Mannschaft hat und ein Spieler nie. */
-  assert.equal(vonKey("AAA").niveau, 96 - 9);
-  assert.equal(vonKey("CCC").niveau, 74 - 9);
-});
+// ── Die Welt ─────────────────────────────────────────────────────────────────
 
 test("Vereine ohne Kaderdaten fallen aus der Welt", () => {
   assert.equal(welt.vereine.length, 6);
-  assert.equal(vonKey("FFF"), undefined);
+  assert.equal(v("OHN"), undefined);
 });
 
-test("der Rang gilt je Liga, nicht über alle", () => {
-  /* Der Beste ist Erster, der Schlechteste Letzter — dazwischen wird gestaucht. */
-  assert.equal(vonKey("AAA").ligaRang, 1);
-  assert.ok(vonKey("BBB").ligaRang > 1 && vonKey("BBB").ligaRang < vonKey("CCC").ligaRang);
-  /* Der zweitstärkste Verein der Welt ist trotzdem Erster seiner Liga. */
-  assert.equal(vonKey("DDD").ligaRang, 1);
-  assert.equal(vonKey("GGG").ligaRang, 1);
+/* DER FEHLER, DEN DAS FÄNGT: Ein Zweitligist mit starkem Kader bekäme sonst die
+   höchste Rufstufe und damit eine Meisterschaftschance — aus der zweiten Liga
+   gewinnt man aber keine Meisterschaft. */
+test("die zweite Liga ist bei Stufe zwei gedeckelt", () => {
+  assert.equal(v("SPI").stufe, 5, "93 ist Spitzenstufe");
+  assert.equal(v("ZWA").stufe, K.STUFE_MAX_2_LIGA, "88 in der zweiten Liga bleibt Stufe 2");
+  assert.ok(v("ZWA").staerke > v("MIT").staerke, "obwohl der Kader stärker ist als der des Erstligisten");
+  assert.ok(v("MIT").stufe > v("ZWA").stufe);
 });
 
-/* DER FEHLER, DEN DAS FÄNGT: Unsere Welt kennt 31 Bundesligavereine aus sechzehn
-   Jahren, eine Tabelle hat aber achtzehn Plätze — der 1. FC Nürnberg stand auf
-   „Platz 21". */
-test("Tabellenplätze gehen nie über die echte Ligagröße hinaus", () => {
-  const viele = Array.from({ length: 31 }, (_, i) => ({ key: `V${i}`, name: `V${i}`, lg: "BL" }));
-  const w = K.baueWelt(viele, (v) => 95 - Number(v.key.slice(1)) * 0.5);
-  for (const v of w.vereine) {
-    assert.equal(v.ligaGroesse, K.LIGA_PLAETZE.BL);
-    assert.ok(v.ligaRang >= 1 && v.ligaRang <= 18, `${v.name}: Rang ${v.ligaRang}`);
-  }
-  assert.equal(w.vereine[0].ligaRang, 1);
-  assert.equal(w.vereine.at(-1).ligaRang, 18);
-});
-
-// ── Einsatzzeit ──────────────────────────────────────────────────────────────
-
-/* DER FEHLER, DEN DIESE PRÜFUNG FÄNGT: Ohne den Versatz in der Kurve stand ein
-   Spieler auf Augenhöhe mit seinem Verein bei 0,5 und kam auf fünfzehn von 34
-   Spielen. Wer das Niveau seines Vereins hat, ist Stammspieler. */
-test("wer auf dem Niveau seines Vereins liegt, ist Stammspieler", () => {
-  const gleich = K.einsatzAnteil(80, 80, 100, 100);
-  /* Gemessen 69 % — also 23 von 34 Spielen. Das ist ein Stammspieler mit den
-     üblichen Pausen, kein Ergänzungsspieler. Ohne den Versatz waren es 44 %. */
-  assert.ok(gleich > 0.65, `nur ${(gleich * 100).toFixed(0)} % Einsatzzeit bei Gleichstand`);
-  assert.ok(K.einsatzAnteil(88, 80, 100, 100) > gleich, "besser als der Verein heißt mehr Spiele");
-  assert.ok(K.einsatzAnteil(70, 88, 100, 100) < 0.25, "acht Punkte darunter ist Bank");
-});
-
-test("Einsatzzeit steigt monoton mit der Stärke und bleibt im Rahmen", () => {
-  let vorher = -1;
-  for (let o = 60; o <= 99; o++) {
-    const a = K.einsatzAnteil(o, 80);
-    assert.ok(a >= vorher, `fällt bei ${o}`);
-    assert.ok(a > 0 && a < 1);
-    vorher = a;
-  }
-  /* Verletzt und ohne Form spielt auch ein Weltklassemann weniger. */
-  assert.ok(K.einsatzAnteil(90, 75, 20, 10) < K.einsatzAnteil(90, 75, 100, 100));
-});
-
-// ── Saisonleistung ───────────────────────────────────────────────────────────
-
-test("Tore hängen an Position, Stärke und Umfeld", () => {
-  const zufall = K.rng(5);
-  const schnitt = (k, niveau) => {
-    let t = 0;
-    for (let n = 0; n < 400; n++) t += K.saisonLeistung(k, niveau, zufall).tore;
-    return t / 400;
-  };
-  /* Alle drei auf Augenhöhe mit ihrem Verein — sonst vergliche man Bankdrücker. */
-  const auf = (pos) => ({ ...spieler({ pos }), overall: 82, form: 70, fitness: 90 });
-  const stuermer = schnitt(auf("ST"), 80);
-  const mittelfeld = schnitt(auf("MF"), 80);
-  const abwehr = schnitt(auf("ABW"), 80);
-  assert.ok(stuermer > mittelfeld && mittelfeld > abwehr, `${stuermer} / ${mittelfeld} / ${abwehr}`);
-  /* Ein Verteidiger trifft selten, aber nicht nie. */
-  assert.ok(abwehr > 0.3 && abwehr < 6, `Verteidiger ${abwehr}`);
-
-  const stark = { ...auf("ST"), overall: 92 };
-  const schwach = { ...auf("ST"), overall: 70 };
-  assert.ok(schnitt(stark, 85) > schnitt(schwach, 85) * 2.5, "Stärke muss klar durchschlagen");
-});
-
-/* Die Größenordnung: Ein Spitzenstürmer bei einem Spitzenverein soll auf zwanzig bis
-   dreißig Ligatore kommen, kein Dutzend und keine sechzig. */
-test("ein Spitzenstürmer erreicht eine realistische Torausbeute", () => {
-  const zufall = K.rng(11);
-  const k = { ...spieler({ pos: "ST" }), overall: 92, form: 80, fitness: 90 };
-  let tore = 0, spiele = 0;
-  for (let n = 0; n < 300; n++) { const l = K.saisonLeistung(k, 86, zufall); tore += l.tore; spiele += l.spiele; }
-  const jeSaison = tore / 300;
-  assert.ok(jeSaison > 15 && jeSaison < 35, `${jeSaison.toFixed(1)} Tore je Saison`);
-  assert.ok(spiele / 300 > 24, `nur ${(spiele / 300).toFixed(1)} Spiele je Saison`);
-});
-
-// ── Verein und Titel ─────────────────────────────────────────────────────────
-
-test("der Tabellenplatz bleibt in der Liga und folgt dem Niveau", () => {
-  const zufall = K.rng(3);
-  const platz = (key) => {
-    let s = 0;
-    for (let n = 0; n < 400; n++) {
-      const p = K.ligaPlatz(vonKey(key), spieler(), zufall);
-      assert.ok(p >= 1 && p <= vonKey(key).ligaGroesse, `${key}: Platz ${p}`);
-      s += p;
-    }
-    return s / 400;
-  };
-  assert.ok(platz("AAA") < platz("BBB"), "der stärkere Verein steht im Schnitt weiter oben");
-  assert.ok(platz("BBB") < platz("CCC"));
-});
-
-test("nur der Erste wird Meister, und der Pokal ist ein Sonderweg", () => {
-  const zufall = K.rng(4);
-  const bl = { ...vonKey("AAA"), lg: "BL" };
-  let meister = 0, pokal = 0;
-  for (let n = 0; n < 500; n++) {
-    const t = K.vereinsTitel(bl, 1, spieler(), zufall);
-    if (t.includes("MBL")) meister++;
-    if (t.includes("DFB")) pokal++;
-  }
-  assert.equal(meister, 500, "Platz eins ist immer der Titel");
-  assert.ok(pokal > 60 && pokal < 250, `Pokal ${pokal} von 500`);
-  assert.deepEqual(K.vereinsTitel(bl, 2, spieler(), K.rng(9)).filter((t) => t === "MBL"), []);
-  /* Ligen ohne Meisterschlüssel (Portugal, Niederlande) vergeben keinen. */
-  assert.deepEqual(K.vereinsTitel({ ...bl, lg: "NL" }, 1, spieler(), K.rng(9)), []);
-});
-
-test("Europapokal gibt es nur nach guter Vorsaison", () => {
-  const zufall = K.rng(6);
-  const stark = { ...vonKey("AAA"), lg: "BL" };
-  assert.deepEqual(K.europaTitel(stark, null, spieler(), zufall), [], "ohne Vorsaison nichts");
-  assert.deepEqual(K.europaTitel(stark, 12, spieler(), zufall), [], "Platz zwölf reicht nicht");
-  let cl = 0, el = 0;
-  for (let n = 0; n < 600; n++) {
-    if (K.europaTitel(stark, 1, spieler(), zufall).includes("CL")) cl++;
-    if (K.europaTitel(stark, 5, spieler(), zufall).includes("EL")) el++;
-  }
-  assert.ok(cl > 10 && cl < 250, `CL ${cl} von 600`);
-  assert.ok(el > 10, `EL ${el} von 600`);
-});
-
-// ── Nationalmannschaft ───────────────────────────────────────────────────────
-
-test("Turniere wechseln sich ab, Südamerika spielt die Copa", () => {
-  assert.equal(K.turnierIn(4, "GER"), "WM");
-  assert.equal(K.turnierIn(8, "BRA"), "WM");
-  assert.equal(K.turnierIn(2, "GER"), "EM");
-  assert.equal(K.turnierIn(2, "BRA"), "CA");
-  assert.equal(K.turnierIn(2, "ARG"), "CA");
-  assert.equal(K.turnierIn(3, "GER"), null, "in ungeraden Saisons ist Pause");
-});
-
-test("die Berufungsschwelle steigt mit der Stärke der Nation", () => {
-  assert.ok(K.nationsSchwelle(90) > K.nationsSchwelle(40), "in Brasilien ist die Konkurrenz größer");
-  assert.ok(K.nationsSchwelle(50) > 65 && K.nationsSchwelle(90) < 90);
-});
-
-test("ohne Turnier gibt es keinen Titel", () => {
-  assert.deepEqual(K.nationalTitel(null, 90, spieler(), K.rng(1)), []);
-});
-
-// ── Einzelauszeichnungen ─────────────────────────────────────────────────────
-
-test("der Ballon d'Or verlangt Weltklasse UND einen großen Titel", () => {
-  const zufall = K.rng(8);
-  const welt2 = { ...spieler(), overall: 94 };
-  const grosseSaison = { tore: 34, vorlagen: 12, spiele: 33, anteil: 0.95 };
-  let ohneTitel = 0, mitTitel = 0;
-  for (let n = 0; n < 400; n++) {
-    if (K.einzelTitel(welt2, grosseSaison, [], zufall).includes("BDO")) ohneTitel++;
-    if (K.einzelTitel(welt2, grosseSaison, ["CL"], zufall).includes("BDO")) mitTitel++;
-  }
-  assert.equal(ohneTitel, 0, "ohne großen Titel niemals");
-  assert.ok(mitTitel > 20, `mit Titel ${mitTitel} von 400`);
-  /* Und selbst mit Titel nicht für einen Durchschnittsspieler. */
-  const mittel = { ...spieler(), overall: 84 };
-  assert.equal(K.einzelTitel(mittel, grosseSaison, ["CL"], K.rng(2)).includes("BDO"), false);
-});
-
-test("die Torjägerkanone hat je Position eine eigene Marke", () => {
-  const zufall = K.rng(12);
-  const wenig = { tore: 4, vorlagen: 2, spiele: 30, anteil: 0.9 };
-  assert.equal(K.einzelTitel(spieler({ pos: "ST" }), wenig, [], zufall).includes("TSK"), false);
-  let treffer = 0;
-  for (let n = 0; n < 200; n++) {
-    if (K.einzelTitel(spieler({ pos: "ABW" }), { tore: 9, vorlagen: 1, spiele: 34, anteil: 1 }, [], zufall).includes("TSK")) treffer++;
-  }
-  assert.ok(treffer > 40, "neun Tore sind für einen Verteidiger eine Kanone");
-});
-
-// ── Entscheidungen ───────────────────────────────────────────────────────────
-
-test("jede Entscheidung kostet etwas und bringt etwas", () => {
-  for (const e of K.EREIGNISSE) {
-    assert.ok(e.frage && e.wahlen.length >= 2, e.key);
-    for (const w of e.wahlen) {
-      const werte = Object.values(w.wirkung || {});
-      assert.ok(werte.length, `${e.key}: „${w.text}" wirkt gar nicht`);
-    }
-    /* KEINE WAHL DARF JEDE ANDERE SCHLAGEN. Eine Wahl mit lauter kleinen Vorteilen
-       ist in Ordnung, solange eine andere auf irgendeiner Achse besser ist — sonst
-       gäbe es nichts zu entscheiden. */
-    const achsen = ["overall", "fitness", "moral", "ruf"];
-    for (const a of e.wahlen) {
-      const schlaegtAlle = e.wahlen.filter((b) => b !== a).every((b) =>
-        achsen.every((x) => (a.wirkung[x] || 0) >= (b.wirkung[x] || 0)) && (a.risiko || 0) <= (b.risiko || 0));
-      assert.ok(!schlaegtAlle, `${e.key}: „${a.text}" ist jeder anderen Wahl überlegen`);
-    }
-  }
-});
-
-test("Werte bleiben in ihren Grenzen", () => {
-  const hart = { ...spieler(), overall: K.OVERALL_MAX, fitness: 100, moral: 100, ruf: 100 };
-  const nachOben = K.entscheide(hart, { wirkung: { overall: 9, fitness: 40, moral: 40, ruf: 40 } });
-  assert.equal(nachOben.overall, K.OVERALL_MAX);
-  assert.equal(nachOben.fitness, 100);
-  assert.equal(nachOben.ruf, 100);
-  const schwach = { ...spieler(), overall: K.OVERALL_START, fitness: 5, moral: 5 };
-  const nachUnten = K.entscheide(schwach, { wirkung: { overall: -9, fitness: -40, moral: -40 } });
-  assert.equal(nachUnten.overall, K.OVERALL_START, "unter den Skalenboden geht es nicht");
-  assert.ok(nachUnten.fitness >= 5);
-});
-
-test("Ereignisse wiederholen sich nicht, solange es neue gibt", () => {
-  const k = spieler();
-  const gesehen = [];
-  for (let i = 0; i < K.EREIGNISSE.length; i++) {
-    const e = K.ziehEreignis(k, gesehen);
-    assert.ok(!gesehen.includes(e.key), `${e.key} kam doppelt`);
-    gesehen.push(e.key);
-  }
-});
-
-// ── Transfers ────────────────────────────────────────────────────────────────
-
-test("Angebote kommen von Vereinen auf dem eigenen Niveau", () => {
-  const zufall = K.rng(21);
-  const k = { ...spieler(), overall: 76, ruf: 30, alter: 25 };
-  const ang = K.angebote(k, welt, zufall, 3);
-  for (const a of ang) {
-    assert.notEqual(a.verein.key, k.verein.key, "der eigene Verein bietet nicht");
-    assert.ok(Math.abs(a.verein.niveau - k.overall) < 14, `${a.verein.name} auf ${a.verein.niveau} für einen ${k.overall}er`);
-    assert.ok(a.jahre >= 2 && a.jahre <= 5);
-  }
-  /* DER FEHLER, DEN DAS FÄNGT: Eine frühere Formel schob einem 80er-Spieler
-     Angebote von 91er-Vereinen zu. Wer annahm, saß auf der Bank und schoss in einer
-     ganzen Laufbahn 54 Tore. */
-  const spitze = K.angebote({ ...spieler(), overall: 94, ruf: 90, alter: 27 }, welt, zufall, 3);
-  const mittel = K.angebote({ ...spieler(), overall: 72, ruf: 10, alter: 27 }, welt, zufall, 3);
-  if (spitze.length && mittel.length) {
-    assert.ok(spitze[0].verein.niveau > mittel[0].verein.niveau, "wer besser ist, bekommt bessere Angebote");
-  }
+test("die Rufstufe folgt der Stärke", () => {
+  assert.ok(v("SPI").stufe > v("MIT").stufe && v("MIT").stufe > v("KEL").stufe);
+  assert.equal(K.stufeVon(60), 0, "unter jeder Schwelle ist Stufe null");
 });
 
 // ── Entwicklung ──────────────────────────────────────────────────────────────
 
-test("jung wächst, alt verliert", () => {
-  assert.ok(K.alterswachstum(18) > K.alterswachstum(25));
-  assert.ok(K.alterswachstum(25) > K.alterswachstum(31));
-  assert.ok(K.alterswachstum(36) < 0);
-  const zufall = K.rng(30);
-  const jung = K.alterePlayer({ ...spieler(), alter: 19, overall: 70 }, { anteil: 0.9 }, zufall, 80);
-  assert.ok(jung.overall > 70, "ein spielender Neunzehnjähriger wird besser");
-  const alt = K.alterePlayer({ ...spieler(), alter: 36, overall: 85 }, { anteil: 0.9 }, zufall, 80);
-  assert.ok(alt.overall < 85, "mit 36 geht es abwärts");
-  assert.equal(jung.saison, 2);
-  assert.equal(jung.alter, 20);
+test("Entwicklungstypen werden im erwarteten Verhältnis gezogen", () => {
+  const zufall = K.rng(7);
+  const zahl = { frueh: 0, normal: 0, spaet: 0 };
+  for (let i = 0; i < 4000; i++) zahl[K.entwicklungstyp(zufall, "ST")]++;
+  assert.ok(zahl.frueh / 4000 > 0.07 && zahl.frueh / 4000 < 0.13, `früh ${zahl.frueh}`);
+  assert.ok(zahl.spaet / 4000 > 0.07 && zahl.spaet / 4000 < 0.13, `spät ${zahl.spaet}`);
+  assert.ok(zahl.normal / 4000 > 0.75);
 });
 
-/* DER ENTWURFSFEHLER, DEN DAS FÄNGT: Hing das Wachstum allein an der Spielzeit, war
-   Faulheit die beste Strategie — beim kleinen Verein spielte man immer und
-   entwickelte sich schneller als beim Spitzenklub. Gemessen: Höchstwert 88 beim
-   Bleiben gegen 82,5 beim Wechseln. */
-test("das Niveau, auf dem man spielt, treibt die Entwicklung mit", () => {
-  const zufall = K.rng(31);
-  const mittel = (niveau, anteil) => {
+test("Torhüter reifen immer normal", () => {
+  const zufall = K.rng(3);
+  for (let i = 0; i < 200; i++) assert.equal(K.entwicklungstyp(zufall, "TW"), "normal");
+});
+
+test("jung wächst man, alt verliert man", () => {
+  const zufall = K.rng(11);
+  const schnitt = (typ, alter) => {
     let s = 0;
-    for (let n = 0; n < 200; n++) s += K.alterePlayer({ ...spieler(), alter: 20, overall: 75 }, { anteil }, zufall, niveau).overall;
-    return s / 200;
+    for (let i = 0; i < 500; i++) s += K.wachstum(typ, alter, zufall);
+    return s / 500;
   };
-  assert.ok(mittel(90, 0.9) > mittel(66, 0.9), "gleich viel spielen, höheres Niveau: mehr Fortschritt");
-  /* Und beide Wege müssen sich ungefähr die Waage halten — sonst gibt es nur einen. */
-  const bank = mittel(90, 0.4), stamm = mittel(66, 1.0);
-  assert.ok(Math.abs(bank - stamm) < 1.2, `Bank oben ${bank.toFixed(2)} gegen Stamm unten ${stamm.toFixed(2)}`);
+  for (const typ of ["frueh", "normal", "spaet"]) {
+    assert.ok(schnitt(typ, 18) > 0, `${typ} mit 18`);
+    assert.ok(schnitt(typ, 36) < 0, `${typ} mit 36`);
+    assert.ok(schnitt(typ, 18) > schnitt(typ, 26), `${typ}: mit 18 mehr als mit 26`);
+  }
+  /* Der Frühentwickler ist mit 18 vorn und mit 26 schon hinten. */
+  assert.ok(schnitt("frueh", 18) > schnitt("spaet", 18));
+  assert.ok(schnitt("spaet", 26) > schnitt("frueh", 26));
 });
 
-test("irgendwann ist Schluss", () => {
-  assert.equal(K.trittZurueck({ ...spieler(), alter: 24, overall: 85 }, K.rng(1)), false);
-  assert.equal(K.trittZurueck({ ...spieler(), alter: 40 }, K.rng(1)), true);
-  const zufall = K.rng(40);
-  let n = 0;
-  while (!K.trittZurueck({ ...spieler(), alter: 34, overall: 78 }, zufall) && n < 200) n++;
-  assert.ok(n < 200, "mit 34 muss das Ende irgendwann kommen");
+test("ein Alter zwischen den Stufen bekommt trotzdem einen Wert", () => {
+  const zufall = K.rng(5);
+  for (let alter = 16; alter <= 40; alter++)
+    assert.equal(typeof K.wachstum("normal", alter, zufall), "number", `Alter ${alter}`);
 });
 
-// ── Das Urteil ───────────────────────────────────────────────────────────────
+// ── Einsatzzeit ──────────────────────────────────────────────────────────────
 
-test("mehr Titel heißt nie ein schlechteres Urteil", () => {
-  const stufen = K.STUFEN.map((s) => s.key);
-  const leer = { titel: {}, overall: 70 };
-  const viel = { titel: { CL: 3, WM: 1, BDO: 2, MBL: 5, DFB: 3, TSK: 4 }, overall: 94, hoechsterOverall: 94 };
-  assert.ok(K.karrierePunkte(viel) > K.karrierePunkte(leer));
-  assert.equal(K.stufeFuer(leer).key, "gescheit");
-  assert.equal(K.stufeFuer(viel).key, "legende");
-  /* Die Stufen müssen absteigend geordnet sein, sonst greift `find` die falsche. */
-  for (let i = 1; i < K.STUFEN.length; i++) assert.ok(K.STUFEN[i].ab < K.STUFEN[i - 1].ab);
-  assert.equal(stufen.at(-1), "gescheit");
+/* Wer genau die Anforderung seiner Stufe erfüllt, ist Stammspieler — ein Verein,
+   der einen Spieler holt, lässt ihn auch spielen. */
+test("wer die Anforderung erfüllt, spielt regelmäßig", () => {
+  const genau = K.einsatzAnteil(K.STUFE_MINDEST_OVR[3], 3);
+  assert.ok(genau > 0.65, `nur ${(genau * 100).toFixed(0)} % bei genauer Passung`);
+  assert.ok(K.einsatzAnteil(K.STUFE_MINDEST_OVR[3] - 8, 3) < 0.35, "acht Punkte darunter ist Bank");
+  assert.ok(K.einsatzAnteil(90, 3) > genau);
 });
 
-// ── Die ganze Laufbahn ───────────────────────────────────────────────────────
+test("die Rolle drückt die Einsatzzeit", () => {
+  const o = 80;
+  assert.ok(K.einsatzAnteil(o, 3, "stamm") > K.einsatzAnteil(o, 3, "rotation"));
+  assert.ok(K.einsatzAnteil(o, 3, "rotation") > K.einsatzAnteil(o, 3, "kader"));
+});
 
-/* Die Probe aufs Ganze: Eine Laufbahn muss enden, plausible Zahlen liefern und auf
-   Entscheidungen reagieren. Ohne das wäre alles darüber Zahlenspielerei. */
-function laufbahn(seed, klug) {
-  const zufall = K.rng(K.hashStr("t" + seed));
-  const klein = welt.vereine.filter((v) => v.niveau < 72);
-  let k = K.neueKarriere({ name: "T", nation: "GER", nummer: 9, pos: "ST", seed,
-    verein: klein[0] || welt.vereine.at(-1) });
-  let hoechster = k.overall, vorplatz = null, runden = 0;
-  while (!k.beendet && runden++ < 40) {
-    if (klug) k = K.entscheide(k, K.ziehEreignis(k, []).wahlen[0]);
-    const l = K.saisonLeistung(k, k.verein.niveau, zufall);
-    const platz = K.ligaPlatz(k.verein, k, zufall);
-    for (const t of [...K.vereinsTitel(k.verein, platz, k, zufall), ...K.europaTitel(k.verein, vorplatz, k, zufall)]) {
-      k.titel[t] = (k.titel[t] || 0) + 1;
+// ── Leistung ─────────────────────────────────────────────────────────────────
+
+test("Tore hängen an Position, Stärke und Umfeld", () => {
+  const zufall = K.rng(9);
+  const schnitt = (pos, ovr, stufe) => {
+    let t = 0;
+    const k = { ...K.neueKarriere({ name: "T", land: "XXX", nummer: 9, pos }), ovr, rolle: "stamm" };
+    for (let i = 0; i < 400; i++) t += K.saisonLeistung(k, stufe, zufall).tore;
+    return t / 400;
+  };
+  const st = schnitt("ST", 84, 4), zm = schnitt("ZM", 84, 4), iv = schnitt("IV", 84, 4);
+  assert.ok(st > zm && zm > iv, `${st} / ${zm} / ${iv}`);
+  assert.ok(iv > 0.2 && iv < 6, `Innenverteidiger ${iv}`);
+  assert.ok(schnitt("ST", 92, 5) > schnitt("ST", 70, 5) * 2, "Stärke muss durchschlagen");
+});
+
+test("ein Spitzenstürmer erreicht eine realistische Ausbeute", () => {
+  const zufall = K.rng(13);
+  const k = { ...K.neueKarriere({ name: "T", land: "XXX", nummer: 9, pos: "ST" }), ovr: 92, rolle: "stamm" };
+  let tore = 0, spiele = 0;
+  for (let i = 0; i < 300; i++) { const l = K.saisonLeistung(k, 5, zufall); tore += l.tore; spiele += l.spiele; }
+  assert.ok(tore / 300 > 14 && tore / 300 < 38, `${(tore / 300).toFixed(1)} Tore je Saison`);
+  assert.ok(spiele / 300 > 24, `nur ${(spiele / 300).toFixed(1)} Spiele`);
+});
+
+// ── Titel ────────────────────────────────────────────────────────────────────
+
+test("die Titelchance steigt mit der Rufstufe", () => {
+  const zufall = K.rng(21);
+  const quote = (verein, key) => {
+    let n = 0;
+    for (let i = 0; i < 2000; i++) if (K.saisonTitel(verein, zufall).includes(key)) n++;
+    return n / 2000;
+  };
+  const spitze = { lg: "BL", stufe: 5 }, mitte = { lg: "BL", stufe: 3 }, keller = { lg: "BL", stufe: 0 };
+  assert.ok(quote(spitze, "MBL") > quote(mitte, "MBL"));
+  assert.ok(quote(mitte, "MBL") > 0);
+  assert.equal(quote(keller, "MBL"), 0, "Stufe null wird nie Meister");
+  assert.ok(quote(keller, "DFB") > 0, "im Pokal ist auch unten etwas möglich");
+});
+
+/* DER FEHLER, DEN DAS FÄNGT: Ohne Meisterschlüssel je Liga bekäme ein Zweitligist
+   oder ein Verein aus Portugal einen Titel, den es bei uns gar nicht gibt. */
+test("nur Ligen mit Titelschlüssel vergeben Meisterschaften", () => {
+  const zufall = K.rng(4);
+  for (const lg of ["BL2", "PL2", "PT", "NL"]) {
+    let n = 0;
+    for (let i = 0; i < 500; i++) n += K.saisonTitel({ lg, stufe: 5 }, zufall).filter((t) => t.startsWith("M")).length;
+    assert.equal(n, 0, `${lg} darf keinen Meistertitel vergeben`);
+  }
+});
+
+test("Modifikatoren aus Entscheidungen wirken auf die Titelchance", () => {
+  const zufall = K.rng(6);
+  const quote = (mod) => {
+    let n = 0;
+    for (let i = 0; i < 2000; i++) if (K.saisonTitel({ lg: "BL", stufe: 4 }, zufall, mod).includes("MBL")) n++;
+    return n / 2000;
+  };
+  assert.ok(quote({ liga: 2 }) > quote({}) * 1.4, "Priorität Liga verdoppelt die Chance");
+  assert.ok(quote({ liga: 0.5 }) < quote({}));
+});
+
+test("den Ballon d'Or gibt es nur ganz oben und selten", () => {
+  const zufall = K.rng(8);
+  const quote = (ovr) => {
+    let n = 0;
+    for (let i = 0; i < 2000; i++) n += K.einzelTitel({ ovr }, { tore: 20 }, zufall).length;
+    return n / 2000;
+  };
+  assert.equal(quote(85), 0, "unter 88 gar nicht");
+  assert.ok(quote(95) > quote(89) && quote(95) < 0.6, `bei 95: ${quote(95)}`);
+});
+
+// ── Marktwert ────────────────────────────────────────────────────────────────
+
+test("der Marktwert steigt streng mit dem Wert", () => {
+  let vorher = -1;
+  for (let o = 45; o <= 99; o++) {
+    const w = K.marktwert(o);
+    assert.ok(w >= vorher, `fällt bei ${o}`);
+    vorher = w;
+  }
+  assert.equal(K.marktwert(50), 1e5);
+  assert.equal(K.marktwert(99), 2.5e8);
+  assert.ok(K.marktwert(72) > K.marktwert(70) && K.marktwert(72) < K.marktwert(75), "dazwischen wird geschätzt");
+});
+
+test("Werte werden lesbar geschrieben", () => {
+  assert.match(K.werteText(1e5), /Tsd/);
+  assert.match(K.werteText(3e7), /Mio/);
+});
+
+// ── Entscheidungen ───────────────────────────────────────────────────────────
+
+/* DAS HERZSTÜCK: Jede Option nennt ihre Quote, und die Quote muss stimmen. */
+test("eine Option mit Quote trifft sie auch", () => {
+  const zufall = K.rng(17);
+  const option = { label: "x", chance: 0.6, wirkung: { ovr: 3 }, sonst: { ovr: -2 } };
+  const k = { ...K.neueKarriere({ name: "T", land: "XXX", nummer: 1, pos: "ST" }), ovr: 70 };
+  let gelungen = 0;
+  for (let i = 0; i < 4000; i++) if (K.entscheide(k, option, zufall).gelungen) gelungen++;
+  assert.ok(Math.abs(gelungen / 4000 - 0.6) < 0.03, `gemessen ${(gelungen / 4000).toFixed(3)} statt 0,6`);
+});
+
+test("eine Option ohne Quote wirkt sicher", () => {
+  const zufall = K.rng(2);
+  const k = { ...K.neueKarriere({ name: "T", land: "XXX", nummer: 1, pos: "ST" }), ovr: 70 };
+  const r = K.entscheide(k, { label: "x", wirkung: { ovr: 2 } }, zufall);
+  assert.equal(r.gelungen, true);
+  assert.equal(r.karriere.ovr, 72);
+});
+
+test("Wirkungen greifen und bleiben in den Grenzen", () => {
+  const zufall = K.rng(1);
+  const k = { ...K.neueKarriere({ name: "T", land: "XXX", nummer: 1, pos: "ST" }), ovr: 98 };
+  assert.equal(K.entscheide(k, { label: "x", wirkung: { ovr: 9 } }, zufall).karriere.ovr, K.OVR_MAX);
+  const tief = { ...k, ovr: 41 };
+  assert.equal(K.entscheide(tief, { label: "x", wirkung: { ovr: -9 } }, zufall).karriere.ovr, K.OVR_MIN);
+  const rolle = K.entscheide(k, { label: "x", wirkung: { rolle: "rotation" } }, zufall);
+  assert.equal(rolle.karriere.rolle, "rotation");
+  const mod = K.entscheide(k, { label: "x", wirkung: { liga: 2, europa: 0.5 } }, zufall);
+  assert.deepEqual(mod.mod, { liga: 2, pokal: 1, europa: 0.5 });
+});
+
+/* Jede Karte muss spielbar sein: mindestens zwei Optionen, jede mit Beschriftung,
+   und wo eine Quote steht, muss es auch den Gegenfall geben. */
+test("alle Ereigniskarten sind vollständig", () => {
+  assert.ok(K.EREIGNISSE.length >= 12, `nur ${K.EREIGNISSE.length} Karten`);
+  const keys = K.EREIGNISSE.map((e) => e.key);
+  assert.equal(new Set(keys).size, keys.length, "doppelte Schlüssel");
+  for (const e of K.EREIGNISSE) {
+    assert.ok(e.titel && e.text, `${e.key} braucht Titel und Text`);
+    assert.ok(e.optionen.length >= 2, `${e.key} braucht eine Wahl`);
+    for (const o of e.optionen) {
+      assert.ok(o.label, `${e.key}: Option ohne Beschriftung`);
+      assert.ok(o.wirkung, `${e.key}/${o.label}: keine Wirkung`);
+      if (o.chance !== undefined) {
+        assert.ok(o.chance > 0 && o.chance < 1, `${e.key}/${o.label}: unmögliche Quote`);
+        assert.ok(o.sonst, `${e.key}/${o.label}: Quote ohne Gegenfall`);
+      }
     }
-    k.gesamt = { spiele: k.gesamt.spiele + l.spiele, tore: k.gesamt.tore + l.tore, vorlagen: k.gesamt.vorlagen + l.vorlagen };
-    vorplatz = platz;
-    k = K.alterePlayer(k, l, zufall, k.verein.niveau);
-    if (klug) {
-      const a = K.angebote(k, welt, zufall, 3);
-      if (a[0] && a[0].verein.niveau > k.verein.niveau + 1) k = { ...k, verein: a[0].verein };
-    }
-    hoechster = Math.max(hoechster, k.overall);
-    if (K.trittZurueck(k, zufall)) k.beendet = true;
-  }
-  return { ...k, hoechsterOverall: hoechster };
-}
-
-test("eine Laufbahn endet und liefert plausible Zahlen", () => {
-  for (let s = 0; s < 30; s++) {
-    const k = laufbahn(s, true);
-    assert.ok(k.beendet, `Lauf ${s} endete nicht`);
-    assert.ok(k.alter >= K.RUECKTRITT_AB && k.alter <= 41, `Rücktritt mit ${k.alter}`);
-    assert.ok(k.saison >= 10 && k.saison <= 26, `${k.saison} Saisons`);
-    assert.ok(k.overall >= K.OVERALL_START && k.overall <= K.OVERALL_MAX);
-    assert.ok(k.gesamt.spiele > 0 && k.gesamt.tore >= 0);
-    /* Nicht mehr Tore als Spiele — das wäre für einen Ligabetrieb absurd. */
-    assert.ok(k.gesamt.tore <= k.gesamt.spiele, `${k.gesamt.tore} Tore in ${k.gesamt.spiele} Spielen`);
   }
 });
 
-test("wer entscheidet und wechselt, kommt weiter", () => {
-  let klug = 0, passiv = 0;
-  for (let s = 0; s < 40; s++) {
-    klug += K.karrierePunkte(laufbahn(s, true));
-    passiv += K.karrierePunkte(laufbahn(s, false));
+test("Ereignisse passen zum Zeitpunkt", () => {
+  const zufall = K.rng(23);
+  const alt = { ...K.neueKarriere({ name: "T", land: "XXX", nummer: 1, pos: "ST" }), alter: 30, verein: v("SPI") };
+  for (let i = 0; i < 300; i++) {
+    const e = K.ziehEreignis(alt, zufall);
+    assert.notEqual(e.key, "schule", "mit dreißig nicht mehr die Schule");
+    assert.notEqual(e.key, "grossvater", "und kein Verbandswechsel mehr");
   }
-  assert.ok(klug > passiv * 2, `klug ${(klug / 40).toFixed(1)} gegen passiv ${(passiv / 40).toFixed(1)}`);
+  const klein = { ...alt, verein: v("KEL") };
+  for (let i = 0; i < 300; i++)
+    assert.notEqual(K.ziehEreignis(klein, zufall).key, "endspiel", "ohne Spitzenverein kein Endspiel");
+});
+
+// ── Angebote ─────────────────────────────────────────────────────────────────
+
+/* DER FEHLER, DEN DAS FÄNGT: Ohne eigene Regel für den Anfang bekäme ein
+   Sechzehnjähriger Angebote von Spitzenvereinen — und die zweite Liga, für die wir
+   die halbe Datenwelt gebaut haben, käme im Spiel nie vor. */
+test("die ersten Angebote kommen aus der Heimat und meist von unten", () => {
+  const zufall = K.rng(31);
+  for (let i = 0; i < 40; i++) {
+    const a = K.jugendAngebote(welt, "XXX", zufall);
+    assert.ok(a.length >= 2, "mindestens zwei Angebote");
+    for (const x of a) assert.equal(x.liga.land, "XXX", `${x.name} ist nicht aus der Heimat`);
+    assert.ok(a.some((x) => x.liga.stufe === 2), "eines muss aus der zweiten Liga sein");
+    for (const x of a) assert.ok(x.stufe <= 3, `${x.name}: kein Spitzenverein für einen Jugendlichen`);
+  }
+});
+
+test("Angebote überspringen nie zwei Stufen", () => {
+  const zufall = K.rng(19);
+  for (const ovr of [55, 65, 75, 85]) {
+    const k = { ...K.neueKarriere({ name: "T", land: "XXX", nummer: 1, pos: "ST" }), ovr, alter: 24 };
+    for (const a of K.angebote(welt, k, zufall))
+      assert.ok(a.stufe <= K.hoechsteErreichbareStufe(ovr), `${ovr}: ${a.name} (Stufe ${a.stufe}) ist zu hoch`);
+  }
+});
+
+test("ab zweiunddreißig werden die Angebote weniger", () => {
+  const zufall = K.rng(29);
+  const jung = { ...K.neueKarriere({ name: "T", land: "XXX", nummer: 1, pos: "ST" }), ovr: 80, alter: 26 };
+  const alt = { ...jung, alter: K.SPAET_AB };
+  assert.ok(K.angebote(welt, jung, zufall).length > K.angebote(welt, alt, zufall).length);
+});
+
+test("man bekommt kein Angebot vom eigenen Verein", () => {
+  const zufall = K.rng(37);
+  const k = { ...K.neueKarriere({ name: "T", land: "XXX", nummer: 1, pos: "ST" }), ovr: 80, alter: 26, verein: v("MIT") };
+  for (let i = 0; i < 30; i++)
+    assert.ok(!K.angebote(welt, k, zufall).some((a) => a.key === "MIT"));
+});
+
+// ── Auszeichnungen ───────────────────────────────────────────────────────────
+
+const leer = () => ({ ...K.neueKarriere({ name: "T", land: "XXX", nummer: 1, pos: "ST" }), vereine: ["A"], laender: ["XXX"] });
+
+test("wer nichts gewonnen hat, bekommt genau eine Auszeichnung", () => {
+  const a = K.erreichteAuszeichnungen(leer());
+  assert.deepEqual(a.map((x) => x.key), ["unvollendet"]);
+});
+
+test("ein einziger Titel nimmt dem Unvollendeten seinen Namen", () => {
+  const k = { ...leer(), titel: { DFB: 1 } };
+  assert.ok(!K.erreichteAuszeichnungen(k).some((a) => a.key === "unvollendet"));
+  /* Der Ballon d'Or ist kein Mannschaftstitel — er zählt hier nicht. */
+  const nurBdo = { ...leer(), titel: { BDO: 2 } };
+  assert.ok(K.erreichteAuszeichnungen(nurBdo).some((a) => a.key === "unvollendet"));
+});
+
+test("die großen Auszeichnungen verlangen wirklich viel", () => {
+  const fast = { ...leer(), titel: { CL: 4 } };
+  assert.ok(!K.erreichteAuszeichnungen(fast).some((a) => a.key === "fuenf_ohren"));
+  const ganz = { ...leer(), titel: { CL: 5 } };
+  assert.ok(K.erreichteAuszeichnungen(ganz).some((a) => a.key === "fuenf_ohren"));
+  const alle = { ...leer(), titel: { MBL: 1, MPL: 1, MLL: 1, MSA: 1, ML1: 1 } };
+  assert.ok(K.erreichteAuszeichnungen(alle).some((a) => a.key === "europas_erster"));
+  const vier = { ...leer(), titel: { MBL: 1, MPL: 1, MLL: 1, MSA: 1 } };
+  assert.ok(!K.erreichteAuszeichnungen(vier).some((a) => a.key === "europas_erster"));
+});
+
+/* EINE AUSZEICHNUNG, DIE NIEMAND ERREICHEN KANN, IST EIN GEBROCHENES VERSPRECHEN.
+   Deshalb wird für jede eine Laufbahn gebaut, die sie erfüllt — fällt eine durch,
+   steht sie im Spiel und ist trotzdem tot. */
+test("jede Auszeichnung ist erreichbar", () => {
+  const beispiele = {
+    fuenf_ohren:    { titel: { CL: 5 } },
+    unvollendet:    {},
+    europas_erster: { titel: { MBL: 1, MPL: 1, MLL: 1, MSA: 1, ML1: 1 } },
+    vereinstreue:   { vereine: ["A"], titel: { MBL: 1, DFB: 1, CL: 1 } },
+    aus_der_zweiten:{ aufstiegMitMeister: true },
+    riesentoeter:   { europaMitKleinem: true },
+    das_triple:     { triple: true },
+    wanderer:       { vereine: Array.from({ length: 15 }, (_, i) => "V" + i) },
+    grenzgaenger:   { laender: ["GER", "ENG", "ESP", "ITA", "FRA", "POR", "NED"] },
+    torfabrik:      { gesamt: { spiele: 700, tore: 500, vorlagen: 100 } },
+    der_ewige:      { alter: 38 },
+    goldjunge:      { bdoAlter: 22, titel: { BDO: 1 } },
+    der_groesste:   { titel: { WM: 1, CL: 4, BDO: 6 } },
+    doppelbuerger:  { verbandGewechselt: true, titel: { EM: 1 } },
+    sammler:        { titel: { MBL: 13, DFB: 12 } },
+  };
+  for (const a of K.AUSZEICHNUNGEN) {
+    const bsp = beispiele[a.key];
+    assert.ok(bsp, `für ${a.key} fehlt ein Beispiel — Auszeichnung ungeprüft`);
+    assert.ok(a.pruefe({ ...leer(), ...bsp }), `${a.name} ist nicht erreichbar`);
+  }
+});
+
+test("jede Auszeichnung hat Namen und Erklärung", () => {
+  const keys = K.AUSZEICHNUNGEN.map((a) => a.key);
+  assert.equal(new Set(keys).size, keys.length, "doppelte Schlüssel");
+  for (const a of K.AUSZEICHNUNGEN) {
+    assert.ok(a.name && a.name.length < 30, `${a.key}: Name fehlt oder ist zu lang`);
+    assert.ok(a.text && a.text.endsWith("."), `${a.key}: Erklärung fehlt`);
+  }
 });
