@@ -243,11 +243,11 @@ export default function Karriere({ onLeave }) {
   const kopf = (
     <GameTop icon="route" name="Karriere" ton="#34D399"
       zusatz={k ? <>{k.alter} Jahre · Stärke {k.ovr}</> : null}>
-      <button className="ibtn" onClick={() => { toggleMute(); setMuted(isMuted()); }} title="Ton">
-        <Icon name={muted ? "soundOff" : "soundOn"} size={18} />
+      <button className="iconbtn" onClick={() => { toggleMute(); setMuted(isMuted()); }} title="Ton">
+        <Icon name={muted ? "mute" : "sound"} size={18} />
       </button>
       <ReportButton mode="karriere" />
-      <button className="ibtn" onClick={onLeave} title="Zur Lobby"><Icon name="home" size={18} /></button>
+      <button className="iconbtn" onClick={onLeave} title="Zur Lobby"><Icon name="leave" size={18} /></button>
     </GameTop>
   );
 
