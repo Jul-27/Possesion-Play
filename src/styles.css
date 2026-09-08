@@ -1223,3 +1223,13 @@ body::after {
 .kaAuszeichnung small { font-size: 12px; color: var(--muted); }
 .kaEndeKnoepfe { display: flex; gap: 10px; margin-top: 16px; }
 .kaEndeKnoepfe .btn { flex: 1; }
+
+/* Wappen in der Karriere: in Kacheln neben dem Text, in der Zeitleiste klein
+   vorangestellt. Die Kachel wechselt dafür von Spalte auf Zeile. */
+.kaOption.mitWappen { flex-direction: row; align-items: center; gap: 11px; }
+.kaOption.mitWappen > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.kaOption.mitWappen .emblem { flex: 0 0 auto; width: 30px; height: 30px; }
+.kaWappen { flex: 0 0 auto; }
+.kaWappen .emblem { width: 34px; height: 34px; }
+.kaZeilenWappen { display: inline-block; vertical-align: -4px; margin-right: 6px; }
+.kaZeilenWappen .emblem { width: 17px; height: 17px; }

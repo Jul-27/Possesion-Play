@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { NATIONS } from "./gameData.js";
+import { NATIONS, CLUBS } from "./gameData.js";
 import { WELT_LIGEN, WELT_VEREINE } from "./careerWorld.js";
 import { baueZiehungen, baueKlassen, kader, DRAFT_AB_JAHR } from "./draft.js";
 import { teamStaerke } from "./saison.js";
@@ -14,6 +14,7 @@ import { shareKarriere } from "./share.js";
 import ReportButton from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
+import { Emblem } from "./Emblems.jsx";
 
 /* Titelnamen für die Vitrine. Die Schlüssel sind dieselben wie im Feld `t` der
    Spielerdaten — „CL" heißt in der Karriere dasselbe wie in jedem anderen Modus. */
@@ -30,6 +31,15 @@ const TITEL_REIHE = ["BDO", "WM", "EM", "CL", "EL", "MBL", "MPL", "MLL", "MSA", 
    die Auswahl nicht veraltet, wenn Ligen dazukommen. */
 const LAENDER = [...new Set(WELT_LIGEN.map((l) => l.land))];
 const landName = (code) => NATIONS.find((n) => n.key === code)?.name || code;
+
+/* Ein Wappen braucht einen Schlüssel und Rückfallfarben. Für die 47 Spielvereine
+   stehen die Farben in gameData; die übrigen 314 bekommen ein aus dem Schlüssel
+   abgeleitetes Farbpaar, damit der gezeichnete Rückfall nicht bei allen gleich
+   aussieht. Das echte Wappen kommt ohnehin aus public/logos/club/<KEY>.png —
+   351 der 361 Vereine haben eines. */
+const defVon = (v) => CLUBS.find((c) => c.key === v.key)
+  || { key: v.key, name: v.name, label: v.key, c2: "#fff", pat: "solid",
+       c1: `hsl(${K.hashStr(v.key) % 360} 52% 36%)` };
 
 const prozent = (p) => `${Math.round(p * 100)} %`;
 /* Wie eine Wirkung auf der Karte steht. Ohne diese Zeile wäre die Entscheidung
@@ -170,7 +180,7 @@ export default function Karriere({ onLeave }) {
         tore: k2.gesamt.tore + tore,
         vorlagen: k2.gesamt.vorlagen + vorlagen,
       },
-      verlauf: [...k2.verlauf, { alter: k2.alter, verein: verein.name, lg: verein.lg, ovr: k2.ovr, spiele, tore, vorlagen, titel: neueTitel }],
+      verlauf: [...k2.verlauf, { alter: k2.alter, verein: verein.name, key: verein.key, lg: verein.lg, ovr: k2.ovr, spiele, tore, vorlagen, titel: neueTitel }],
     };
 
     setK(k2);
@@ -301,7 +311,7 @@ export default function Karriere({ onLeave }) {
           {k.verlauf.map((z, i) => (
             <tr key={i}>
               <td>{z.alter}</td>
-              <td>{z.verein} <small>{z.lg}</small>{z.titel.length ? <em> · {z.titel.map((t) => TITEL_NAME[t] || t).join(", ")}</em> : null}</td>
+              <td><span className="kaZeilenWappen"><Emblem def={defVon({ key: z.key, name: z.verein })} /></span>{z.verein} <small>{z.lg}</small>{z.titel.length ? <em> · {z.titel.map((t) => TITEL_NAME[t] || t).join(", ")}</em> : null}</td>
               <td><b>{z.ovr}</b></td><td>{z.spiele}</td><td>{z.tore}</td><td>{z.vorlagen}</td>
             </tr>
           ))}
@@ -324,6 +334,7 @@ export default function Karriere({ onLeave }) {
   const kopfzeile = (
     <div className="kaKopf">
       <div className="kaOvr"><b>{k.ovr}</b><small>Stärke</small></div>
+      {k.verein && <span className="kaWappen"><Emblem def={defVon(k.verein)} /></span>}
       <div className="kaWer">
         <b>#{k.nummer} {k.name}</b>
         <small>{K.posDaten(k.pos).name} · {landName(k.land)} · {k.verein ? k.verein.name : "vereinslos"}</small>
@@ -349,9 +360,9 @@ export default function Karriere({ onLeave }) {
             <p>Drei Vereine aus {landName(land)} wollen dich in ihre Jugend holen.</p>
             <div className="kaOptionen">
               {karte.vereine.map((v) => (
-                <button key={v.key} className="kaOption" onClick={() => spieleSchritt(k, v)}>
-                  <b>{v.name}</b>
-                  <small>{v.liga.name} · Stufe {v.stufe}</small>
+                <button key={v.key} className="kaOption mitWappen" onClick={() => spieleSchritt(k, v)}>
+                  <Emblem def={defVon(v)} />
+                  <span><b>{v.name}</b><small>{v.liga.name} · Stufe {v.stufe}</small></span>
                 </button>
               ))}
             </div>
@@ -364,10 +375,11 @@ export default function Karriere({ onLeave }) {
             <p>Bei {karte.bleiben.name} kommst du nicht zum Zug. Eine Saison woanders bringt dir Spiele.</p>
             <div className="kaOptionen">
               {karte.vereine.map((v) => (
-                <button key={v.key} className="kaOption"
+                <button key={v.key} className="kaOption mitWappen"
                   onClick={() => spieleSchritt({ ...k, leiheVon: karte.bleiben }, v)}>
-                  <b>Leihe zu {v.name}</b>
-                  <small>{v.liga.name} · Stufe {v.stufe} · dort {Math.round(K.einsatzAnteil(k.ovr, v.stufe, k.rolle) * K.SPIELE_JE_SAISON)} Spiele statt {Math.round(K.einsatzAnteil(k.ovr, karte.bleiben.stufe, k.rolle) * K.SPIELE_JE_SAISON)}</small>
+                  <Emblem def={defVon(v)} />
+                  <span><b>Leihe zu {v.name}</b>
+                  <small>{v.liga.name} · Stufe {v.stufe} · dort {Math.round(K.einsatzAnteil(k.ovr, v.stufe, k.rolle) * K.SPIELE_JE_SAISON)} Spiele statt {Math.round(K.einsatzAnteil(k.ovr, karte.bleiben.stufe, k.rolle) * K.SPIELE_JE_SAISON)}</small></span>
                 </button>
               ))}
               <button className="kaOption" onClick={() => spieleSchritt(k, karte.bleiben)}>
@@ -383,9 +395,9 @@ export default function Karriere({ onLeave }) {
             <h3>Zurück von der Leihe</h3>
             <p>Die Zeit bei {karte.verein.name} ist vorbei — {karte.heim.name} holt dich zurück.</p>
             <div className="kaOptionen">
-              <button className="kaOption" onClick={() => spieleSchritt(k, karte.heim)}>
-                <b>Zurück zu {karte.heim.name}</b>
-                <small>{karte.heim.liga.name} · Stufe {karte.heim.stufe}</small>
+              <button className="kaOption mitWappen" onClick={() => spieleSchritt(k, karte.heim)}>
+                <Emblem def={defVon(karte.heim)} />
+                <span><b>Zurück zu {karte.heim.name}</b><small>{karte.heim.liga.name} · Stufe {karte.heim.stufe}</small></span>
               </button>
             </div>
           </div>
@@ -417,14 +429,14 @@ export default function Karriere({ onLeave }) {
             <p>{karte.vereine.length ? "Andere Vereine klopfen an." : "Es klopft niemand an."}</p>
             <div className="kaOptionen">
               {karte.vereine.map((v) => (
-                <button key={v.key} className="kaOption" onClick={() => spieleSchritt(k, v)}>
-                  <b>Wechseln zu {v.name}</b>
-                  <small>{v.liga.name} · Stufe {v.stufe} · verlangt Stärke {K.STUFE_MINDEST_OVR[v.stufe]}</small>
+                <button key={v.key} className="kaOption mitWappen" onClick={() => spieleSchritt(k, v)}>
+                  <Emblem def={defVon(v)} />
+                  <span><b>Wechseln zu {v.name}</b><small>{v.liga.name} · Stufe {v.stufe} · verlangt Stärke {K.STUFE_MINDEST_OVR[v.stufe]}</small></span>
                 </button>
               ))}
-              <button className="kaOption" onClick={() => spieleSchritt(k, karte.bleiben)}>
-                <b>Bleiben bei {karte.bleiben.name}</b>
-                <small>{karte.bleiben.liga.name} · Stufe {karte.bleiben.stufe}</small>
+              <button className="kaOption mitWappen" onClick={() => spieleSchritt(k, karte.bleiben)}>
+                <Emblem def={defVon(karte.bleiben)} />
+                <span><b>Bleiben bei {karte.bleiben.name}</b><small>{karte.bleiben.liga.name} · Stufe {karte.bleiben.stufe}</small></span>
               </button>
               {karte.rücktritt && (
                 <button className="kaOption kaEnde" onClick={() => beende(k)}>
