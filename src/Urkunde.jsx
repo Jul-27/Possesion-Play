@@ -101,7 +101,9 @@ export function urkundeSvg({ liga, saison, formation, abzeichen, zeile, teams, e
  * ein SVG in einen Nachrichtenverlauf zieht. Gerendert wird in doppelter Auflösung
  * — auf einem Telefonbildschirm sieht ein 1:1 gerastertes PNG matschig aus.
  */
-export default function Urkunde(props) {
+/* Der Rahmen um jede Urkunde: anzeigen und als PNG speichern. Steht getrennt, weil
+   die Karriere dieselbe Mechanik braucht — nur mit anderem Inhalt und Maß. */
+export function UrkundeRahmen({ kind, breite, hoehe, dateiname }) {
   const huelle = useRef(null);
   const [stand, setStand] = useState(null);   // null | "laeuft" | "fertig" | "fehler"
 
@@ -120,8 +122,8 @@ export default function Urkunde(props) {
       });
       const skala = 2;
       const leinwand = document.createElement("canvas");
-      leinwand.width = B * skala;
-      leinwand.height = H * skala;
+      leinwand.width = breite * skala;
+      leinwand.height = hoehe * skala;
       const ctx = leinwand.getContext("2d");
       ctx.drawImage(bild, 0, 0, leinwand.width, leinwand.height);
       URL.revokeObjectURL(url);
@@ -130,7 +132,7 @@ export default function Urkunde(props) {
       const png = await new Promise((r) => leinwand.toBlob(r, "image/png"));
       const a = document.createElement("a");
       a.href = URL.createObjectURL(png);
-      a.download = `traumelf-${props.saison.replace("/", "-")}-${props.abzeichen.toLowerCase().replace(/[^a-z]+/g, "-")}.png`;
+      a.download = dateiname;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -143,7 +145,7 @@ export default function Urkunde(props) {
 
   return (
     <div className="tmUrkunde">
-      <div className="tmUrkundeBild" ref={huelle}>{urkundeSvg(props)}</div>
+      <div className="tmUrkundeBild" ref={huelle}>{kind}</div>
       <div className="closeline">
         <button className="btn primary" style={{ flex: 1, padding: "12px" }} onClick={speichern} disabled={stand === "laeuft"}>
           {stand === "laeuft" ? "Erzeuge Bild…" : stand === "fertig" ? "Gespeichert ✓" : stand === "fehler" ? "Noch einmal versuchen" : "Urkunde als Bild speichern"}
@@ -151,4 +153,9 @@ export default function Urkunde(props) {
       </div>
     </div>
   );
+}
+
+export default function Urkunde(props) {
+  const name = `traumelf-${props.saison.replace("/", "-")}-${props.abzeichen.toLowerCase().replace(/[^a-z]+/g, "-")}.png`;
+  return <UrkundeRahmen kind={urkundeSvg(props)} breite={B} hoehe={H} dateiname={name} />;
 }

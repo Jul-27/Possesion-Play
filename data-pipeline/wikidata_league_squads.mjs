@@ -31,6 +31,7 @@ import { dirname, join } from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import { norm } from "../src/gameData.js";
 import { LIGA_VEREINE } from "../src/leagueClubs.js";
+import { WELT_VEREINE } from "../src/careerWorld.js";
 import { CLUB_QID } from "./wikidata_roster.mjs";
 import { posBucket, pickBucket } from "./wikidata_positions.mjs";
 import { recToString } from "./player_record.mjs";
@@ -74,10 +75,14 @@ const abfrage = (qid) => `SELECT ?pLabel ?by ?sl ?von ?bis ?posLabel ?natLabel W
   OPTIONAL { ?p wdt:P413 ?pos }
   OPTIONAL { ?p wdt:P1532 ?nat }
   BIND(YEAR(?d) AS ?by)
-  /* „de,en" und nicht nur „en": Zum Zeitpunkt des Laufs trugen Wayne Rooney, Juan
-     Mata und Pierre-Emerick Aubameyang vandalierte ENGLISCHE Labels („El Perrito de
-     la C", „Juan Mata Pata", „Pierre Cardin picha grande") und wurden dadurch als
-     drei neue Spieler angelegt. Die deutschen Labels waren sauber. */
+  # SPARQL KENNT NUR RAUTEN-KOMMENTARE. Hier stand ein /* */-Kommentar, und der hat
+  # die Abfrage still unbrauchbar gemacht: WDQS antwortete auf JEDEN Verein mit
+  # HTTP 400, das Skript übersprang alle 362 und schrieb am Ende null neue Kader.
+  # Gemessen: mit /* */ HTTP 400, mit # HTTP 200.
+  #
+  # „de,en" und nicht nur „en": Zum Zeitpunkt des Laufs trugen Wayne Rooney, Juan
+  # Mata und Pierre-Emerick Aubameyang vandalierte ENGLISCHE Labels und wurden
+  # dadurch als drei neue Spieler angelegt. Die deutschen Labels waren sauber.
   SERVICE wikibase:label { bd:serviceParam wikibase:language "de,en". }
 }`;
 
@@ -147,9 +152,16 @@ async function main() {
   const nurIdx = process.argv.indexOf("--nur");
   const nurLiga = nurIdx > 0 ? process.argv[nurIdx + 1] : null;
 
-  const vereine = Object.entries(LIGA_VEREINE)
-    .filter(([lg]) => !nurLiga || lg === nurLiga)
-    .flatMap(([, v]) => v);
+  /* --welt: Kader für die Vereinswelt des Karriere-Modus statt für LIGA_VEREINE.
+     Ohne diesen Lauf ist careerWorld.js eine Hülle — gemessen hatten 249 der 362
+     Vereine keinen einzigen Spieler, die 2. Bundesliga null von 27. Ein Verein ohne
+     Kader hat keine Stärke, keine Rufstufe und fällt aus dem Spiel. */
+  const welt = process.argv.includes("--welt");
+  const vereine = welt
+    ? WELT_VEREINE.filter((v) => !nurLiga || v.lg === nurLiga)
+    : Object.entries(LIGA_VEREINE)
+        .filter(([lg]) => !nurLiga || lg === nurLiga)
+        .flatMap(([, v]) => v);
   /* Ein Verein kann in zwei Ligen stehen (Auf- und Abstieg über Landesgrenzen gibt
      es nicht, aber derselbe Schlüssel taucht durch die Auflösung doppelt auf). */
   const eindeutig = [...new Map(vereine.map((v) => [v.key, v])).values()];
@@ -166,6 +178,13 @@ async function main() {
     console.log(`  ${v.key.padEnd(5)} ${v.name.padEnd(28)} ${String(zeilen.length).padStart(5)} Zeilen · ${gesammelt.size - vorher} neue Spieler   (${i + 1}/${eindeutig.length})`);
     await sleep(1300);
   }
+
+  /* NICHT SCHREIBEN, WENN NICHTS ANKAM. Ein kaputter Kommentar in der Abfrage ließ
+     WDQS auf jeden einzelnen Verein mit HTTP 400 antworten; das Skript übersprang
+     alle 362 und hätte am Ende brav „0 neue Spieler" gemeldet, als wäre das ein
+     Ergebnis. Ein Lauf, der nirgends etwas findet, ist kein leeres Ergebnis, sondern
+     ein Fehler. */
+  if (!gesammelt.size) throw new Error(`Kein einziger Verein lieferte Daten (${eindeutig.length} abgefragt) — Abbruch statt leerem Schreiben.`);
 
   const mod = await import(pathToFileURL(PLAYERS_PATH).href + "?t=" + Date.now());
   const alle = mod.PLAYERS.map((p) => ({ ...p }));

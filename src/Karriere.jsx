@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { CLUBS, NATIONS } from "./gameData.js";
-import { LIGA_VEREINE, LIGA_AB_JAHR } from "./leagueClubs.js";
-import { baueZiehungen, baueKlassen, kader, DRAFT_AB_JAHR, LIGA_NAME, VERBUND_MAX } from "./draft.js";
+import { NATIONS, CLUBS } from "./gameData.js";
+import { WELT_LIGEN, WELT_VEREINE } from "./careerWorld.js";
+import { baueZiehungen, baueKlassen, kader, DRAFT_AB_JAHR } from "./draft.js";
 import { teamStaerke } from "./saison.js";
 import * as K from "./karriere.js";
 import { loadPlayers } from "./playersStore.js";
@@ -15,81 +15,140 @@ import ReportButton from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
 import { Emblem } from "./Emblems.jsx";
-
-const store = {
-  get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
-  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ohne Speicherstand weiter */ } },
-};
-const BESTEN_KEY = "pp:karriere:best";
+import UrkundeKarriere from "./UrkundeKarriere.jsx";
 
 /* Titelnamen für die Vitrine. Die Schlüssel sind dieselben wie im Feld `t` der
-   Spielerdaten — dadurch heißt „CL" in der Karriere dasselbe wie in jedem anderen
-   Modus, und die Wappen passen ohne Übersetzungstabelle. */
+   Spielerdaten — „CL" heißt in der Karriere dasselbe wie in jedem anderen Modus. */
 const TITEL_NAME = {
   MBL: "Deutscher Meister", MPL: "Englischer Meister", MLL: "Spanischer Meister",
   MSA: "Italienischer Meister", ML1: "Französischer Meister",
   DFB: "DFB-Pokal", FAC: "FA Cup", CDR: "Copa del Rey", CIT: "Coppa Italia",
   CL: "Champions League", EL: "Europa League",
-  WM: "Weltmeister", EM: "Europameister", CA: "Copa América",
-  BDO: "Ballon d'Or", TSK: "Torschützenkönig", VLK: "Vorlagenkönig",
+  WM: "Weltmeister", EM: "Europameister", BDO: "Ballon d'Or",
 };
-const TITEL_REIHE = ["BDO", "WM", "CL", "EM", "CA", "MBL", "MPL", "MLL", "MSA", "ML1", "EL", "DFB", "FAC", "CDR", "CIT", "TSK", "VLK"];
+const TITEL_REIHE = ["BDO", "WM", "EM", "CL", "EL", "MBL", "MPL", "MLL", "MSA", "ML1", "DFB", "FAC", "CDR", "CIT"];
 
-/* Wie stark ist eine Nation? Aus der Zahl ihrer Spieler im Bestand — mehr Spieler
-   heißt mehr Konkurrenz um einen Platz und ein stärkeres Team. Gerechnet, nicht
-   gesetzt, damit die Liste nicht veraltet, wenn die Daten wachsen. */
-function nationsStaerken(players) {
-  const zahl = new Map();
-  for (const p of players) for (const n of p.nat || []) zahl.set(n, (zahl.get(n) || 0) + 1);
-  const werte = [...zahl.values()].sort((a, b) => a - b);
-  const max = werte.at(-1) || 1;
-  const out = new Map();
-  for (const [n, c] of zahl) out.set(n, Math.round(40 + 55 * Math.sqrt(c / max)));
-  return out;
+/* Die Länder, in denen unsere Welt spielt — aus der Ligatabelle abgeleitet, damit
+   die Auswahl nicht veraltet, wenn Ligen dazukommen. */
+const LAENDER = [...new Set(WELT_LIGEN.map((l) => l.land))];
+const landName = (code) => NATIONS.find((n) => n.key === code)?.name || code;
+
+/* Ein Wappen braucht einen Schlüssel und Rückfallfarben. Für die 47 Spielvereine
+   stehen die Farben in gameData; die übrigen 314 bekommen ein aus dem Schlüssel
+   abgeleitetes Farbpaar, damit der gezeichnete Rückfall nicht bei allen gleich
+   aussieht. Das echte Wappen kommt ohnehin aus public/logos/club/<KEY>.png —
+   351 der 361 Vereine haben eines. */
+const defVon = (v) => CLUBS.find((c) => c.key === v.key)
+  || { key: v.key, name: v.name, label: v.key, c2: "#fff", pat: "solid",
+       c1: `hsl(${K.hashStr(v.key) % 360} 52% 36%)` };
+
+/* ── Die Verlaufskurve ────────────────────────────────────────────────────────
+   Die Zeitleiste als Tabelle sagt alles, aber sie erzählt nichts. Dieselben Zahlen
+   als Kurve zeigen auf einen Blick, was eine Laufbahn ausmacht: der Anstieg bis
+   Mitte zwanzig, das Plateau, der Abfall — und wo dazwischen gewechselt und
+   gewonnen wurde.
+
+   Wappen stehen nur dort, wo der Verein WECHSELT. Eines je Schritt wäre eine
+   Perlenkette; so markieren sie die Wendepunkte. */
+function Verlaufskurve({ verlauf, defVon }) {
+  if (verlauf.length < 2) return null;
+  const B = 600, H = 150, RAND = { o: 18, u: 26, l: 8, r: 8 };
+  const werte = verlauf.map((z) => z.ovr);
+  const min = Math.min(...werte) - 4, max = Math.max(...werte) + 4;
+  const x = (i) => RAND.l + (i / (verlauf.length - 1)) * (B - RAND.l - RAND.r);
+  const y = (v) => RAND.o + (1 - (v - min) / (max - min || 1)) * (H - RAND.o - RAND.u);
+  const punkte = verlauf.map((z, i) => `${x(i)},${y(z.ovr)}`).join(" ");
+  const flaeche = `${x(0)},${H - RAND.u} ${punkte} ${x(verlauf.length - 1)},${H - RAND.u}`;
+
+  return (
+    <svg className="kaKurve" viewBox={`0 0 ${B} ${H}`} preserveAspectRatio="none" role="img"
+      aria-label="Stärkeverlauf der Laufbahn">
+      <defs>
+        <linearGradient id="kaKurveF" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--teal)" stopOpacity=".35" />
+          <stop offset="100%" stopColor="var(--teal)" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon points={flaeche} fill="url(#kaKurveF)" />
+      <polyline points={punkte} fill="none" stroke="var(--teal)" strokeWidth="2"
+        strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+      {verlauf.map((z, i) => {
+        const neuerVerein = i === 0 || verlauf[i - 1].key !== z.key;
+        const titel = (z.titel || []).length;
+        return (
+          <g key={i}>
+            {titel > 0 && <circle cx={x(i)} cy={y(z.ovr)} r="5.5" fill="var(--gold)" />}
+            <circle cx={x(i)} cy={y(z.ovr)} r="2.6" fill={titel ? "var(--bg-1)" : "var(--teal)"} />
+            {neuerVerein && z.key && (
+              <image href={`/logos/club/${z.key}.png`} x={x(i) - 9} y={H - RAND.u + 4} width="18" height="18" />
+            )}
+            {(i === 0 || i === verlauf.length - 1) && (
+              <text x={x(i)} y={RAND.o - 6} textAnchor={i === 0 ? "start" : "end"}
+                fill="var(--muted)" fontSize="11">{z.alter} J · {z.ovr}</text>
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+const prozent = (p) => `${Math.round(p * 100)} %`;
+/* Wie eine Wirkung auf der Karte steht. Ohne diese Zeile wäre die Entscheidung
+   wieder ein Blindflug — sie ist der Kern des Modus. */
+function wirkungsText(w) {
+  const teile = [];
+  if (w.ovr) teile.push(`${w.ovr > 0 ? "+" : ""}${w.ovr} Stärke`);
+  if (w.rolle) teile.push({ stamm: "Stammplatz", rotation: "Rotation", kader: "nur im Kader" }[w.rolle]);
+  if (w.verletzt) teile.push(`${w.verletzt} Saison verletzt`);
+  for (const [feld, name] of [["liga", "Meisterschaft"], ["pokal", "Pokal"], ["europa", "Europapokal"]])
+    if (w[feld] !== undefined) teile.push(`${name} ${w[feld] > 1 ? "×" + w[feld] : "halbiert"}`);
+  if (w.verbandswechsel) teile.push("neuer Verband");
+  if (w.abschluss) teile.push("Schulabschluss");
+  return teile.length ? teile.join(" · ") : "nichts ändert sich";
 }
 
 export default function Karriere({ onLeave }) {
   const [players, setPlayers] = useState(null);
   const [einsaetze, setEinsaetze] = useState(undefined);
   const [muted, setMuted] = useState(isMuted());
-  const [regeln, setRegeln] = useState(false);
-  const [best, setBest] = useState(() => store.get(BESTEN_KEY) || null);
 
   // Anlage
   const [name, setName] = useState("");
-  const [nation, setNation] = useState("GER");
+  const [land, setLand] = useState("GER");
   const [nummer, setNummer] = useState(9);
   const [pos, setPos] = useState("ST");
+  const [fuss, setFuss] = useState("rechts");
   const [tempo, setTempo] = useState("normal");
 
   // Lauf
   const [k, setK] = useState(null);
-  const [frage, setFrage] = useState(null);       // offenes Ereignis
-  const [angebote, setAngebote] = useState(null); // offene Transferwahl
-  const [bericht, setBericht] = useState([]);     // Saisonmeldungen
+  const [karte, setKarte] = useState(null);   // { art: "jugend"|"ereignis"|"angebot"|"ende", ... }
+  const [meldung, setMeldung] = useState([]); // was im letzten Schritt geschah
   const zufallRef = useRef(null);
-  const vorplatzRef = useRef(null);
-  const endeRef = useRef(null);
+  const modRef = useRef({ liga: 1, pokal: 1, europa: 1 });
+  const verletztRef = useRef(0);
+  const letzteRef = useRef([]);
 
   useEffect(() => { loadPlayers().then(setPlayers); }, []);
   useEffect(() => { loadAppearances().then((e) => setEinsaetze(e || null)); }, []);
 
-  /* Die Welt einmal bauen — 125 Vereine, jeder mit einem Niveau aus seinen echten
-     Kadern. Gemessen rund zwei Sekunden, deshalb nur einmal je Sitzung. */
+  /* Die Welt einmal bauen: 362 Vereine, jeder mit einer Stärke aus seinen echten
+     Kadern — dieselbe Rechnung wie in der Traumelf. Daraus wird die Rufstufe.
+     Gemessen einige Sekunden, deshalb nur einmal je Sitzung. */
   const welt = useMemo(() => {
     if (!players || einsaetze === undefined) return null;
-    const roh = [
-      ...CLUBS.map((c) => ({ key: c.key, name: c.name, lg: c.lg })),
-      ...Object.entries(LIGA_VEREINE).flatMap(([lg, v]) => v.map((x) => ({ ...x, lg }))),
-    ];
-    const eindeutig = [...new Map(roh.map((c) => [c.key, c])).values()];
+    const jahre = Array.from({ length: 2026 - DRAFT_AB_JAHR + 1 }, (_, i) => DRAFT_AB_JAHR + i);
+    /* Die Klassen — also wie stark jeder Spieler war — brauchen Ziehungen je Liga.
+       Sie werden hier über die ganze Welt gebaut, damit ein Zweitligist an
+       derselben Skala gemessen wird wie Bayern. */
     const ziehungen = [];
-    for (const lg of [...new Set(eindeutig.map((c) => c.lg))]) {
-      ziehungen.push(...baueZiehungen(players, eindeutig.filter((c) => c.lg === lg), lg));
+    for (const liga of WELT_LIGEN) {
+      const vs = WELT_VEREINE.filter((v) => v.lg === liga.key);
+      if (vs.length) ziehungen.push(...baueZiehungen(players, vs, liga.key));
     }
     const klassen = baueKlassen(players, ziehungen, einsaetze);
     const staerkeVon = (v) => {
-      const jahre = v.jahre || Array.from({ length: 2026 - DRAFT_AB_JAHR + 1 }, (_, i) => DRAFT_AB_JAHR + i);
       const w = [];
       for (const j of jahre) {
         const kd = kader(players, v.key, j, 5);
@@ -99,363 +158,409 @@ export default function Karriere({ onLeave }) {
       w.sort((a, b) => a - b);
       return w[Math.floor(w.length / 2)];
     };
-    return K.baueWelt(eindeutig, staerkeVon, VERBUND_MAX);
+    return K.baueWelt(staerkeVon);
   }, [players, einsaetze]);
 
-  const nationStaerke = useMemo(() => (players ? nationsStaerken(players) : new Map()), [players]);
+  const bereit = welt && welt.vereine.length > 0;
 
-  /* Startvereine: das untere Drittel. Copero fängt bei einem lokalen Verein an, und
-     bei Real Madrid zu beginnen nähme der Laufbahn ihren Bogen. */
-  const startVereine = useMemo(() => {
-    if (!welt) return [];
-    const schwelle = welt.vereine.at(-1).niveau + (welt.vereine[0].niveau - welt.vereine.at(-1).niveau) * 0.35;
-    return welt.vereine.filter((v) => v.niveau <= schwelle);
-  }, [welt]);
+  // ── Ablauf ─────────────────────────────────────────────────────────────────
 
   function starte() {
-    const seed = Math.floor(Math.random() * 1e9);
-    zufallRef.current = K.rng(K.hashStr("kar:" + seed));
-    vorplatzRef.current = null;
-    endeRef.current = null;
-    const verein = startVereine[Math.floor(zufallRef.current() * startVereine.length)];
-    setK(K.neueKarriere({ name: name.trim() || "Dein Spieler", nation, nummer, pos, verein, tempo, seed }));
-    setBericht([]);
-    setAngebote(null);
-    setFrage(null);
-    play("click");
+    const seed = Date.now() >>> 0;
+    const neu = K.neueKarriere({ name: name.trim() || "Namenlos", land, nummer, pos, fuss, tempo, seed });
+    zufallRef.current = K.rng(K.hashStr(`${neu.name}|${seed}`));
+    modRef.current = { liga: 1, pokal: 1, europa: 1 };
+    verletztRef.current = 0;
+    letzteRef.current = [];
+    setK(neu);
+    setMeldung([]);
+    setKarte({ art: "jugend", vereine: K.jugendAngebote(welt, land, zufallRef.current) });
+    play("start");
   }
 
-  /* ── Eine Saison ────────────────────────────────────────────────────────────
-     Erst die Entscheidungen, dann die Saison, dann die Angebote. Genau diese
-     Reihenfolge macht eine Wahl spürbar: Wer hart trainiert, sieht es im selben
-     Jahr auf dem Platz. */
-  function naechsteSaison(stand = k) {
-    const t = K.TEMPO[stand.tempo] || K.TEMPO.normal;
+  /* Ein Schritt: so viele Saisons, wie das Tempo vorgibt. Danach steht fest, was
+     passiert ist — und die nächste Karte liegt an. */
+  function spieleSchritt(basis, startVerein) {
     const zufall = zufallRef.current;
-    let cur = stand;
-    const meldungen = [];
+    const saisons = K.TEMPO[basis.tempo].saisons;
+    let verein = startVerein;
+    let k2 = { ...basis, verein };
+    const neueTitel = [];
+    const ereignisse = [];
+    let spiele = 0, tore = 0, vorlagen = 0;
 
-    for (let s = 0; s < t.saisonsJeSchritt && !cur.beendet; s++) {
-      const leistung = K.saisonLeistung(cur, cur.verein.niveau, zufall);
-      const platz = K.ligaPlatz(cur.verein, cur, zufall);
-      const titel = [
-        ...K.vereinsTitel(cur.verein, platz, cur, zufall),
-        ...K.europaTitel(cur.verein, vorplatzRef.current, cur, zufall),
-      ];
-      const turnier = K.turnierIn(cur.saison, cur.nation);
-      const nStaerke = nationStaerke.get(cur.nation) || 60;
-      const berufen = cur.overall >= K.nationsSchwelle(nStaerke);
-      if (berufen && turnier) titel.push(...K.nationalTitel(turnier, nStaerke, cur, zufall));
-      titel.push(...K.einzelTitel(cur, leistung, titel, zufall));
-
-      const titelZaehler = { ...cur.titel };
-      for (const x of titel) titelZaehler[x] = (titelZaehler[x] || 0) + 1;
-
-      meldungen.push({
-        saison: cur.saison, alter: cur.alter, verein: cur.verein, platz,
-        overall: Math.round(cur.overall), ...leistung, titel, berufen, turnier,
-      });
-      vorplatzRef.current = platz;
-
-      const nachher = K.alterePlayer(cur, leistung, zufall, cur.verein.niveau);
-      cur = {
-        ...nachher,
-        titel: titelZaehler,
-        gesamt: {
-          spiele: cur.gesamt.spiele + leistung.spiele,
-          tore: cur.gesamt.tore + leistung.tore,
-          vorlagen: cur.gesamt.vorlagen + leistung.vorlagen,
-        },
-        hoechsterOverall: Math.max(cur.hoechsterOverall || cur.overall, nachher.overall),
-      };
-      if (K.trittZurueck(cur, zufall)) cur = { ...cur, beendet: true };
+    for (let s = 0; s < saisons; s++) {
+      if (verletztRef.current > 0) { verletztRef.current--; continue; }
+      const l = K.saisonLeistung(k2, verein.stufe, zufall);
+      spiele += l.spiele; tore += l.tore; vorlagen += l.vorlagen;
+      for (const t of K.saisonTitel(verein, zufall, modRef.current)) neueTitel.push(t);
+      for (const t of K.einzelTitel(k2, l, zufall)) { neueTitel.push(t); if (k2.bdoAlter === undefined) k2.bdoAlter = k2.alter; }
+      k2.saisonNr = (k2.saisonNr || 0) + 1;
+      for (const t of K.nationalTitel(k2, verein, zufall, k2.saisonNr)) neueTitel.push(t);
+      k2.alter += 1;
+      k2.ovr = K.grenze(k2.ovr + K.wachstum(k2.typ, k2.alter, zufall), K.OVR_MIN, K.OVR_MAX);
+      /* Auf- und Abstieg am Saisonende. Wer aufsteigt, wird vermerkt — nur so kann
+         später „Aus der Zweiten" überhaupt zutreffen. */
+      const w = K.ligaWechsel(verein, zufall);
+      if (w.richtung) {
+        ereignisse.push(`${verein.name} ${w.richtung === "auf" ? "steigt auf" : "steigt ab"}`);
+        if (w.richtung === "auf") k2.aufgestiegenMit = verein.key;
+        verein = w.verein;
+      }
     }
+    modRef.current = { liga: 1, pokal: 1, europa: 1 };
 
-    setBericht(meldungen);
-    setK(cur);
-    if (cur.beendet) { play("ok"); return; }
+    const titel = { ...k2.titel };
+    for (const t of neueTitel) titel[t] = (titel[t] || 0) + 1;
+    /* Auszeichnungen, die einen Verlauf brauchen, werden hier mitgeschrieben —
+       nachträglich ließe sich nicht mehr feststellen, WANN etwas zusammenfiel. */
+    const ligaKey = K.LIGA_TITEL[verein.lg], pokalKey = K.POKAL_TITEL[verein.lg];
+    const triple = ligaKey && pokalKey && neueTitel.includes(ligaKey) && neueTitel.includes(pokalKey)
+      && (neueTitel.includes("CL") || neueTitel.includes("EL"));
+    const europaKlein = verein.stufe <= 3 && (neueTitel.includes("CL") || neueTitel.includes("EL"));
+    const aufstieg = !!ligaKey && neueTitel.includes(ligaKey) && k2.aufgestiegenMit === verein.key;
 
-    /* Erst fragen, dann Angebote — sonst entscheidet man über einen Wechsel, bevor
-       man weiß, wie man trainiert hat. */
-    const gesehen = [];
-    const fragen = [];
-    for (let e = 0; e < t.ereignisse; e++) {
-      const ev = K.ziehEreignis(cur, gesehen);
-      gesehen.push(ev.key);
-      fragen.push(ev);
-    }
-    setFrage({ liste: fragen, index: 0 });
-    play("click");
+    k2 = {
+      ...k2, verein, titel,
+      triple: k2.triple || triple,
+      europaMitKleinem: k2.europaMitKleinem || europaKlein,
+      aufstiegMitMeister: k2.aufstiegMitMeister || aufstieg,
+      vereine: k2.vereine.includes(verein.key) ? k2.vereine : [...k2.vereine, verein.key],
+      laender: k2.laender.includes(verein.liga.land) ? k2.laender : [...k2.laender, verein.liga.land],
+      gesamt: {
+        spiele: k2.gesamt.spiele + spiele,
+        tore: k2.gesamt.tore + tore,
+        vorlagen: k2.gesamt.vorlagen + vorlagen,
+      },
+      verlauf: [...k2.verlauf, { alter: k2.alter, verein: verein.name, key: verein.key, lg: verein.lg, ovr: k2.ovr, spiele, tore, vorlagen, titel: neueTitel }],
+    };
+
+    setK(k2);
+    setMeldung([...neueTitel.map((t) => `🏆 ${TITEL_NAME[t] || t}`), ...ereignisse.map((e) => `↕ ${e}`)]);
+    if (neueTitel.length) play("win");
+    naechsteKarte(k2, verein);
   }
 
-  function waehle(w) {
-    const nach = K.entscheide(k, w);
-    setK(nach);
-    const naechster = frage.index + 1;
-    if (naechster < frage.liste.length) { setFrage({ ...frage, index: naechster }); return; }
-    setFrage(null);
-    /* Verträge laufen aus, und dann kommen Angebote. Ohne die Bedingung würde in
-       jeder Saison der Markt aufgehen und der Modus zur Wechselbörse. */
-    const ang = K.angebote(nach, welt, zufallRef.current, 3);
-    if (ang.length && (nach.vertragBis <= 0 || zufallRef.current() < 0.5)) setAngebote(ang);
-  }
+  /* Was kommt als Nächstes — eine Entscheidung oder ein Wechsel? Angebote dürfen
+     nicht ausbleiben, sonst klebt man ewig am selben Verein; Ereignisse nicht
+     dauernd kommen, sonst wird die Laufbahn zur Fragebogenaktion. */
+  function naechsteKarte(k2, verein) {
+    const zufall = zufallRef.current;
+    /* Schluss ist Schluss. Die Grenze lag bei 40 und wurde VOR dem naechsten Schritt
+       geprueft — ein Schritt umfasst aber zwei Saisons, also endeten Laufbahnen bei
+       41. Auf der Urkunde stand dann „bis 41 Jahre", und so lange spielt niemand. */
+    if (k2.alter >= K.ALTERSGRENZE) return beende(k2);
+    const offerten = K.angebote(welt, k2, zufall);
+    const mussWechseln = k2.alter >= K.RUECKTRITT_AB && offerten.length === 0;
+    if (mussWechseln) return beende(k2);
 
-  function wechsle(a) {
-    setK({ ...k, verein: a.verein, vertragBis: a.jahre, ruf: Math.min(100, k.ruf + 4) });
-    setAngebote(null);
-    play("ok");
-  }
-
-  /* Bestleistung festhalten, sobald die Laufbahn endet. */
-  useEffect(() => {
-    if (!k?.beendet || endeRef.current) return;
-    endeRef.current = true;
-    const punkte = K.karrierePunkte(k);
-    if (!best || punkte > best.punkte) {
-      const neu = { punkte, stufe: K.stufeFuer(k).name, name: k.name, tore: k.gesamt.tore, saisons: k.saison };
-      setBest(neu);
-      store.set(BESTEN_KEY, neu);
+    /* Eine Leihe endet immer nach einem Schritt — man kehrt zu seinem Verein zurück
+       und entscheidet dort neu. */
+    if (k2.leiheVon) {
+      const heim = k2.leiheVon;
+      setK({ ...k2, leiheVon: null });
+      return setKarte({ art: "rueckkehr", heim, verein });
     }
-  }, [k?.beendet]); // eslint-disable-line react-hooks/exhaustive-deps
+    /* Wer jung ist und bei seinem Verein nicht spielt, bekommt eine Leihe angeboten.
+       Genau dafür gibt es die zweite Spielklasse. */
+    if (K.leiheMoeglich(k2, verein)) {
+      const ziele = K.leihAngebote(welt, k2, verein, zufall);
+      if (ziele.length) return setKarte({ art: "leihe", vereine: ziele, bleiben: verein });
+    }
 
-  // ── Ansicht ────────────────────────────────────────────────────────────────
+    const seitWechsel = k2.verlauf.filter((z) => z.verein === verein.name).length;
+    if (seitWechsel >= 3 || zufall() < 0.45) {
+      setKarte({ art: "angebot", vereine: offerten, bleiben: verein, rücktritt: k2.alter >= K.RUECKTRITT_AB });
+    } else {
+      const e = K.ziehEreignis(k2, zufall, letzteRef.current);
+      letzteRef.current = [...letzteRef.current, e.key].slice(-4);
+      setKarte({ art: "ereignis", ereignis: e, verein });
+    }
+  }
+
+  function waehleOption(option) {
+    const r = K.entscheide(k, option, zufallRef.current);
+    modRef.current = r.mod;
+    verletztRef.current += r.verletzt;
+    play(r.gelungen ? "ok" : "err");
+    spieleSchritt(r.karriere, karte.verein);
+  }
+
+  function beende(k2) {
+    const fertig = { ...k2, beendet: true };
+    setK(fertig);
+    setKarte({ art: "ende", auszeichnungen: K.erreichteAuszeichnungen(fertig) });
+    play("end");
+  }
+
+  // ── Ansichten ──────────────────────────────────────────────────────────────
 
   const kopf = (
-    <GameTop icon="route" name="Karriere" ton="#34D399" zusatz={k ? <>Saison {k.saison} · {k.alter} Jahre</> : null}>
-      <button className="iconbtn" title="Ton an/aus" onClick={() => setMuted(toggleMute())}><Icon name={muted ? "mute" : "sound"} size={18} /></button>
-      <button className="iconbtn" title="Regeln" onClick={() => setRegeln(true)}><Icon name="help" size={18} /></button>
+    <GameTop icon="route" name="Karriere" ton="#34D399"
+      zusatz={k ? <>{k.alter} Jahre · Stärke {k.ovr}</> : null}>
+      <button className="iconbtn" onClick={() => { toggleMute(); setMuted(isMuted()); }} title="Ton">
+        <Icon name={muted ? "mute" : "sound"} size={18} />
+      </button>
       <ReportButton mode="karriere" />
-      <button className="iconbtn" title="Zur Lobby" onClick={onLeave}><Icon name="leave" size={18} /></button>
+      <button className="iconbtn" onClick={onLeave} title="Zur Lobby"><Icon name="leave" size={18} /></button>
     </GameTop>
   );
 
-  const regelModal = regeln && (
-    <div className="overlay" onClick={() => setRegeln(false)}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2>Karriere</h2>
-        <p className="ruleP">Du steuerst keinen Spieler auf dem Platz, sondern eine <b>Laufbahn</b>. Mit sechzehn geht es bei einem kleinen Verein los, mit Mitte dreißig ist Schluss. Dazwischen entscheidest du über Training, Ernährung, Presse, Feiern — und über jeden Wechsel.</p>
-        <p className="ruleP">Die Vereine sind <b>echt</b>, und ihre Stärke ist gerechnet: Sie kommt aus denselben Kadern, aus denen der Draft zieht. Real Madrid steht bei 90, Heidenheim bei 65. Danach richtet sich, wer dich haben will — und wie viel du dort spielst.</p>
-        <p className="ruleP">Der <b>Wechsel nach oben ist ein Wagnis</b>: Wer deutlich unter dem Niveau seines neuen Vereins liegt, sitzt auf der Bank und entwickelt sich langsamer. Wer klein bleibt, spielt immer, kommt aber an keinen Titel. Beide Wege sind gangbar, keiner ist geschenkt.</p>
-        <p className="ruleP">Am Ende steht ein Urteil von <b>Gescheitertes Talent</b> bis <b>Legende</b>. Gemessen an je 300 simulierten Laufbahnen erreicht die Legende gut ein Zehntel derer, die jede Entscheidung optimal treffen — und keine, die durchklickt.</p>
+  if (!bereit) return (<div className="ppRoot">{kopf}<div className="panel"><p>Die Vereinswelt wird gebaut …</p></div></div>);
+
+  // Anlage
+  if (!k) return (
+    <div className="ppRoot">
+      {kopf}
+      <div className="panel kaAnlage">
+        <h2>Wer wirst du?</h2>
+        <div className="kaFeldreihe">
+          <label>Name
+            <input value={name} onChange={(e) => setName(e.target.value)} maxLength={20} placeholder="Nachname" />
+          </label>
+          <label>Nummer
+            <input type="number" min="1" max="99" value={nummer} onChange={(e) => setNummer(+e.target.value)} />
+          </label>
+        </div>
+        <div className="kaFeldreihe">
+          <label>Land
+            <select value={land} onChange={(e) => setLand(e.target.value)}>
+              {LAENDER.map((c) => <option key={c} value={c}>{landName(c)}</option>)}
+            </select>
+          </label>
+          <label>Starker Fuß
+            <select value={fuss} onChange={(e) => setFuss(e.target.value)}>
+              <option value="rechts">rechts</option><option value="links">links</option>
+            </select>
+          </label>
+        </div>
+
+        <h3>Position</h3>
+        <div className="kaPositionen">
+          {K.POSITIONEN.map((p) => (
+            <button key={p.key} className={"kaPos" + (pos === p.key ? " an" : "")}
+              onClick={() => setPos(p.key)} title={p.name}>{p.key}</button>
+          ))}
+        </div>
+
+        <h3>Tempo</h3>
+        <div className="kaTempo">
+          {Object.entries(K.TEMPO).map(([key, t]) => (
+            <button key={key} className={"kaWahl" + (tempo === key ? " an" : "")} onClick={() => setTempo(key)}>
+              <b>{t.name}</b><small>{t.text}</small>
+            </button>
+          ))}
+        </div>
+
+        <button className="btn primary" onClick={starte}>Laufbahn beginnen</button>
         <DataStamp />
-        <div className="closeline"><button className="btn primary" style={{ flex: 1, padding: "11px" }} onClick={() => setRegeln(false)}>Los geht's</button></div>
       </div>
     </div>
   );
 
-  if (!players || einsaetze === undefined || !welt) {
-    return <div className="ppRoot">{kopf}<div className="qlogEmpty">Baue die Fußballwelt…</div>{regelModal}</div>;
-  }
+  const zeitleiste = (
+    <div className="kaLeiste">
+      <Verlaufskurve verlauf={k.verlauf} defVon={defVon} />
+      <table>
+        <thead><tr><th>Alter</th><th>Verein</th><th>Stärke</th><th>Sp</th><th>To</th><th>Vo</th></tr></thead>
+        <tbody>
+          {k.verlauf.map((z, i) => (
+            <tr key={i}>
+              <td>{z.alter}</td>
+              <td><span className="kaZeilenWappen"><Emblem def={defVon({ key: z.key, name: z.verein })} /></span>{z.verein} <small>{z.lg}</small>{z.titel.length ? <em> · {z.titel.map((t) => TITEL_NAME[t] || t).join(", ")}</em> : null}</td>
+              <td><b>{z.ovr}</b></td><td>{z.spiele}</td><td>{z.tore}</td><td>{z.vorlagen}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 
-  // Schritt 1: Anlage
-  if (!k) {
+  const vitrine = (() => {
+    const eintraege = TITEL_REIHE.filter((t) => k.titel[t]);
     return (
-      <div className="ppRoot">
-        {kopf}
-        <div className="panel">
-          <div className="prompt">Wer wirst du?</div>
-          <div className="karAnlage">
-            <label>Name
-              <input className="field" value={name} maxLength={24} placeholder="Dein Spieler"
-                onChange={(e) => setName(e.target.value)} />
-            </label>
-            <label>Nation
-              <select className="field" value={nation} onChange={(e) => setNation(e.target.value)}>
-                {NATIONS.map((n) => <option key={n.key} value={n.key}>{n.name}</option>)}
-              </select>
-            </label>
-            <label>Rückennummer
-              <input className="field" type="number" min="1" max="99" value={nummer}
-                onChange={(e) => setNummer(Math.max(1, Math.min(99, +e.target.value || 1)))} />
-            </label>
-          </div>
-
-          <div className="prompt" style={{ marginTop: 16 }}>Position</div>
-          <div className="karWahlreihe">
-            {K.POSITIONEN.map((p) => (
-              <button key={p.key} className={`karWahl ${pos === p.key ? "an" : ""}`} onClick={() => setPos(p.key)}>
-                <b>{p.name}</b>
-              </button>
-            ))}
-          </div>
-
-          <div className="prompt" style={{ marginTop: 16 }}>Wie schnell soll die Zeit vergehen?</div>
-          <div className="karWahlreihe">
-            {Object.entries(K.TEMPO).map(([key, t]) => (
-              <button key={key} className={`karWahl ${tempo === key ? "an" : ""}`} onClick={() => setTempo(key)}>
-                <b>{t.name}</b><span>{t.text}</span>
-              </button>
-            ))}
-          </div>
-
-          {best && <p className="ruleP">Bisher am weitesten gekommen: <b>{best.stufe}</b> mit {best.name} — {best.tore} Tore in {best.saisons} Saisons.</p>}
-          <div className="closeline">
-            <button className="btn primary" style={{ flex: 1, padding: "12px" }} onClick={starte}>Karriere beginnen</button>
-          </div>
-        </div>
-        {regelModal}
+      <div className="kaVitrine">
+        {eintraege.length
+          ? eintraege.map((t) => <span key={t} className="kaTitel">{TITEL_NAME[t]}{k.titel[t] > 1 ? ` ×${k.titel[t]}` : ""}</span>)
+          : <span className="kaLeer">Vitrine leer</span>}
       </div>
     );
-  }
+  })();
 
-  const stufe = k.beendet ? K.stufeFuer(k) : null;
-  const titelListe = TITEL_REIHE.filter((t) => k.titel[t]);
+  const kopfzeile = (
+    <div className="kaKopf">
+      <div className="kaOvr"><b>{k.ovr}</b><small>Stärke</small></div>
+      {k.verein && <span className="kaWappen"><Emblem def={defVon(k.verein)} /></span>}
+      <div className="kaWer">
+        <b>#{k.nummer} {k.name}</b>
+        <small>{K.posDaten(k.pos).name} · {landName(k.land)} · {k.verein ? k.verein.name : "vereinslos"}</small>
+      </div>
+      <div className="kaWert"><b>{K.werteText(K.marktwert(k.ovr))}</b><small>Marktwert</small></div>
+    </div>
+  );
 
   return (
     <div className="ppRoot">
       {kopf}
+      <div className="panel">
+        {kopfzeile}
+        {vitrine}
 
-      <div className="karKopf">
-        <div className="karWer">
-          <span className="karNummer">{k.nummer}</span>
-          <div>
-            <b>{k.name}</b>
-            <span className="karMeta">{K.posDaten(k.pos).name} · {k.nation} · {k.alter} Jahre</span>
+        {meldung.length > 0 && (
+          <div className="kaMeldung">{meldung.map((m, i) => <span key={i}>{m}</span>)}</div>
+        )}
+
+        {karte?.art === "jugend" && (
+          <div className="kaEntscheidung">
+            <h3>Dein erster Verein</h3>
+            <p>Drei Vereine aus {landName(land)} wollen dich in ihre Jugend holen.</p>
+            <div className="kaOptionen">
+              {karte.vereine.map((v) => (
+                <button key={v.key} className="kaOption mitWappen" onClick={() => spieleSchritt(k, v)}>
+                  <Emblem def={defVon(v)} />
+                  <span><b>{v.name}</b><small>{v.liga.name} · Stufe {v.stufe}</small></span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="karOverall">{Math.round(k.overall)}</div>
-      </div>
+        )}
 
-      <div className="karVerein">
-        <Emblem def={CLUBS.find((c) => c.key === k.verein.key) || { key: k.verein.key, name: k.verein.name, label: k.verein.key, c1: "#334", c2: "#fff", pat: "solid" }} />
-        <span><b>{k.verein.name}</b><span className="karMeta">{LIGA_NAME[k.verein.lg] || k.verein.lg} · Niveau {k.verein.niveau}</span></span>
-      </div>
-
-      <div className="karBalken">
-        {[["Form", k.form], ["Fitness", k.fitness], ["Moral", k.moral], ["Ruf", k.ruf]].map(([label, wert]) => (
-          <div key={label}>
-            <span>{label}</span>
-            <div className="karBar"><i style={{ width: `${wert}%` }} /></div>
+        {karte?.art === "leihe" && (
+          <div className="kaEntscheidung">
+            <h3>Leihe</h3>
+            <p>Bei {karte.bleiben.name} kommst du nicht zum Zug. Eine Saison woanders bringt dir Spiele.</p>
+            <div className="kaOptionen">
+              {karte.vereine.map((v) => (
+                <button key={v.key} className="kaOption mitWappen"
+                  onClick={() => spieleSchritt({ ...k, leiheVon: karte.bleiben }, v)}>
+                  <Emblem def={defVon(v)} />
+                  <span><b>Leihe zu {v.name}</b>
+                  <small>{v.liga.name} · Stufe {v.stufe} · dort {Math.round(K.einsatzAnteil(k.ovr, v.stufe, k.rolle) * K.SPIELE_JE_SAISON)} Spiele statt {Math.round(K.einsatzAnteil(k.ovr, karte.bleiben.stufe, k.rolle) * K.SPIELE_JE_SAISON)}</small></span>
+                </button>
+              ))}
+              <button className="kaOption" onClick={() => spieleSchritt(k, karte.bleiben)}>
+                <b>Bleiben und kämpfen</b>
+                <small>Wenig Einsatzzeit bei {karte.bleiben.name}</small>
+              </button>
+            </div>
           </div>
-        ))}
-      </div>
+        )}
 
-      {bericht.length > 0 && (
-        <div className="panel">
-          {bericht.map((b, n) => (
-            <div key={n} className="karSaison">
-              <div className="karSaisonKopf">
-                <b>Saison {b.saison}</b>
-                <span className="karMeta">{b.verein.name} · Platz {b.platz}</span>
-              </div>
-              <div className="karZahlen">
-                <span><b>{b.spiele}</b> Spiele</span>
-                <span><b>{b.tore}</b> Tore</span>
-                <span><b>{b.vorlagen}</b> Vorlagen</span>
-              </div>
-              {b.berufen && b.turnier && <div className="karMeta">Im Aufgebot für die {TITEL_NAME[b.turnier] || b.turnier}-Endrunde</div>}
-              {b.titel.length > 0 && (
-                <div className="karTitelZeile">{b.titel.map((t) => <span key={t} className="karTitel">{TITEL_NAME[t] || t}</span>)}</div>
+        {karte?.art === "rueckkehr" && (
+          <div className="kaEntscheidung">
+            <h3>Zurück von der Leihe</h3>
+            <p>Die Zeit bei {karte.verein.name} ist vorbei — {karte.heim.name} holt dich zurück.</p>
+            <div className="kaOptionen">
+              <button className="kaOption mitWappen" onClick={() => spieleSchritt(k, karte.heim)}>
+                <Emblem def={defVon(karte.heim)} />
+                <span><b>Zurück zu {karte.heim.name}</b><small>{karte.heim.liga.name} · Stufe {karte.heim.stufe}</small></span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {karte?.art === "ereignis" && (
+          <div className="kaEntscheidung">
+            <h3>{karte.ereignis.titel}</h3>
+            <p>{karte.ereignis.text}</p>
+            <div className="kaOptionen">
+              {karte.ereignis.optionen.map((o, i) => (
+                <button key={i} className="kaOption" onClick={() => waehleOption(o)}>
+                  <b>{o.label}</b>
+                  {o.chance === undefined
+                    ? <small>{wirkungsText(o.wirkung)}</small>
+                    : <>
+                        <small className="gut">{wirkungsText(o.wirkung)} · {prozent(o.chance)}</small>
+                        <small className="schlecht">{wirkungsText(o.sonst)} · {prozent(1 - o.chance)}</small>
+                      </>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {karte?.art === "angebot" && (
+          <div className="kaEntscheidung">
+            <h3>Wie geht es weiter?</h3>
+            <p>{karte.vereine.length ? "Andere Vereine klopfen an." : "Es klopft niemand an."}</p>
+            <div className="kaOptionen">
+              {karte.vereine.map((v) => (
+                <button key={v.key} className="kaOption mitWappen" onClick={() => spieleSchritt(k, v)}>
+                  <Emblem def={defVon(v)} />
+                  <span><b>Wechseln zu {v.name}</b><small>{v.liga.name} · Stufe {v.stufe} · verlangt Stärke {K.STUFE_MINDEST_OVR[v.stufe]}</small></span>
+                </button>
+              ))}
+              <button className="kaOption mitWappen" onClick={() => spieleSchritt(k, karte.bleiben)}>
+                <Emblem def={defVon(karte.bleiben)} />
+                <span><b>Bleiben bei {karte.bleiben.name}</b><small>{karte.bleiben.liga.name} · Stufe {karte.bleiben.stufe}</small></span>
+              </button>
+              {karte.rücktritt && (
+                <button className="kaOption kaEnde" onClick={() => beende(k)}>
+                  <b>Die Schuhe an den Nagel hängen</b>
+                  <small>Laufbahn beenden</small>
+                </button>
               )}
             </div>
-          ))}
-        </div>
-      )}
-
-      {frage && (
-        <div className="panel">
-          <div className="prompt">{frage.liste[frage.index].frage}</div>
-          <div className="karWahlen">
-            {frage.liste[frage.index].wahlen.map((w, i) => (
-              <button key={i} className="karEntscheidung" onClick={() => waehle(w)}>
-                <b>{w.text}</b>
-                <span className="karMeta">{beschreibeWirkung(w)}</span>
-              </button>
-            ))}
           </div>
-        </div>
-      )}
+        )}
 
-      {angebote && (
-        <div className="panel">
-          <div className="prompt">Diese Vereine wollen dich</div>
-          <div className="karWahlen">
-            {angebote.map((a, i) => (
-              <button key={i} className="karEntscheidung" onClick={() => wechsle(a)}>
-                <b>{a.verein.name}</b>
-                <span className="karMeta">
-                  {LIGA_NAME[a.verein.lg] || a.verein.lg} · Niveau {a.verein.niveau} · {a.jahre} Jahre
-                  {a.verein.niveau > k.overall + 3 ? " · du wärst Ergänzungsspieler" : a.verein.niveau < k.overall - 4 ? " · du wärst der Star" : " · du wärst Stammspieler"}
-                </span>
-              </button>
-            ))}
-            <button className="karEntscheidung" onClick={() => setAngebote(null)}>
-              <b>Bleiben</b><span className="karMeta">Beim {k.verein.name} weitermachen</span>
-            </button>
-          </div>
-        </div>
-      )}
+        {karte?.art === "ende" && (
+          <div className="kaEnde">
+            <Confetti an={karte.auszeichnungen.length > 1} />
+            <h2>Laufbahn beendet</h2>
+            <p className="kaBilanz">
+              {k.verlauf.length ? `${k.verlauf[0].alter - K.TEMPO[k.tempo].saisons} bis ${k.alter}` : k.alter} ·{" "}
+              {k.gesamt.spiele} Spiele · {k.gesamt.tore} Tore · {k.gesamt.vorlagen} Vorlagen ·{" "}
+              {k.vereine.length} Verein{k.vereine.length === 1 ? "" : "e"}
+            </p>
+            <h3>Auszeichnungen</h3>
+            {/* Die Auszeichnungen sind absichtlich schwer. Ohne diesen Satz stünde bei
+                den meisten Laufbahnen eine leere Überschrift, und das sähe nach einem
+                Fehler aus statt nach einem Ergebnis. */}
+            <div className="kaAuszeichnungen">
+              {karte.auszeichnungen.length
+                ? karte.auszeichnungen.map((a) => (
+                    <div key={a.key} className="kaAuszeichnung"><b>{a.name}</b><small>{a.text}</small></div>
+                  ))
+                : <p className="kaLeer">
+                    Keine der {K.AUSZEICHNUNGEN.length} Auszeichnungen erreicht — sie verlangen mehr
+                    als eine ordentliche Laufbahn.
+                  </p>}
+            </div>
+            {/* Die Urkunde: das Bild, das die Laufbahn überdauert. Sie zeichnet ohne
+                Wappen — ein SVG mit externen Bildern liesse sich nicht als PNG
+                speichern, und speichern ist ihr ganzer Zweck. */}
+            <UrkundeKarriere
+              name={k.name}
+              nummer={k.nummer}
+              position={K.posDaten(k.pos).name}
+              land={landName(k.land)}
+              verlauf={k.verlauf}
+              gesamt={k.gesamt}
+              hoechste={Math.max(...k.verlauf.map((z) => z.ovr), k.ovr)}
+              titel={TITEL_REIHE.filter((x) => k.titel[x]).map((x) => ({ name: TITEL_NAME[x], anzahl: k.titel[x] }))}
+              auszeichnungen={karte.auszeichnungen}
+              vereine={[...new Set(k.verlauf.map((z) => z.verein))]}
+              datum={new Date().toLocaleDateString("de-DE")}
+            />
 
-      {!frage && !angebote && !k.beendet && (
-        <div className="closeline">
-          <button className="btn primary" style={{ flex: 1, padding: "12px" }} onClick={() => naechsteSaison()}>
-            {bericht.length ? "Weiter" : "Erste Saison spielen"}
-          </button>
-        </div>
-      )}
-
-      {titelListe.length > 0 && (
-        <div className="panel">
-          <div className="prompt">Vitrine</div>
-          <div className="karVitrine">
-            {titelListe.map((t) => (
-              <span key={t} className="karPokal">{TITEL_NAME[t]}{k.titel[t] > 1 ? ` ×${k.titel[t]}` : ""}</span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {k.beendet && (
-        <div className="panel dailyEnd">
-          {(stufe.key === "legende" || stufe.key === "weltstar") && <Confetti />}
-          <div className="tmKarteKopf">
-            <span className="tmKarteEmoji">{stufe.emoji}</span>
-            <div>
-              <h2 style={{ margin: 0 }}>{stufe.name}</h2>
-              <span className="tmSpielerMeta">{k.name} · {k.saison - 1} Saisons · Rücktritt mit {k.alter}</span>
+            <div className="kaEndeKnoepfe">
+              <ShareButton style={{ flex: 1, padding: "12px" }}
+                text={() => shareKarriere({
+                  name: k.name,
+                  stufe: karte.auszeichnungen[0]?.name || "ohne Auszeichnung",
+                  saisons: k.gesamt.spiele ? k.verlauf.length * K.TEMPO[k.tempo].saisons : 0,
+                  tore: k.gesamt.tore, vorlagen: k.gesamt.vorlagen, overall: k.ovr,
+                  titel: TITEL_REIHE.filter((t) => k.titel[t]).map((t) => TITEL_NAME[t]),
+                })} />
+              <button className="btn" onClick={() => { setK(null); setKarte(null); setMeldung([]); }}>Neue Laufbahn</button>
             </div>
           </div>
-          <div className="tmBilanz">
-            <span><b>{k.gesamt.spiele}</b>Sp</span>
-            <span><b>{k.gesamt.tore}</b>T</span>
-            <span><b>{k.gesamt.vorlagen}</b>V</span>
-            <span className="tmPunkte"><b>{Math.round(k.hoechsterOverall || k.overall)}</b> Höchstwert</span>
-          </div>
-          <div className="closeline">
-            <ShareButton style={{ flex: 1, padding: "12px" }}
-              text={shareKarriere({
-                name: k.name, stufe: stufe.name, saisons: k.saison - 1,
-                tore: k.gesamt.tore, vorlagen: k.gesamt.vorlagen,
-                overall: Math.round(k.hoechsterOverall || k.overall),
-                titel: titelListe.map((t) => `${TITEL_NAME[t]}${k.titel[t] > 1 ? ` ×${k.titel[t]}` : ""}`),
-              })} />
-          </div>
-          <div className="closeline">
-            <button className="btn primary" style={{ flex: 1, padding: "12px" }} onClick={() => setK(null)}>Neue Karriere</button>
-            <button className="btn ghost" style={{ flex: 1, padding: "12px" }} onClick={onLeave}>Zur Lobby</button>
-          </div>
-        </div>
-      )}
+        )}
 
-      {regelModal}
+        {k.verlauf.length > 0 && zeitleiste}
+        <DataStamp />
+      </div>
     </div>
   );
-}
-
-/* Was eine Wahl bewirkt, in Worten. Zahlen stünden dem Spiel im Weg: „+1,6 Overall,
-   −10 Fitness" liest sich wie eine Tabellenkalkulation, „Du wirst besser, aber es
-   geht auf die Substanz" wie eine Entscheidung. */
-function beschreibeWirkung(w) {
-  const teile = [];
-  const w0 = w.wirkung || {};
-  if (w0.overall >= 1) teile.push("macht dich deutlich besser");
-  else if (w0.overall > 0) teile.push("macht dich etwas besser");
-  else if (w0.overall < 0) teile.push("kostet Spielstärke");
-  if (w0.fitness >= 8) teile.push("tut dem Körper gut");
-  else if (w0.fitness <= -8) teile.push("geht auf die Substanz");
-  if (w0.moral >= 6) teile.push("hebt die Laune");
-  else if (w0.moral <= -6) teile.push("drückt die Laune");
-  if (w0.ruf >= 8) teile.push("macht Schlagzeilen");
-  if (w.risiko >= 0.15) teile.push("Verletzungsgefahr");
-  return teile.join(" · ") || "wirkt sich kaum aus";
 }
