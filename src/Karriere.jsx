@@ -241,13 +241,13 @@ export default function Karriere({ onLeave }) {
     </GameTop>
   );
 
-  if (!bereit) return (<>{kopf}<div className="karte"><p>Die Vereinswelt wird gebaut …</p></div></>);
+  if (!bereit) return (<div className="ppRoot">{kopf}<div className="panel"><p>Die Vereinswelt wird gebaut …</p></div></div>);
 
   // Anlage
   if (!k) return (
-    <>
+    <div className="ppRoot">
       {kopf}
-      <div className="karte kaAnlage">
+      <div className="panel kaAnlage">
         <h2>Wer wirst du?</h2>
         <div className="kaFeldreihe">
           <label>Name
@@ -290,7 +290,7 @@ export default function Karriere({ onLeave }) {
         <button className="btn primary" onClick={starte}>Laufbahn beginnen</button>
         <DataStamp />
       </div>
-    </>
+    </div>
   );
 
   const zeitleiste = (
@@ -333,9 +333,9 @@ export default function Karriere({ onLeave }) {
   );
 
   return (
-    <>
+    <div className="ppRoot">
       {kopf}
-      <div className="karte">
+      <div className="panel">
         {kopfzeile}
         {vitrine}
 
@@ -476,6 +476,6 @@ export default function Karriere({ onLeave }) {
         {k.verlauf.length > 0 && zeitleiste}
         <DataStamp />
       </div>
-    </>
+    </div>
   );
 }

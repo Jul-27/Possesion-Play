@@ -1117,3 +1117,109 @@ body::after {
 
 .karVitrine { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .karPokal { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(250, 204, 21, .12); color: var(--gold); border: 1px solid rgba(250, 204, 21, .25); }
+
+/* ── Karriere ────────────────────────────────────────────────────────────────
+   Eigenes Kürzel `ka`, wie `tm` bei der Traumelf. Farben ausschließlich aus den
+   Marken oben: Der Modus soll sich einfügen, nicht auffallen. */
+
+/* Anlage: Formularzeilen mit Beschriftung über dem Feld. */
+.kaAnlage h2 { font-size: 19px; margin: 0 0 12px; }
+.kaAnlage h3 { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; }
+.kaFeldreihe { display: flex; gap: 10px; margin-bottom: 10px; }
+.kaFeldreihe label { flex: 1; display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--muted); }
+.kaFeldreihe input, .kaFeldreihe select {
+  background: var(--bg-3); border: 1px solid var(--brd); border-radius: 12px; color: var(--text);
+  padding: 11px 13px; font-size: 15px; font-family: 'Archivo', sans-serif; outline: none;
+  transition: border-color .15s;
+}
+.kaFeldreihe input:focus, .kaFeldreihe select:focus { border-color: var(--teal); }
+
+/* Positionen: zwölf gleich große Felder, damit sie wie eine Tafel wirken. */
+.kaPositionen { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.kaPos {
+  padding: 10px 0; border-radius: 10px; cursor: pointer; font-weight: 800; font-size: 12.5px;
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--muted);
+  font-family: 'Archivo', sans-serif; transition: border-color .15s, color .15s;
+}
+.kaPos:hover { border-color: var(--teal); color: var(--text); }
+.kaPos.an { background: var(--acc); border-color: transparent; color: #04121B; }
+
+/* Tempo und alle anderen Auswahlkacheln folgen demselben Bau wie .tmLiga. */
+.kaTempo { display: grid; gap: 6px; margin-bottom: 16px; }
+.kaWahl {
+  display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 11px 13px;
+  border-radius: 12px; cursor: pointer; background: var(--bg-2); border: 1px solid var(--line);
+  color: var(--text); font-family: 'Archivo', sans-serif;
+}
+.kaWahl:hover { border-color: var(--teal); }
+.kaWahl b { font-size: 14px; }
+.kaWahl small { font-size: 12px; color: var(--muted); }
+.kaWahl.an { border-color: var(--teal); background: rgba(34,211,238,.08); }
+
+/* Kopfzeile: Stärke links, Person in der Mitte, Marktwert rechts. */
+.kaKopf { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line-soft); }
+.kaOvr, .kaWert { display: flex; flex-direction: column; align-items: center; min-width: 68px; }
+.kaOvr b { font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+.kaWert b { font-size: 14px; line-height: 1.3; font-variant-numeric: tabular-nums; color: var(--gold); }
+.kaOvr small, .kaWert small { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-top: 3px; }
+.kaWer { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.kaWer b { font-size: 15px; }
+.kaWer small { font-size: 12px; color: var(--muted); }
+
+/* Vitrine: Titel als kleine Marken, damit eine volle Vitrine etwas hermacht. */
+.kaVitrine { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px 0; }
+.kaTitel {
+  font-size: 11.5px; padding: 3px 9px; border-radius: 999px; background: rgba(250,204,21,.12);
+  border: 1px solid rgba(250,204,21,.3); color: var(--gold);
+}
+.kaLeer { font-size: 12px; color: var(--muted); }
+
+/* Was im letzten Schritt geschah — Titel und Auf-/Abstiege. */
+.kaMeldung { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; font-size: 12.5px; color: var(--win); }
+
+/* Die Entscheidungskarte — das Herz des Modus. */
+.kaEntscheidung h3 { font-size: 17px; margin: 6px 0 4px; }
+.kaEntscheidung > p { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
+.kaOptionen { display: grid; gap: 8px; }
+.kaOption {
+  display: flex; flex-direction: column; gap: 3px; text-align: left; padding: 12px 14px;
+  border-radius: 12px; cursor: pointer; background: var(--bg-2); border: 1px solid var(--line);
+  color: var(--text); font-family: 'Archivo', sans-serif;
+  transition: border-color .15s, transform .12s;
+}
+.kaOption:hover { border-color: var(--teal); transform: translateY(-1px); }
+.kaOption b { font-size: 14.5px; }
+.kaOption small { font-size: 12px; color: var(--muted); }
+/* Die beiden Quotenzeilen: Erfolg grün, Rückschlag rot. Sie sind der Grund, warum
+   dieser Modus anders ist als ein Knopfdruck — deshalb dürfen sie Farbe haben. */
+.kaOption small.gut { color: var(--win); }
+.kaOption small.schlecht { color: var(--rose); }
+.kaOption.kaEnde { border-color: rgba(244,63,94,.35); }
+
+/* Zeitleiste: die Laufbahn als Tabelle, Zahlen mit fester Breite. */
+.kaLeiste { margin-top: 16px; overflow-x: auto; }
+.kaLeiste table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.kaLeiste th {
+  text-align: left; font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); font-weight: 700; padding: 0 8px 6px 0; border-bottom: 1px solid var(--line);
+}
+.kaLeiste td { padding: 7px 8px 7px 0; border-bottom: 1px solid var(--line-soft); vertical-align: baseline; }
+.kaLeiste td:first-child, .kaLeiste th:first-child { width: 42px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.kaLeiste td:nth-child(n+3) { text-align: right; font-variant-numeric: tabular-nums; }
+.kaLeiste th:nth-child(n+3) { text-align: right; padding-right: 0; }
+.kaLeiste small { color: var(--muted); font-size: 10.5px; margin-left: 4px; }
+.kaLeiste em { font-style: normal; color: var(--gold); font-size: 11.5px; }
+
+/* Karriereende */
+.kaEnde h2 { font-size: 21px; margin: 8px 0 4px; }
+.kaEnde h3 { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; }
+.kaBilanz { font-size: 13px; color: var(--muted); margin: 0; }
+.kaAuszeichnungen { display: grid; gap: 8px; }
+.kaAuszeichnung {
+  display: flex; flex-direction: column; gap: 3px; padding: 11px 13px; border-radius: 12px;
+  background: rgba(250,204,21,.07); border: 1px solid rgba(250,204,21,.28);
+}
+.kaAuszeichnung b { font-size: 14.5px; color: var(--gold); }
+.kaAuszeichnung small { font-size: 12px; color: var(--muted); }
+.kaEndeKnoepfe { display: flex; gap: 10px; margin-top: 16px; }
+.kaEndeKnoepfe .btn { flex: 1; }
