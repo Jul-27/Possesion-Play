@@ -15,6 +15,7 @@ import ReportButton from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
 import { Emblem } from "./Emblems.jsx";
+import UrkundeKarriere from "./UrkundeKarriere.jsx";
 
 /* Titelnamen für die Vitrine. Die Schlüssel sind dieselben wie im Feld `t` der
    Spielerdaten — „CL" heißt in der Karriere dasselbe wie in jedem anderen Modus. */
@@ -40,6 +41,57 @@ const landName = (code) => NATIONS.find((n) => n.key === code)?.name || code;
 const defVon = (v) => CLUBS.find((c) => c.key === v.key)
   || { key: v.key, name: v.name, label: v.key, c2: "#fff", pat: "solid",
        c1: `hsl(${K.hashStr(v.key) % 360} 52% 36%)` };
+
+/* ── Die Verlaufskurve ────────────────────────────────────────────────────────
+   Die Zeitleiste als Tabelle sagt alles, aber sie erzählt nichts. Dieselben Zahlen
+   als Kurve zeigen auf einen Blick, was eine Laufbahn ausmacht: der Anstieg bis
+   Mitte zwanzig, das Plateau, der Abfall — und wo dazwischen gewechselt und
+   gewonnen wurde.
+
+   Wappen stehen nur dort, wo der Verein WECHSELT. Eines je Schritt wäre eine
+   Perlenkette; so markieren sie die Wendepunkte. */
+function Verlaufskurve({ verlauf, defVon }) {
+  if (verlauf.length < 2) return null;
+  const B = 600, H = 150, RAND = { o: 18, u: 26, l: 8, r: 8 };
+  const werte = verlauf.map((z) => z.ovr);
+  const min = Math.min(...werte) - 4, max = Math.max(...werte) + 4;
+  const x = (i) => RAND.l + (i / (verlauf.length - 1)) * (B - RAND.l - RAND.r);
+  const y = (v) => RAND.o + (1 - (v - min) / (max - min || 1)) * (H - RAND.o - RAND.u);
+  const punkte = verlauf.map((z, i) => `${x(i)},${y(z.ovr)}`).join(" ");
+  const flaeche = `${x(0)},${H - RAND.u} ${punkte} ${x(verlauf.length - 1)},${H - RAND.u}`;
+
+  return (
+    <svg className="kaKurve" viewBox={`0 0 ${B} ${H}`} preserveAspectRatio="none" role="img"
+      aria-label="Stärkeverlauf der Laufbahn">
+      <defs>
+        <linearGradient id="kaKurveF" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--teal)" stopOpacity=".35" />
+          <stop offset="100%" stopColor="var(--teal)" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon points={flaeche} fill="url(#kaKurveF)" />
+      <polyline points={punkte} fill="none" stroke="var(--teal)" strokeWidth="2"
+        strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+      {verlauf.map((z, i) => {
+        const neuerVerein = i === 0 || verlauf[i - 1].key !== z.key;
+        const titel = (z.titel || []).length;
+        return (
+          <g key={i}>
+            {titel > 0 && <circle cx={x(i)} cy={y(z.ovr)} r="5.5" fill="var(--gold)" />}
+            <circle cx={x(i)} cy={y(z.ovr)} r="2.6" fill={titel ? "var(--bg-1)" : "var(--teal)"} />
+            {neuerVerein && z.key && (
+              <image href={`/logos/club/${z.key}.png`} x={x(i) - 9} y={H - RAND.u + 4} width="18" height="18" />
+            )}
+            {(i === 0 || i === verlauf.length - 1) && (
+              <text x={x(i)} y={RAND.o - 6} textAnchor={i === 0 ? "start" : "end"}
+                fill="var(--muted)" fontSize="11">{z.alter} J · {z.ovr}</text>
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
 
 const prozent = (p) => `${Math.round(p * 100)} %`;
 /* Wie eine Wirkung auf der Karte steht. Ohne diese Zeile wäre die Entscheidung
@@ -194,7 +246,10 @@ export default function Karriere({ onLeave }) {
      dauernd kommen, sonst wird die Laufbahn zur Fragebogenaktion. */
   function naechsteKarte(k2, verein) {
     const zufall = zufallRef.current;
-    if (k2.alter >= 40) return beende(k2);
+    /* Schluss ist Schluss. Die Grenze lag bei 40 und wurde VOR dem naechsten Schritt
+       geprueft — ein Schritt umfasst aber zwei Saisons, also endeten Laufbahnen bei
+       41. Auf der Urkunde stand dann „bis 41 Jahre", und so lange spielt niemand. */
+    if (k2.alter >= K.ALTERSGRENZE) return beende(k2);
     const offerten = K.angebote(welt, k2, zufall);
     const mussWechseln = k2.alter >= K.RUECKTRITT_AB && offerten.length === 0;
     if (mussWechseln) return beende(k2);
@@ -305,6 +360,7 @@ export default function Karriere({ onLeave }) {
 
   const zeitleiste = (
     <div className="kaLeiste">
+      <Verlaufskurve verlauf={k.verlauf} defVon={defVon} />
       <table>
         <thead><tr><th>Alter</th><th>Verein</th><th>Stärke</th><th>Sp</th><th>To</th><th>Vo</th></tr></thead>
         <tbody>
@@ -471,6 +527,23 @@ export default function Karriere({ onLeave }) {
                     als eine ordentliche Laufbahn.
                   </p>}
             </div>
+            {/* Die Urkunde: das Bild, das die Laufbahn überdauert. Sie zeichnet ohne
+                Wappen — ein SVG mit externen Bildern liesse sich nicht als PNG
+                speichern, und speichern ist ihr ganzer Zweck. */}
+            <UrkundeKarriere
+              name={k.name}
+              nummer={k.nummer}
+              position={K.posDaten(k.pos).name}
+              land={landName(k.land)}
+              verlauf={k.verlauf}
+              gesamt={k.gesamt}
+              hoechste={Math.max(...k.verlauf.map((z) => z.ovr), k.ovr)}
+              titel={TITEL_REIHE.filter((x) => k.titel[x]).map((x) => ({ name: TITEL_NAME[x], anzahl: k.titel[x] }))}
+              auszeichnungen={karte.auszeichnungen}
+              vereine={[...new Set(k.verlauf.map((z) => z.verein))]}
+              datum={new Date().toLocaleDateString("de-DE")}
+            />
+
             <div className="kaEndeKnoepfe">
               <ShareButton style={{ flex: 1, padding: "12px" }}
                 text={() => shareKarriere({

@@ -1233,3 +1233,7 @@ body::after {
 .kaWappen .emblem { width: 34px; height: 34px; }
 .kaZeilenWappen { display: inline-block; vertical-align: -4px; margin-right: 6px; }
 .kaZeilenWappen .emblem { width: 17px; height: 17px; }
+
+/* Die Verlaufskurve über der Zeitleiste — Stärke über die Jahre, Wappen an den
+   Wechseln, Goldpunkte, wo etwas gewonnen wurde. */
+.kaKurve { width: 100%; height: 150px; display: block; margin: 4px 0 14px; overflow: visible; }

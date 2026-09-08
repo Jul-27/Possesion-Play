@@ -493,6 +493,10 @@ export const ANGEBOTE_NORMAL = 3;
 export const ANGEBOTE_SPAET = 2;
 export const SPAET_AB = 32;
 export const RUECKTRITT_AB = 34;
+/* Spaetestens hier ist Schluss, auch wenn noch Angebote kaemen. Gemessen: Ohne
+   diese Grenze liefen Laufbahnen bis 41, weil die Welt 345 Vereine kennt und sich
+   fuer einen Spieler mit Stufe 0 immer noch einer findet. */
+export const ALTERSGRENZE = 38;
 
 export function jugendAngebote(welt, land, zufall) {
   const heimisch = (stufe) => welt.vereine.filter((v) => v.liga.land === land && v.liga.stufe === stufe && v.stufe <= 3);
