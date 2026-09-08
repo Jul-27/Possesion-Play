@@ -318,10 +318,10 @@ test("die großen Auszeichnungen verlangen wirklich viel", () => {
   assert.ok(!K.erreichteAuszeichnungen(fast).some((a) => a.key === "fuenf_ohren"));
   const ganz = { ...leer(), titel: { CL: 5 } };
   assert.ok(K.erreichteAuszeichnungen(ganz).some((a) => a.key === "fuenf_ohren"));
-  const alle = { ...leer(), titel: { MBL: 1, MPL: 1, MLL: 1, MSA: 1, ML1: 1 } };
-  assert.ok(K.erreichteAuszeichnungen(alle).some((a) => a.key === "europas_erster"));
   const vier = { ...leer(), titel: { MBL: 1, MPL: 1, MLL: 1, MSA: 1 } };
-  assert.ok(!K.erreichteAuszeichnungen(vier).some((a) => a.key === "europas_erster"));
+  assert.ok(K.erreichteAuszeichnungen(vier).some((a) => a.key === "europas_erster"));
+  const drei = { ...leer(), titel: { MBL: 1, MPL: 1, MLL: 1 } };
+  assert.ok(!K.erreichteAuszeichnungen(drei).some((a) => a.key === "europas_erster"));
 });
 
 /* EINE AUSZEICHNUNG, DIE NIEMAND ERREICHEN KANN, IST EIN GEBROCHENES VERSPRECHEN.
@@ -331,15 +331,15 @@ test("jede Auszeichnung ist erreichbar", () => {
   const beispiele = {
     fuenf_ohren:    { titel: { CL: 5 } },
     unvollendet:    {},
-    europas_erster: { titel: { MBL: 1, MPL: 1, MLL: 1, MSA: 1, ML1: 1 } },
+    europas_erster: { titel: { MBL: 1, MPL: 1, MLL: 1, MSA: 1 } },
     vereinstreue:   { vereine: ["A"], titel: { MBL: 1, DFB: 1, CL: 1 } },
     aus_der_zweiten:{ aufstiegMitMeister: true },
     riesentoeter:   { europaMitKleinem: true },
     das_triple:     { triple: true },
-    wanderer:       { vereine: Array.from({ length: 15 }, (_, i) => "V" + i) },
+    wanderer:       { vereine: Array.from({ length: 10 }, (_, i) => "V" + i) },
     grenzgaenger:   { laender: ["GER", "ENG", "ESP", "ITA", "FRA", "POR", "NED"] },
-    torfabrik:      { gesamt: { spiele: 700, tore: 500, vorlagen: 100 } },
-    der_ewige:      { alter: 38 },
+    torfabrik:      { gesamt: { spiele: 700, tore: 300, vorlagen: 100 } },
+    der_ewige:      { alter: 36, verein: { stufe: 5 } },
     goldjunge:      { bdoAlter: 22, titel: { BDO: 1 } },
     der_groesste:   { titel: { WM: 1, CL: 4, BDO: 6 } },
     doppelbuerger:  { verbandGewechselt: true, titel: { EM: 1 } },
@@ -359,4 +359,192 @@ test("jede Auszeichnung hat Namen und Erklärung", () => {
     assert.ok(a.name && a.name.length < 30, `${a.key}: Name fehlt oder ist zu lang`);
     assert.ok(a.text && a.text.endsWith("."), `${a.key}: Erklärung fehlt`);
   }
+});
+
+// ── Auf- und Abstieg ─────────────────────────────────────────────────────────
+
+test("die Schwesterliga ist die andere Spielklasse desselben Landes", () => {
+  const erste = LIGEN[0], zweite = LIGEN[1];
+  assert.equal(K.schwesterLiga(erste, LIGEN).key, zweite.key);
+  assert.equal(K.schwesterLiga(zweite, LIGEN).key, erste.key);
+  assert.equal(K.schwesterLiga(LIGEN[2], LIGEN), null, "ein Land ohne zweite Liga hat keine");
+});
+
+/* DER FEHLER, DEN DAS FÄNGT: Ein Aufsteiger behielte sonst die Deckelung der zweiten
+   Liga und bliebe für immer bei Rufstufe 2 — er dürfte also auch als Erstligist nie
+   Meister werden. */
+test("ein Aufsteiger darf wachsen", () => {
+  const zwa = v("ZWA");
+  assert.equal(zwa.stufe, 2, "in der zweiten Liga gedeckelt");
+  const oben = K.mitLiga(zwa, LIGEN[0]);
+  assert.equal(oben.lg, "XL");
+  assert.ok(oben.stufe > 2, `nach dem Aufstieg Stufe ${oben.stufe}`);
+  assert.equal(oben.staerke, zwa.staerke, "die Mannschaft ist dieselbe");
+});
+
+test("aufgestiegen wird nach oben, abgestiegen nach unten", () => {
+  const zufall = K.rng(41);
+  const richtungen = (verein) => {
+    const zahl = { auf: 0, ab: 0, keine: 0 };
+    for (let i = 0; i < 3000; i++) zahl[K.ligaWechsel(verein, zufall, LIGEN).richtung || "keine"]++;
+    return zahl;
+  };
+  const zweite = richtungen(v("ZWA"));
+  assert.ok(zweite.auf > 0 && zweite.ab === 0, "aus der zweiten Liga geht es nur hoch");
+  const schwach = richtungen(v("KEL"));
+  assert.ok(schwach.ab > 0 && schwach.auf === 0, "aus der ersten nur runter");
+  const stark = richtungen(v("SPI"));
+  assert.equal(stark.ab, 0, "ein Spitzenverein steigt nicht ab");
+});
+
+test("ohne zweite Liga passiert nichts", () => {
+  const zufall = K.rng(43);
+  for (let i = 0; i < 200; i++) assert.equal(K.ligaWechsel(v("AUS"), zufall, LIGEN).richtung, null);
+});
+
+// ── Leihe ────────────────────────────────────────────────────────────────────
+
+/* Wofür die zweite Spielklasse gebaut wurde: Ein Siebzehnjähriger bei einem
+   Spitzenverein sitzt. Eine Leihe nach unten gibt ihm Spiele. */
+test("verliehen wird nur, wer jung ist und nicht spielt", () => {
+  const jung = { ...K.neueKarriere({ name: "T", land: "XXX", nummer: 9, pos: "ST" }), alter: 18, ovr: 55 };
+  assert.equal(K.leiheMoeglich(jung, v("SPI")), true, "zu schwach für den Spitzenverein");
+  assert.equal(K.leiheMoeglich(jung, v("KEL")), false, "beim kleinen Verein spielt er");
+  const stark = { ...jung, ovr: 90 };
+  assert.equal(K.leiheMoeglich(stark, v("SPI")), false, "wer gut genug ist, wird nicht verliehen");
+  const alt = { ...jung, alter: K.LEIHE_BIS_ALTER + 1 };
+  assert.equal(K.leiheMoeglich(alt, v("SPI")), false, "zu alt für eine Leihe");
+  const schon = { ...jung, leiheVon: v("SPI") };
+  assert.equal(K.leiheMoeglich(schon, v("SPI")), false, "nicht zweimal hintereinander");
+});
+
+test("geliehen wird nach unten, nie nach oben", () => {
+  const zufall = K.rng(47);
+  const k = { ...K.neueKarriere({ name: "T", land: "XXX", nummer: 9, pos: "ST" }), alter: 18, ovr: 60 };
+  for (let i = 0; i < 30; i++)
+    for (const ziel of K.leihAngebote(welt, k, v("SPI"), zufall)) {
+      assert.ok(ziel.stufe < v("SPI").stufe, `${ziel.name} ist nicht schwächer`);
+      assert.ok(k.ovr >= K.STUFE_MINDEST_OVR[ziel.stufe], `${ziel.name} nähme ihn gar nicht`);
+      assert.notEqual(ziel.key, "SPI");
+    }
+});
+
+// ── Turnier-Takt ─────────────────────────────────────────────────────────────
+
+/* DER FEHLER, DEN DAS FÄNGT: Zuerst wurde in jeder Saison auf beide Turniere
+   gewürfelt. Im Spiel wurde ein Spieler dadurch zweimal binnen zwei Saisons
+   Weltmeister — es gibt aber alle vier Jahre eine WM. */
+test("Turniere folgen dem Vierjahrestakt", () => {
+  const takt = Array.from({ length: 12 }, (_, i) => K.turnierIn(i));
+  assert.deepEqual(takt, ["WM", null, "EM", null, "WM", null, "EM", null, "WM", null, "EM", null]);
+});
+
+test("ohne Turnier gibt es keinen Länderpokal", () => {
+  const zufall = K.rng(53);
+  const k = { ovr: 95 };
+  for (const saison of [1, 3, 5, 7]) {
+    for (let i = 0; i < 200; i++)
+      assert.deepEqual(K.nationalTitel(k, { stufe: 5 }, zufall, saison), [], `Saison ${saison}`);
+  }
+  /* Und in einem Turnierjahr kommt höchstens EIN Titel heraus, nie beide. */
+  for (let i = 0; i < 300; i++) {
+    const t = K.nationalTitel(k, { stufe: 5 }, zufall, 0);
+    assert.ok(t.length <= 1 && (t.length === 0 || t[0] === "WM"));
+  }
+});
+
+test("wer zu schwach ist, spielt nicht in der Nationalelf", () => {
+  const zufall = K.rng(59);
+  for (let i = 0; i < 300; i++)
+    assert.deepEqual(K.nationalTitel({ ovr: K.NATIONALELF_AB - 1 }, { stufe: 5 }, zufall, 0), []);
+});
+
+// ── Der Wächter ──────────────────────────────────────────────────────────────
+
+/* WARUM ES DIESE PRÜFUNG BRAUCHT, obwohl es oben schon eine zu den Auszeichnungen
+   gibt: Jene baut sich die Laufbahn, die sie erfüllt, selbst zusammen. Sie zeigt,
+   dass eine Bedingung ERFÜLLBAR ist — nicht, dass das Spiel sie je hervorbringt.
+
+   Genau diese Lücke war teuer. Nach der ersten Fassung fielen in 600 gespielten
+   Laufbahnen ACHT der fünfzehn Auszeichnungen kein einziges Mal, eine fiel in
+   100 %. Beides ist dasselbe Versagen: eine Auszeichnung, die nichts aussagt.
+
+   Diese Prüfung spielt deshalb echte Laufbahnen durch — mit festen Startwerten,
+   also immer dieselben — und verlangt, dass jede Auszeichnung mindestens einmal
+   vorkommt und keine in mehr als der Hälfte aller Läufe.
+
+   SCHLÄGT SIE FEHL, ist nicht die Prüfung schuld, sondern die Auszeichnung oder
+   eine Kurve: Dann liegt eine Schwelle außerhalb dessen, was das Spiel erzeugt. */
+function spieleDurch(seed, stil, welt) {
+  const zufall = K.rng(seed * 7919 + 13);
+  let k = K.neueKarriere({ name: "P", land: "XXX", nummer: 9, pos: "ST", tempo: "normal", seed });
+  let verein = K.jugendAngebote(welt, "XXX", zufall)[0];
+  if (!verein) return null;
+  let mod = { liga: 1, pokal: 1, europa: 1 };
+  for (let schritt = 0; schritt < 11 && k.alter < 39; schritt++) {
+    const neu = [];
+    for (let s = 0; s < 2; s++) {
+      const l = K.saisonLeistung(k, verein.stufe, zufall);
+      k.gesamt = { spiele: k.gesamt.spiele + l.spiele, tore: k.gesamt.tore + l.tore, vorlagen: k.gesamt.vorlagen + l.vorlagen };
+      k.saisonNr++;
+      neu.push(...K.saisonTitel(verein, zufall, mod), ...K.einzelTitel(k, l, zufall),
+               ...K.nationalTitel(k, verein, zufall, k.saisonNr));
+      k.alter++;
+      k.ovr = K.grenze(k.ovr + K.wachstum(k.typ, k.alter, zufall), K.OVR_MIN, K.OVR_MAX);
+      /* welt.ligen, NICHT die kleine Testwelt oben: Mit der falschen Liste findet
+         schwesterLiga nichts, und es steigt nie jemand auf. */
+      const w = K.ligaWechsel(verein, zufall, welt.ligen);
+      if (w.richtung === "auf") k.aufgestiegenMit = verein.key;
+      verein = w.verein;
+    }
+    mod = { liga: 1, pokal: 1, europa: 1 };
+    const lk = K.LIGA_TITEL[verein.lg], pk = K.POKAL_TITEL[verein.lg];
+    for (const t of neu) { k.titel[t] = (k.titel[t] || 0) + 1; if (t === "BDO" && k.bdoAlter === undefined) k.bdoAlter = k.alter; }
+    if (lk && pk && neu.includes(lk) && neu.includes(pk) && (neu.includes("CL") || neu.includes("EL"))) k.triple = true;
+    if (verein.stufe <= 3 && (neu.includes("CL") || neu.includes("EL"))) k.europaMitKleinem = true;
+    if (lk && neu.includes(lk) && k.aufgestiegenMit === verein.key) k.aufstiegMitMeister = true;
+    if (!k.vereine.includes(verein.key)) k.vereine.push(verein.key);
+    if (!k.laender.includes(verein.liga.land)) k.laender.push(verein.liga.land);
+
+    if (stil === "treu") { const r = K.entscheide(k, K.ziehEreignis(k, zufall).optionen[0], zufall); k = { ...r.karriere }; mod = r.mod; continue; }
+    const a = K.angebote(welt, k, zufall);
+    if (stil === "ehrgeizig" && a.length) { verein = a.reduce((x, y) => (y.stufe > x.stufe ? y : x)); continue; }
+    if (zufall() < 0.5 && a.length) { verein = a[Math.floor(zufall() * a.length)]; continue; }
+    const e = K.ziehEreignis(k, zufall);
+    const r = K.entscheide(k, e.optionen[Math.floor(zufall() * e.optionen.length)], zufall);
+    k = { ...r.karriere }; mod = r.mod;
+  }
+  k.verein = verein;
+  return k;
+}
+
+test("jede Auszeichnung kommt im gespielten Spiel wirklich vor", () => {
+  /* Eine breitere Welt als die Handvoll oben — sonst gäbe es weder fünf große
+     Meisterschaften noch sieben Länder zu holen. */
+  const ligen = [];
+  const vereine = [];
+  for (const [lg, lg2, land] of [["BL", "BL2", "GER"], ["PL", "PL2", "ENG"], ["LL", "LL2", "ESP"],
+                                 ["SA", "SA2", "ITA"], ["L1", "L2", "FRA"], ["PT", "PT2", "PRT"], ["NL", "NL2", "NED"]]) {
+    ligen.push({ key: lg, name: lg, land, stufe: 1, plaetze: 18 }, { key: lg2, name: lg2, land, stufe: 2, plaetze: 18 });
+    for (let i = 0; i < 6; i++) vereine.push({ key: `${lg}${i}`, name: `${lg} ${i}`, qid: `Q${lg}${i}`, lg });
+    for (let i = 0; i < 6; i++) vereine.push({ key: `${lg2}${i}`, name: `${lg2} ${i}`, qid: `Q${lg2}${i}`, lg: lg2 });
+  }
+  const staerke = (v) => 70 + ((v.key.length * 7 + v.key.charCodeAt(v.key.length - 1) * 3) % 24);
+  const w = K.baueWelt(staerke, vereine, ligen);
+
+  const zahl = new Map(K.AUSZEICHNUNGEN.map((a) => [a.key, 0]));
+  let laeufe = 0;
+  for (const stil of ["ehrgeizig", "treu", "zufall"]) {
+    for (let n = 0; n < 500; n++) {
+      const k = spieleDurch(n, stil, w);
+      if (!k) continue;
+      laeufe++;
+      for (const a of K.erreichteAuszeichnungen(k)) zahl.set(a.key, zahl.get(a.key) + 1);
+    }
+  }
+  assert.ok(laeufe > 1000, `nur ${laeufe} Laufbahnen gespielt`);
+  const tot = K.AUSZEICHNUNGEN.filter((a) => zahl.get(a.key) === 0);
+  assert.deepEqual(tot.map((a) => a.name), [], `unerreichbar in ${laeufe} Laufbahnen`);
+  const zuLeicht = K.AUSZEICHNUNGEN.filter((a) => zahl.get(a.key) > laeufe * 0.5);
+  assert.deepEqual(zuLeicht.map((a) => a.name), [], "fällt in über der Hälfte aller Laufbahnen");
 });

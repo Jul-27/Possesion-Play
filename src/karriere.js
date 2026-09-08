@@ -93,10 +93,17 @@ export const ausSpanne = ([min, max], zufall) => min + Math.floor(zufall() * (ma
 
    Die Werte sind Spannen je Lebensjahr — der tatsächliche Zuwachs wird daraus
    gezogen. Deshalb sind zwei Laufbahnen desselben Typs nie gleich. */
+/* GEMESSEN UND NACHGEZOGEN: Die erste Fassung war zu flach — aus 50 mit sechzehn
+   wurden bis 22 rund 77, und weil der Ballon d'Or erst ab 88 vergeben wird, ist er
+   in 600 simulierten Laufbahnen kein einziges Mal an einen Zweiundzwanzigjährigen
+   gegangen. Eine Auszeichnung, die das Spiel nie hervorbringt, ist tot.
+
+   Die Werte gelten JE SAISON, nicht je Entscheidungsschritt. Ein Frühentwickler mit
+   Glück steht damit um die 86 bis 88, wenn er 22 wird. */
 export const ENTWICKLUNG = {
-  frueh:  { 18: [4, 9], 20: [3, 8], 22: [2, 5], 24: [0, 4], 26: [-1, 1], 28: [-1, 0], 30: [-1, 0], 32: [-2, 0], 34: [-3, -1], 36: [-4, -1], 38: [-5, -2] },
-  normal: { 18: [2, 7], 20: [2, 7], 22: [1, 5], 24: [1, 4], 26: [0, 2], 28: [-1, 0], 30: [-1, 0], 32: [-2, 0], 34: [-3, -1], 36: [-4, -1], 38: [-5, -2] },
-  spaet:  { 18: [1, 6], 20: [1, 6], 22: [1, 5], 24: [1, 5], 26: [1, 3], 28: [0, 1], 30: [0, 1], 32: [-1, 0], 34: [-3, -1], 36: [-4, -1], 38: [-5, -2] },
+  frueh:  { 18: [5, 10], 20: [4, 9], 22: [2, 6], 24: [0, 4], 26: [-1, 1], 28: [-1, 0], 30: [-1, 0], 32: [-2, 0], 34: [-3, -1], 36: [-4, -1], 38: [-5, -2] },
+  normal: { 18: [3, 8],  20: [3, 8], 22: [2, 6], 24: [1, 4], 26: [0, 2],  28: [-1, 0], 30: [-1, 0], 32: [-2, 0], 34: [-3, -1], 36: [-4, -1], 38: [-5, -2] },
+  spaet:  { 18: [2, 6],  20: [2, 6], 22: [2, 6], 24: [2, 5], 26: [1, 3],  28: [0, 1],  30: [0, 1],  32: [-1, 0], 34: [-3, -1], 36: [-4, -1], 38: [-5, -2] },
 };
 export const ENTWICKLUNG_NAMEN = { frueh: "Frühentwickler", normal: "normale Entwicklung", spaet: "Spätentwickler" };
 
@@ -141,7 +148,7 @@ export const STUFE_MINDEST_OVR = [48, 56, 64, 72, 79, 85];
 export const TITEL_CHANCE = {
   liga:   [0.00, 0.01, 0.05, 0.14, 0.30, 0.55],
   pokal:  [0.01, 0.04, 0.09, 0.16, 0.24, 0.34],
-  europa: [0.00, 0.00, 0.02, 0.07, 0.14, 0.26],
+  europa: [0.00, 0.00, 0.02, 0.07, 0.16, 0.30],
 };
 
 /* ── Marktwert ─────────────────────────────────────────────────────────────────
@@ -183,6 +190,65 @@ export function baueWelt(staerkeVon, vereine = WELT_VEREINE, ligen = WELT_LIGEN)
   return { vereine: out, ligen };
 }
 
+/* ── Auf- und Abstieg ──────────────────────────────────────────────────────────
+   Ohne ihn wäre die zweite Spielklasse nur eine Schublade für schwächere Vereine,
+   und „Aus der Zweiten" — mit demselben Verein aufsteigen und dann Meister werden —
+   wäre nicht bloß schwer, sondern unmöglich: Jeder Verein hätte für immer dieselbe
+   Liga.
+
+   Gespielt wird nicht die Tabelle, sondern die Erwartung: Ein starker Zweitligist
+   steigt oft auf, ein schwacher Erstligist oft ab. Die Rufstufe ist dabei an die
+   Spielklasse gebunden (in der zweiten ist bei 2 Schluss), deshalb wird sie beim
+   Wechsel neu berechnet — ein Aufsteiger darf wachsen. */
+export const AUFSTIEG_CHANCE = [0.01, 0.04, 0.12];          // je Rufstufe, nur 2. Liga
+export const ABSTIEG_CHANCE = [0.34, 0.16, 0.06, 0.01, 0, 0]; // je Rufstufe, nur 1. Liga
+
+/** Die andere Spielklasse desselben Landes — oder null, wo es keine gibt. */
+export function schwesterLiga(liga, ligen = WELT_LIGEN) {
+  return ligen.find((l) => l.land === liga.land && l.stufe !== liga.stufe) || null;
+}
+
+/** Denselben Verein in einer anderen Liga, mit neu berechneter Rufstufe. */
+export function mitLiga(verein, liga) {
+  return { ...verein, lg: liga.key, liga, stufe: stufeVon(verein.staerke, liga.stufe) };
+}
+
+/** Steigt der Verein auf oder ab? Liefert { verein, richtung }. */
+export function ligaWechsel(verein, zufall, ligen = WELT_LIGEN) {
+  const andere = schwesterLiga(verein.liga, ligen);
+  if (!andere) return { verein, richtung: null };
+  if (verein.liga.stufe === 2 && zufall() < (AUFSTIEG_CHANCE[verein.stufe] ?? 0))
+    return { verein: mitLiga(verein, andere), richtung: "auf" };
+  if (verein.liga.stufe === 1 && zufall() < (ABSTIEG_CHANCE[verein.stufe] ?? 0))
+    return { verein: mitLiga(verein, andere), richtung: "ab" };
+  return { verein, richtung: null };
+}
+
+/* ── Leihe ─────────────────────────────────────────────────────────────────────
+   Der zweite Grund, warum es die zweite Spielklasse gibt. Ein Siebzehnjähriger bei
+   einem Spitzenverein spielt dort nicht — er sitzt. Eine Leihe nach unten gibt ihm
+   Spiele, und Spiele sind das, woraus Entwicklung entsteht.
+
+   Angeboten wird sie nur, solange er jung ist UND bei seinem Verein zu schwach für
+   einen Stammplatz. Wer gut genug ist, wird nicht verliehen. */
+export const LEIHE_BIS_ALTER = 21;
+export const LEIHE_UNTER_ANTEIL = 0.45;   // weniger Einsatzzeit als das heißt: Bank
+
+export function leiheMoeglich(k, verein) {
+  return k.alter <= LEIHE_BIS_ALTER && !k.leiheVon
+    && einsatzAnteil(k.ovr, verein.stufe, k.rolle) < LEIHE_UNTER_ANTEIL;
+}
+
+/** Vereine, die den Spieler leihweise nähmen — schwächer als sein eigener. */
+export function leihAngebote(welt, k, verein, zufall, anzahl = 3) {
+  const infrage = welt.vereine.filter((v) =>
+    v.key !== verein.key && v.stufe < verein.stufe && k.ovr >= STUFE_MINDEST_OVR[v.stufe]);
+  const kopie = [...infrage];
+  const out = [];
+  while (out.length < anzahl && kopie.length) out.push(...kopie.splice(Math.floor(zufall() * kopie.length), 1));
+  return out;
+}
+
 /** Alle Vereine einer Stufe, die den Spieler nehmen würden. */
 export function passendeVereine(welt, ovr, { land = null, ligaStufe = null, ausser = [] } = {}) {
   const raus = new Set(ausser);
@@ -203,7 +269,12 @@ export function neueKarriere({ name, land, nummer, pos, fuss = "rechts", tempo =
     ovr: OVR_START,
     verein: null,
     leiheVon: null,
-    rolle: "kader",          // kader | rotation | stamm
+    /* „stamm" ist der richtige Anfang, nicht „kader": Ob jemand zu schwach für seinen
+       Verein ist, entscheidet die Einsatzkurve ohnehin. Mit „kader" als Vorgabe lief
+       JEDER Spieler von Anfang an mit 45 % Einsatzzeit — auch bei einem kleinen
+       Verein, der ihn spielen ließe. Die Rolle sinkt erst durch Ereignisse. */
+    rolle: "stamm",          // stamm | rotation | kader
+    saisonNr: 0,             // zählt Saisons — daran hängt der Turnier-Takt
     verlauf: [],             // je Schritt eine Zeile für die Zeitleiste
     titel: {},               // Honour-Key -> Anzahl
     vereine: [],             // alle Vereine der Laufbahn, für Auszeichnungen
@@ -255,7 +326,13 @@ export function saisonTitel(verein, zufall, mod = {}) {
   if (liga && zufall() < chance("liga")) out.push(liga);
   const pokal = POKAL_TITEL[verein.lg];
   if (pokal && zufall() < chance("pokal")) out.push(pokal);
-  if (zufall() < chance("europa")) out.push(zufall() < 0.45 ? "CL" : "EL");
+  /* WELCHER EUROPAPOKAL — nicht gewürfelt, sondern nach Rang. Ein Verein der
+     höchsten Stufen spielt die Champions League, kein Mittelfeldverein spielt sie.
+     Vorher entschied ein Münzwurf, und damit gewann ein Spitzenverein die Champions
+     League nur in 11,7 % der Saisons; fünf Titel in einer Laufbahn waren in 1500
+     gespielten Läufen kein einziges Mal zu holen. Real Madrid hat sie in elf Jahren
+     sechsmal gewonnen. */
+  if (zufall() < chance("europa")) out.push(verein.stufe >= 4 ? "CL" : zufall() < 0.3 ? "CL" : "EL");
   return out;
 }
 
@@ -267,16 +344,27 @@ export function einzelTitel(k, leistung, zufall) {
   return zufall() < chance ? ["BDO"] : [];
 }
 
-/* Nationalelf: ab einem Wert, der von der Stufe des Vereins mitgetragen wird. Die
-   Turniere kommen im Zweijahrestakt, deshalb hängt die Chance am Schritt. */
+/* Nationalelf: ab einem Wert, der von der Stufe des Vereins mitgetragen wird.
+
+   DER TAKT IST WICHTIG. Zuerst wurde in JEDER Saison auf beide Turniere gewürfelt —
+   im Spiel wurde ein Spieler dadurch zweimal innerhalb von zwei Saisons Weltmeister.
+   Eine WM gibt es alle vier Jahre, eine EM dazwischen. Der Fehler blähte nebenbei
+   die Titelzahlen auf, an denen „Der Sammler" hängt. */
 export const NATIONALELF_AB = 76;
-export function nationalTitel(k, verein, zufall) {
-  if (k.ovr < NATIONALELF_AB) return [];
+export const TURNIER_TAKT = 4;
+
+/** Welches Turnier findet in dieser Saison statt — oder keines? */
+export function turnierIn(saisonNr) {
+  const rest = saisonNr % TURNIER_TAKT;
+  return rest === 0 ? "WM" : rest === 2 ? "EM" : null;
+}
+
+export function nationalTitel(k, verein, zufall, saisonNr = 0) {
+  const turnier = turnierIn(saisonNr);
+  if (!turnier || k.ovr < NATIONALELF_AB) return [];
   const guete = (k.ovr - NATIONALELF_AB) / 20 + verein.stufe * 0.03;
-  const out = [];
-  if (zufall() < guete * 0.10) out.push("WM");
-  if (zufall() < guete * 0.14) out.push("EM");
-  return out;
+  /* Die EM ist leichter zu gewinnen als die WM: weniger Mitbewerber. */
+  return zufall() < guete * (turnier === "WM" ? 0.22 : 0.30) ? [turnier] : [];
 }
 
 /* ── Entscheidungen ────────────────────────────────────────────────────────────
@@ -452,8 +540,11 @@ export const AUSZEICHNUNGEN = [
     pruefe: (k) => zahl(k, "CL") >= 5 },
   { key: "unvollendet", name: "Der Unvollendete", text: "Eine ganze Laufbahn ohne einen einzigen Mannschaftstitel.",
     pruefe: (k) => Object.keys(k.titel).filter((t) => t !== "BDO").length === 0 },
-  { key: "europas_erster", name: "Europas Erster", text: "Meister in allen fünf großen Ligen.",
-    pruefe: (k) => alleLigaTitel(k) === 5 },
+  /* GEMESSEN über 1200 Laufbahnen: vier verschiedene große Meisterschaften kamen in
+     0,3 % zusammen, alle fünf in keiner einzigen. Vier ist damit die härteste noch
+     erreichbare Stufe — und liegt gleichauf mit „Der Größte" und „Goldjunge". */
+  { key: "europas_erster", name: "Europas Erster", text: "Meister in vier der fünf großen Ligen.",
+    pruefe: (k) => alleLigaTitel(k) >= 4 },
   { key: "vereinstreue", name: "Ein Leben, ein Verein", text: "Die ganze Laufbahn bei einem Verein — mit Meisterschaft, Pokal und Europapokal.",
     pruefe: (k) => k.vereine.length === 1 && alleLigaTitel(k) >= 1
       && Object.values(POKAL_TITEL).some((t) => zahl(k, t) > 0) && (zahl(k, "CL") + zahl(k, "EL")) > 0 },
@@ -463,14 +554,22 @@ export const AUSZEICHNUNGEN = [
     pruefe: (k) => k.europaMitKleinem === true },
   { key: "das_triple", name: "Das Triple", text: "Meisterschaft, Pokal und Europapokal in einer einzigen Saison.",
     pruefe: (k) => k.triple === true },
-  { key: "wanderer", name: "Der Wanderer", text: "Für fünfzehn verschiedene Vereine gespielt.",
-    pruefe: (k) => k.vereine.length >= 15 },
+  /* Elf Entscheidungsschritte heißt höchstens elf Vereine — fünfzehn zu verlangen
+     war unerfüllbar. Gemessen: Median 6, oberes Zehntel 11. */
+  { key: "wanderer", name: "Der Wanderer", text: "Für zehn verschiedene Vereine gespielt.",
+    pruefe: (k) => k.vereine.length >= 10 },
   { key: "grenzgaenger", name: "Grenzgänger", text: "In allen sieben Ländern der Welt gespielt.",
     pruefe: (k) => k.laender.length >= 7 },
-  { key: "torfabrik", name: "Torfabrik", text: "Fünfhundert Tore in der Laufbahn.",
-    pruefe: (k) => k.gesamt.tore >= 500 },
-  { key: "der_ewige", name: "Der Ewige", text: "Mit achtunddreißig noch im Kader.",
-    pruefe: (k) => k.alter >= 38 },
+  /* Gemessen über 1200 Laufbahnen: Median 78 Tore, oberes Zehntel 181, Bestwert 366.
+     Fünfhundert war unerreichbar; dreihundert liegt über dem oberen Zehntel und
+     unter dem Bestwert — also selten, aber möglich. */
+  { key: "torfabrik", name: "Torfabrik", text: "Dreihundert Tore in der Laufbahn.",
+    pruefe: (k) => k.gesamt.tore >= 300 },
+  /* GEMESSEN: „mit 38 noch im Kader" fiel in 100 % der Laufbahnen — jede erreicht
+     dieses Alter, also war die Auszeichnung keine. Verlangt wird jetzt, mit 36 noch
+     bei einem Spitzenverein zu stehen; das schafft nur, wer sein Niveau hält. */
+  { key: "der_ewige", name: "Der Ewige", text: "Mit sechsunddreißig noch bei einem Spitzenverein.",
+    pruefe: (k) => k.alter >= 36 && (k.verein?.stufe ?? 0) >= 4 },
   { key: "goldjunge", name: "Goldjunge", text: "Ballon d'Or vor dem dreiundzwanzigsten Geburtstag.",
     pruefe: (k) => (k.bdoAlter ?? 99) < 23 },
   { key: "der_groesste", name: "Der Größte", text: "Weltmeister, viermal Champions League und sechs Ballons d'Or.",

@@ -118,11 +118,13 @@ export default function Karriere({ onLeave }) {
 
   /* Ein Schritt: so viele Saisons, wie das Tempo vorgibt. Danach steht fest, was
      passiert ist — und die nächste Karte liegt an. */
-  function spieleSchritt(basis, verein) {
+  function spieleSchritt(basis, startVerein) {
     const zufall = zufallRef.current;
     const saisons = K.TEMPO[basis.tempo].saisons;
+    let verein = startVerein;
     let k2 = { ...basis, verein };
     const neueTitel = [];
+    const ereignisse = [];
     let spiele = 0, tore = 0, vorlagen = 0;
 
     for (let s = 0; s < saisons; s++) {
@@ -131,9 +133,18 @@ export default function Karriere({ onLeave }) {
       spiele += l.spiele; tore += l.tore; vorlagen += l.vorlagen;
       for (const t of K.saisonTitel(verein, zufall, modRef.current)) neueTitel.push(t);
       for (const t of K.einzelTitel(k2, l, zufall)) { neueTitel.push(t); if (k2.bdoAlter === undefined) k2.bdoAlter = k2.alter; }
-      for (const t of K.nationalTitel(k2, verein, zufall)) neueTitel.push(t);
+      k2.saisonNr = (k2.saisonNr || 0) + 1;
+      for (const t of K.nationalTitel(k2, verein, zufall, k2.saisonNr)) neueTitel.push(t);
       k2.alter += 1;
       k2.ovr = K.grenze(k2.ovr + K.wachstum(k2.typ, k2.alter, zufall), K.OVR_MIN, K.OVR_MAX);
+      /* Auf- und Abstieg am Saisonende. Wer aufsteigt, wird vermerkt — nur so kann
+         später „Aus der Zweiten" überhaupt zutreffen. */
+      const w = K.ligaWechsel(verein, zufall);
+      if (w.richtung) {
+        ereignisse.push(`${verein.name} ${w.richtung === "auf" ? "steigt auf" : "steigt ab"}`);
+        if (w.richtung === "auf") k2.aufgestiegenMit = verein.key;
+        verein = w.verein;
+      }
     }
     modRef.current = { liga: 1, pokal: 1, europa: 1 };
 
@@ -145,11 +156,10 @@ export default function Karriere({ onLeave }) {
     const triple = ligaKey && pokalKey && neueTitel.includes(ligaKey) && neueTitel.includes(pokalKey)
       && (neueTitel.includes("CL") || neueTitel.includes("EL"));
     const europaKlein = verein.stufe <= 3 && (neueTitel.includes("CL") || neueTitel.includes("EL"));
-    const aufstieg = verein.liga.stufe === 1 && basis.verein?.key === verein.key
-      && basis.verein?.liga.stufe === 2 && !!ligaKey && neueTitel.includes(ligaKey);
+    const aufstieg = !!ligaKey && neueTitel.includes(ligaKey) && k2.aufgestiegenMit === verein.key;
 
     k2 = {
-      ...k2, titel,
+      ...k2, verein, titel,
       triple: k2.triple || triple,
       europaMitKleinem: k2.europaMitKleinem || europaKlein,
       aufstiegMitMeister: k2.aufstiegMitMeister || aufstieg,
@@ -164,7 +174,7 @@ export default function Karriere({ onLeave }) {
     };
 
     setK(k2);
-    setMeldung(neueTitel.map((t) => TITEL_NAME[t] || t));
+    setMeldung([...neueTitel.map((t) => `🏆 ${TITEL_NAME[t] || t}`), ...ereignisse.map((e) => `↕ ${e}`)]);
     if (neueTitel.length) play("win");
     naechsteKarte(k2, verein);
   }
@@ -178,6 +188,20 @@ export default function Karriere({ onLeave }) {
     const offerten = K.angebote(welt, k2, zufall);
     const mussWechseln = k2.alter >= K.RUECKTRITT_AB && offerten.length === 0;
     if (mussWechseln) return beende(k2);
+
+    /* Eine Leihe endet immer nach einem Schritt — man kehrt zu seinem Verein zurück
+       und entscheidet dort neu. */
+    if (k2.leiheVon) {
+      const heim = k2.leiheVon;
+      setK({ ...k2, leiheVon: null });
+      return setKarte({ art: "rueckkehr", heim, verein });
+    }
+    /* Wer jung ist und bei seinem Verein nicht spielt, bekommt eine Leihe angeboten.
+       Genau dafür gibt es die zweite Spielklasse. */
+    if (K.leiheMoeglich(k2, verein)) {
+      const ziele = K.leihAngebote(welt, k2, verein, zufall);
+      if (ziele.length) return setKarte({ art: "leihe", vereine: ziele, bleiben: verein });
+    }
 
     const seitWechsel = k2.verlauf.filter((z) => z.verein === verein.name).length;
     if (seitWechsel >= 3 || zufall() < 0.45) {
@@ -316,7 +340,7 @@ export default function Karriere({ onLeave }) {
         {vitrine}
 
         {meldung.length > 0 && (
-          <div className="kaMeldung">{meldung.map((m, i) => <span key={i}>🏆 {m}</span>)}</div>
+          <div className="kaMeldung">{meldung.map((m, i) => <span key={i}>{m}</span>)}</div>
         )}
 
         {karte?.art === "jugend" && (
@@ -330,6 +354,39 @@ export default function Karriere({ onLeave }) {
                   <small>{v.liga.name} · Stufe {v.stufe}</small>
                 </button>
               ))}
+            </div>
+          </div>
+        )}
+
+        {karte?.art === "leihe" && (
+          <div className="kaEntscheidung">
+            <h3>Leihe</h3>
+            <p>Bei {karte.bleiben.name} kommst du nicht zum Zug. Eine Saison woanders bringt dir Spiele.</p>
+            <div className="kaOptionen">
+              {karte.vereine.map((v) => (
+                <button key={v.key} className="kaOption"
+                  onClick={() => spieleSchritt({ ...k, leiheVon: karte.bleiben }, v)}>
+                  <b>Leihe zu {v.name}</b>
+                  <small>{v.liga.name} · Stufe {v.stufe} · dort {Math.round(K.einsatzAnteil(k.ovr, v.stufe, k.rolle) * K.SPIELE_JE_SAISON)} Spiele statt {Math.round(K.einsatzAnteil(k.ovr, karte.bleiben.stufe, k.rolle) * K.SPIELE_JE_SAISON)}</small>
+                </button>
+              ))}
+              <button className="kaOption" onClick={() => spieleSchritt(k, karte.bleiben)}>
+                <b>Bleiben und kämpfen</b>
+                <small>Wenig Einsatzzeit bei {karte.bleiben.name}</small>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {karte?.art === "rueckkehr" && (
+          <div className="kaEntscheidung">
+            <h3>Zurück von der Leihe</h3>
+            <p>Die Zeit bei {karte.verein.name} ist vorbei — {karte.heim.name} holt dich zurück.</p>
+            <div className="kaOptionen">
+              <button className="kaOption" onClick={() => spieleSchritt(k, karte.heim)}>
+                <b>Zurück zu {karte.heim.name}</b>
+                <small>{karte.heim.liga.name} · Stufe {karte.heim.stufe}</small>
+              </button>
             </div>
           </div>
         )}
