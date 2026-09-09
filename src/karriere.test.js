@@ -283,10 +283,17 @@ test("Angebote überspringen nie zwei Stufen", () => {
 });
 
 test("ab zweiunddreißig werden die Angebote weniger", () => {
+  /* Eine breitere Welt als die sechs Vereine oben: Mit dem Angebotsband bleibt dort
+     fuer einen 80er nur ein einziger Verein uebrig, und an einem Verein laesst sich
+     kein Unterschied in der ANZAHL zeigen. */
+  const viele = Array.from({ length: 12 }, (_, i) => ({ key: `B${i}`, name: `B${i}`, qid: `Q${i}`, lg: "XL" }));
+  const breit = K.baueWelt((v) => 80 + (Number(v.key.slice(1)) % 4), viele, LIGEN);
   const zufall = K.rng(29);
   const jung = { ...K.neueKarriere({ name: "T", land: "XXX", nummer: 1, pos: "ST" }), ovr: 80, alter: 26 };
   const alt = { ...jung, alter: K.SPAET_AB };
-  assert.ok(K.angebote(welt, jung, zufall).length > K.angebote(welt, alt, zufall).length);
+  assert.equal(K.angebote(breit, jung, zufall).length, K.ANGEBOTE_NORMAL);
+  assert.equal(K.angebote(breit, alt, zufall).length, K.ANGEBOTE_SPAET);
+  assert.ok(K.ANGEBOTE_NORMAL > K.ANGEBOTE_SPAET);
 });
 
 test("man bekommt kein Angebot vom eigenen Verein", () => {
@@ -547,4 +554,45 @@ test("jede Auszeichnung kommt im gespielten Spiel wirklich vor", () => {
   assert.deepEqual(tot.map((a) => a.name), [], `unerreichbar in ${laeufe} Laufbahnen`);
   const zuLeicht = K.AUSZEICHNUNGEN.filter((a) => zahl.get(a.key) > laeufe * 0.5);
   assert.deepEqual(zuLeicht.map((a) => a.name), [], "fällt in über der Hälfte aller Laufbahnen");
+});
+
+// ── Das Angebotsband ─────────────────────────────────────────────────────────
+
+/* DER FEHLER, DEN DAS FÄNGT: Es gab nur eine Obergrenze. Ein Spieler mit 85 bekam
+   deshalb weiterhin Angebote von Kellervereinen — die Auswahl stellte Weltklasse
+   und Abstiegskampf nebeneinander. Der eigene Wert muss das ganze Fenster
+   verschieben, nicht nur seine Decke. */
+test("Angebote kommen aus einem Band um das eigene Niveau", () => {
+  const zufall = K.rng(61);
+  const stufen = (ovr) => {
+    const k = { ...K.neueKarriere({ name: "T", land: "XXX", nummer: 9, pos: "ST" }), ovr, alter: 26 };
+    const alle = new Set();
+    for (let i = 0; i < 60; i++) for (const a of K.angebote(welt, k, zufall)) alle.add(a.stufe);
+    return [...alle].sort();
+  };
+  const stark = stufen(90);
+  assert.ok(stark.length, "ein Spitzenspieler bekommt Angebote");
+  assert.ok(Math.min(...stark) >= K.eigeneStufe(90) - K.BAND_UNTEN,
+    `ein 90er bekommt Angebote der Stufen ${stark} — zu weit unten`);
+  const schwach = stufen(58);
+  assert.ok(Math.max(...schwach) <= K.eigeneStufe(58) + K.BAND_OBEN,
+    `ein 58er bekommt Angebote der Stufen ${schwach} — zu weit oben`);
+  /* Und die Bänder duerfen sich nicht decken: Oben und unten ist es woanders. */
+  assert.ok(Math.min(...stark) > Math.min(...schwach), "das Fenster verschiebt sich mit dem Wert");
+});
+
+test("das eigene Niveau folgt den Anforderungen der Stufen", () => {
+  for (let s = 0; s < K.STUFE_MINDEST_OVR.length; s++)
+    assert.equal(K.eigeneStufe(K.STUFE_MINDEST_OVR[s]), s, `bei genau ${K.STUFE_MINDEST_OVR[s]}`);
+  assert.equal(K.eigeneStufe(40), 0, "unter jeder Anforderung ist es Stufe null");
+  assert.equal(K.eigeneStufe(99), 5);
+});
+
+test("wer nichts im Band findet, steht trotzdem nicht ohne Angebot da", () => {
+  /* Eine Welt mit nur einem sehr schwachen Verein: Das Band eines starken Spielers
+     ist leer, ein Angebot muss es trotzdem geben. */
+  const klein = K.baueWelt(() => 70, [{ key: "EIN", name: "Einziger", qid: "Q9", lg: "XL" }], LIGEN);
+  const zufall = K.rng(67);
+  const k = { ...K.neueKarriere({ name: "T", land: "XXX", nummer: 9, pos: "ST" }), ovr: 95, alter: 26 };
+  assert.equal(K.angebote(klein, k, zufall).length, 1);
 });

@@ -510,22 +510,48 @@ export function jugendAngebote(welt, land, zufall) {
   return angebote.length ? angebote : zieh(welt.vereine.filter((v) => v.stufe <= 2), 3);
 }
 
+/* DAS BAND. Angebote kommen aus einem Bereich UM das eigene Niveau — nicht aus
+   allem, was unterhalb liegt.
+
+   Das war der Fehler: Es gab nur eine Obergrenze. Ein Spieler mit 85 bekam deshalb
+   weiterhin Angebote von Kellervereinen, und die Auswahl war eine Liste aus
+   Weltklasse und Abstiegskampf nebeneinander. Im Vorbild klopfen bei 69 Zweitligisten
+   an, bei 79 Bologna und Brügge — der eigene Wert verschiebt das ganze Fenster,
+   nicht nur seine Decke.
+
+   Eine Stufe nach oben ist der mögliche Sprung, eine nach unten der Schritt zurück,
+   den ein alternder Spieler geht. Zwei Stufen tiefer ruft niemanden an, der oben
+   spielt. */
+export const BAND_UNTEN = 1;
+export const BAND_OBEN = 1;
+
 export function angebote(welt, k, zufall) {
   const anzahl = k.alter >= SPAET_AB ? ANGEBOTE_SPAET : ANGEBOTE_NORMAL;
-  const infrage = passendeVereine(welt, k.ovr, { ausser: k.verein ? [k.verein.key] : [] })
-    .filter((v) => v.stufe <= hoechsteErreichbareStufe(k.ovr));
+  const eigene = eigeneStufe(k.ovr);
+  const min = Math.max(0, eigene - BAND_UNTEN);
+  const max = Math.min(5, eigene + BAND_OBEN);
+  let infrage = passendeVereine(welt, k.ovr, { ausser: k.verein ? [k.verein.key] : [] })
+    .filter((v) => v.stufe >= min && v.stufe <= max);
+  /* Findet sich im Band nichts, wird nach unten geöffnet — ohne das stünde ein
+     Spieler ohne Angebot da, obwohl es Vereine für ihn gäbe. */
+  if (!infrage.length) infrage = passendeVereine(welt, k.ovr, { ausser: k.verein ? [k.verein.key] : [] });
   const out = [];
   const kopie = [...infrage];
   while (out.length < anzahl && kopie.length) out.push(...kopie.splice(Math.floor(zufall() * kopie.length), 1));
   return out;
 }
 
+/** Die höchste Stufe, deren Anforderung der Wert erfüllt — das eigene Niveau. */
+export function eigeneStufe(ovr) {
+  let s = 0;
+  for (let i = 0; i < STUFE_MINDEST_OVR.length; i++) if (ovr >= STUFE_MINDEST_OVR[i]) s = i;
+  return s;
+}
+
 /** Eine Stufe über dem, was der Wert sicher hergibt — mehr ist kein Wechsel, das
     wäre ein Wunder. */
 export function hoechsteErreichbareStufe(ovr) {
-  let s = 0;
-  for (let i = 0; i < STUFE_MINDEST_OVR.length; i++) if (ovr >= STUFE_MINDEST_OVR[i]) s = i;
-  return Math.min(5, s + 1);
+  return Math.min(5, eigeneStufe(ovr) + BAND_OBEN);
 }
 
 /* ── Auszeichnungen ────────────────────────────────────────────────────────────
