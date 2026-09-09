@@ -94,6 +94,16 @@ function Verlaufskurve({ verlauf, defVon }) {
   );
 }
 
+/* ── Bilder mit Rückfall ──────────────────────────────────────────────────────
+   Jedes Bild ist eine Zugabe, keine Bedingung: Fehlt die Datei, verschwindet nur
+   das Bild und der Rest der Karte steht unverändert. So laesst sich der Bestand
+   Stueck fuer Stueck fuellen, ohne dass zwischendurch etwas kaputt aussieht. */
+function Bild({ pfad, klasse, alt = "" }) {
+  const [fehlt, setFehlt] = useState(false);
+  if (fehlt) return null;
+  return <img className={klasse} src={pfad} alt={alt} loading="lazy" onError={() => setFehlt(true)} />;
+}
+
 /* ── Der Zähler ───────────────────────────────────────────────────────────────
    Das Rating ist die Zahl, um die sich alles dreht — deshalb springt sie nicht von
    60 auf 65, sondern läuft dorthin. Eine Zahl, die sich bewegt, wird gelesen; eine,
@@ -411,6 +421,7 @@ export default function Karriere({ onLeave }) {
     <div className="ppRoot">
       {kopf}
       <div className="panel kaAnlage">
+        <Bild pfad="/bilder/karriere-kopf.jpg" klasse="kaKopfbild" alt="" />
         <h2>Definiere deine Identität</h2>
 
         <div className="kaAnlageSpalten">
@@ -581,6 +592,7 @@ export default function Karriere({ onLeave }) {
 
         {karte?.art === "ereignis" && (
           <div className="kaEntscheidung">
+            <Bild pfad={`/bilder/ereignis/${karte.ereignis.key}.jpg`} klasse="kaKartenBild" alt="" />
             <h3>{karte.ereignis.titel}</h3>
             <p>{karte.ereignis.text}</p>
             <div className="kaOptionen">
@@ -640,7 +652,10 @@ export default function Karriere({ onLeave }) {
             <div className="kaAuszeichnungen">
               {karte.auszeichnungen.length
                 ? karte.auszeichnungen.map((a) => (
-                    <div key={a.key} className="kaAuszeichnung"><b>{a.name}</b><small>{a.text}</small></div>
+                    <div key={a.key} className="kaAuszeichnung">
+                      <Bild pfad={`/bilder/auszeichnung/${a.key}.png`} klasse="kaAbzeichen" alt="" />
+                      <span><b>{a.name}</b><small>{a.text}</small></span>
+                    </div>
                   ))
                 : <p className="kaLeer">
                     Keine der {K.AUSZEICHNUNGEN.length} Auszeichnungen erreicht — sie verlangen mehr
