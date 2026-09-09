@@ -1237,3 +1237,119 @@ body::after {
 /* Die Verlaufskurve über der Zeitleiste — Stärke über die Jahre, Wappen an den
    Wechseln, Goldpunkte, wo etwas gewonnen wurde. */
 .kaKurve { width: 100%; height: 150px; display: block; margin: 4px 0 14px; overflow: visible; }
+
+/* ── Karriere: die Anlage ────────────────────────────────────────────────────
+   Drei Spalten nach dem Vorbild: wer du bist, woher du kommst, wo du spielst.
+   Auf schmalen Schirmen untereinander. */
+.kaAnlageSpalten { display: grid; grid-template-columns: 1fr; gap: 18px; margin: 6px 0 4px; }
+@media (min-width: 760px) { .kaAnlageSpalten { grid-template-columns: 1fr 1fr 1fr; gap: 22px; } }
+.kaSpalte { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.kaSpalte h3 { margin: 0 0 2px; text-align: center; }
+
+.kaTrikot { width: 100%; max-width: 190px; align-self: center; height: auto; font-family: 'Archivo', sans-serif; }
+
+.kaFussLabel { font-size: 12px; color: var(--muted); }
+.kaFuss { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.kaFussKnopf {
+  padding: 11px 0; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 700;
+  background: var(--bg-3); border: 1px solid var(--brd); color: var(--muted);
+  font-family: 'Archivo', sans-serif; transition: border-color .15s, color .15s;
+}
+.kaFussKnopf:hover { border-color: var(--teal); color: var(--text); }
+.kaFussKnopf.an { background: var(--acc); border-color: transparent; color: #04121B; }
+
+/* Nationalität: suchen und aus 225 Ländern wählen. */
+.kaLandSuche {
+  background: var(--bg-3); border: 1px solid var(--brd); border-radius: 12px; color: var(--text);
+  padding: 10px 13px; font-size: 14px; font-family: 'Archivo', sans-serif; outline: none;
+}
+.kaLandSuche:focus { border-color: var(--teal); }
+.kaLandListe {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+  max-height: 268px; overflow-y: auto; padding-right: 4px;
+}
+.kaLand {
+  display: flex; align-items: center; gap: 7px; padding: 7px 9px; border-radius: 10px;
+  background: transparent; border: 1px solid transparent; color: var(--text); cursor: pointer;
+  font-family: 'Archivo', sans-serif; font-size: 12.5px; text-align: left; min-width: 0;
+}
+.kaLand:hover { background: var(--bg-2); }
+.kaLand.an { background: rgba(34,211,238,.1); border-color: var(--teal); }
+.kaLandFlagge { font-size: 16px; line-height: 1; flex: 0 0 auto; }
+.kaLandName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Das Spielfeld: Positionen dort, wo sie stehen. */
+.kaFeld {
+  position: relative; aspect-ratio: 3 / 4; border-radius: 12px;
+  background: linear-gradient(170deg, rgba(34,197,94,.14), rgba(16,120,70,.10));
+  border: 1px solid var(--line); overflow: hidden;
+}
+.kaFeldLinien { position: absolute; inset: 0; width: 100%; height: 100%; color: rgba(190,230,205,.28); }
+.kaFeldPos {
+  position: absolute; transform: translate(-50%, -50%);
+  padding: 5px 8px; border-radius: 8px; cursor: pointer;
+  font-size: 11.5px; font-weight: 800; letter-spacing: .02em;
+  background: rgba(9,16,13,.72); border: 1px solid rgba(190,230,205,.3); color: #DDEBE2;
+  font-family: 'Archivo', sans-serif; transition: transform .12s, background .15s, border-color .15s;
+}
+.kaFeldPos:hover { border-color: var(--teal); transform: translate(-50%, -50%) scale(1.08); }
+.kaFeldPos.an { background: var(--acc); border-color: transparent; color: #04121B; }
+.kaFeldName { text-align: center; font-size: 13px; color: var(--muted); margin: 2px 0 0; }
+
+/* Die Anlage darf aus der 600er-Spalte ausbrechen — drei Spalten brauchen Platz,
+   und im Vorbild nimmt dieser Schritt die ganze Breite. Alle anderen Ansichten des
+   Modus bleiben in der Spalte, weil sie dort richtig sind. */
+@media (min-width: 760px) {
+  .kaAnlage {
+    width: min(1040px, calc(100vw - 40px));
+    /* KEIN transform: .panel bringt eine Einblend-Animation mit `both` mit, und
+       deren Endzustand ueberschreibt jedes eigene transform — das Panel stand
+       dadurch um die halbe Spaltenbreite verschoben. Ein negativer Rand wirkt
+       unabhaengig von Animationen. */
+    margin-left: calc((100% - min(1040px, 100vw - 40px)) / 2);
+  }
+}
+/* Eine Spalte statt zwei: Bei zwei Spalten wurden aus Ländernamen Stummel
+   („Deutschland" -> „Deu…"), und ein abgeschnittener Name ist keine Auswahl. */
+.kaLandListe { grid-template-columns: 1fr; max-height: 300px; }
+@media (min-width: 1000px) { .kaLandListe { grid-template-columns: 1fr 1fr; } }
+/* Die Nummer braucht wenig Platz, der Nachname viel. */
+.kaSpalte .kaFeldreihe label:first-child { flex: 1 1 auto; }
+.kaSpalte .kaFeldreihe label:last-child { flex: 0 0 88px; }
+
+/* ── Das Rating ist der Anker ────────────────────────────────────────────────
+   Im Vorbild sitzt es als grosse farbige Kachel oben links und taucht in jeder
+   Zeile der Zeitleiste als Marke wieder auf. Es ist die Zahl, um die sich alles
+   dreht — sie darf nicht aussehen wie jede andere. */
+.kaOvr {
+  min-width: 84px; padding: 10px 8px 8px; border-radius: 14px; gap: 0;
+  background: linear-gradient(150deg, #F0A93B, #D9741C);
+  box-shadow: 0 10px 24px -12px rgba(217,116,28,.9), inset 0 1px 0 rgba(255,255,255,.35);
+}
+.kaOvr b { font-size: 34px; line-height: 1; color: #1A1205; font-variant-numeric: tabular-nums; }
+.kaOvr small { color: rgba(26,18,5,.72); font-weight: 800; letter-spacing: .12em; margin: 0 0 2px; }
+
+.kaRatingMarke {
+  display: inline-block; min-width: 30px; padding: 2px 7px; border-radius: 999px;
+  background: rgba(240,169,59,.16); border: 1px solid rgba(240,169,59,.42);
+  color: #F0A93B; font-weight: 800; font-variant-numeric: tabular-nums; font-size: 12px;
+}
+
+/* Bilder im Karriere-Modus. Jedes ist eine Zugabe: Fehlt die Datei, faellt das
+   Bild weg und der Rest steht unveraendert. */
+.kaKopfbild {
+  display: block; width: calc(100% + 32px); margin: -16px -16px 14px; height: 150px;
+  object-fit: cover; border-radius: var(--radius) var(--radius) 0 0;
+  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent);
+  mask-image: linear-gradient(180deg, #000 55%, transparent);
+}
+.kaKartenBild {
+  display: block; width: 100%; height: 132px; object-fit: cover;
+  border-radius: 12px; margin: 2px 0 10px; border: 1px solid var(--line);
+}
+.kaAuszeichnung { flex-direction: row; align-items: center; gap: 11px; }
+.kaAuszeichnung > span { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+/* 64 statt 46 Pixel: Die Abzeichen sind erzeugte Bilder mit Praegung und Rundung
+   statt flacher Zeichnungen — bei 46 Pixeln geht ihr Motiv verloren, und dann waere
+   der Unterschied zwischen fuenfzehn Auszeichnungen dahin. */
+.kaAbzeichen { width: 64px; height: 64px; flex: 0 0 auto; object-fit: contain; }

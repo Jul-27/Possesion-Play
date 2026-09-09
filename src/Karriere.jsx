@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { NATIONS, CLUBS } from "./gameData.js";
+import { CLUBS } from "./gameData.js";
+import { alleLaender, passtAufSuche, namenVon, EIGENE, flaggeVon } from "./laender.js";
 import { WELT_LIGEN, WELT_VEREINE } from "./careerWorld.js";
 import { baueZiehungen, baueKlassen, kader, DRAFT_AB_JAHR } from "./draft.js";
 import { teamStaerke } from "./saison.js";
@@ -28,10 +29,10 @@ const TITEL_NAME = {
 };
 const TITEL_REIHE = ["BDO", "WM", "EM", "CL", "EL", "MBL", "MPL", "MLL", "MSA", "ML1", "DFB", "FAC", "CDR", "CIT"];
 
-/* Die Länder, in denen unsere Welt spielt — aus der Ligatabelle abgeleitet, damit
-   die Auswahl nicht veraltet, wenn Ligen dazukommen. */
-const LAENDER = [...new Set(WELT_LIGEN.map((l) => l.land))];
-const landName = (code) => NATIONS.find((n) => n.key === code)?.name || code;
+/* Der Name eines Landes. Die sieben mit eigener Liga tragen unseren internen
+   Schlüssel (GER, ENG, …), alle übrigen ihren ISO-Code — beide löst laender.js auf. */
+const landName = (code) => namenVon(EIGENE[code] || code) || code;
+const landFlagge = (code) => flaggeVon(EIGENE[code] || code);
 
 /* Ein Wappen braucht einen Schlüssel und Rückfallfarben. Für die 47 Spielvereine
    stehen die Farben in gameData; die übrigen 314 bekommen ein aus dem Schlüssel
@@ -93,6 +94,112 @@ function Verlaufskurve({ verlauf, defVon }) {
   );
 }
 
+/* ── Bilder mit Rückfall ──────────────────────────────────────────────────────
+   Jedes Bild ist eine Zugabe, keine Bedingung: Fehlt die Datei, verschwindet nur
+   das Bild und der Rest der Karte steht unverändert. So laesst sich der Bestand
+   Stueck fuer Stueck fuellen, ohne dass zwischendurch etwas kaputt aussieht. */
+function Bild({ pfad, klasse, alt = "" }) {
+  const [fehlt, setFehlt] = useState(false);
+  if (fehlt) return null;
+  return <img className={klasse} src={pfad} alt={alt} loading="lazy" onError={() => setFehlt(true)} />;
+}
+
+/* ── Der Zähler ───────────────────────────────────────────────────────────────
+   Das Rating ist die Zahl, um die sich alles dreht — deshalb springt sie nicht von
+   60 auf 65, sondern läuft dorthin. Eine Zahl, die sich bewegt, wird gelesen; eine,
+   die sich austauscht, wird übersehen.
+
+   Der Wert läuft weich aus, damit die Endzahl steht statt zu zucken. */
+function Zaehler({ wert, dauer = 900 }) {
+  const [zeige, setZeige] = useState(wert);
+  const vonRef = useRef(wert);
+  useEffect(() => {
+    const von = vonRef.current;
+    if (von === wert) { setZeige(wert); return; }
+    /* IM VERSTECKTEN TAB LÄUFT KEIN EINZELBILD. requestAnimationFrame ruht, solange
+       die Seite nicht sichtbar ist — der Zähler blieb dann für immer auf dem alten
+       Wert stehen. Gemessen: Kopfzeile 50, Zeitleiste 64. Wer waehrend einer Saison
+       den Tab wechselt, saehe dauerhaft eine falsche Zahl. Deshalb springt der Wert
+       dort direkt, und ein Sicherungsnetz setzt ihn in jedem Fall. */
+    if (typeof document !== "undefined" && document.hidden) { setZeige(wert); vonRef.current = wert; return; }
+    let bild, start = 0;
+    const schritt = (t) => {
+      if (!start) start = t;
+      const anteil = Math.min(1, (t - start) / dauer);
+      const weich = 1 - Math.pow(1 - anteil, 3);
+      setZeige(Math.round(von + (wert - von) * weich));
+      if (anteil < 1) bild = requestAnimationFrame(schritt);
+      else vonRef.current = wert;
+    };
+    bild = requestAnimationFrame(schritt);
+    const netz = setTimeout(() => { setZeige(wert); vonRef.current = wert; }, dauer + 300);
+    return () => { cancelAnimationFrame(bild); clearTimeout(netz); };
+  }, [wert, dauer]);
+  return <>{zeige}</>;
+}
+
+/* ── Das Trikot ───────────────────────────────────────────────────────────────
+   Der Blickfang der Anlage: Was man eingibt, steht sofort auf dem Rücken. Gezeichnet
+   statt fotografiert — so trägt es jede Auflösung und braucht keine Datei. */
+function Trikot({ name, nummer }) {
+  const beschriftung = (name || "").trim().toUpperCase() || "NACHNAME";
+  return (
+    <svg className="kaTrikot" viewBox="0 0 200 220" role="img" aria-label="Trikot mit Name und Nummer">
+      <defs>
+        <linearGradient id="kaTrikotF" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#F7FAFF" /><stop offset="100%" stopColor="#D6E0EC" />
+        </linearGradient>
+      </defs>
+      <path fill="url(#kaTrikotF)" stroke="rgba(0,0,0,.25)"
+        d="M70 14 L44 26 L14 52 L34 78 L52 66 L52 206 L148 206 L148 66 L166 78 L186 52 L156 26 L130 14
+           C126 30 112 38 100 38 C88 38 74 30 70 14 Z" />
+      <text x="100" y="86" textAnchor="middle" fill="#16202C" fontSize="17" fontWeight="700"
+        letterSpacing="1" style={{ fontFamily: "inherit" }}>
+        {beschriftung.length > 12 ? beschriftung.slice(0, 12) : beschriftung}
+      </text>
+      <text x="100" y="168" textAnchor="middle" fill="#16202C" fontSize="72" fontWeight="800"
+        style={{ fontFamily: "inherit" }}>{nummer || "0"}</text>
+    </svg>
+  );
+}
+
+/* ── Das Spielfeld ────────────────────────────────────────────────────────────
+   Zwölf Positionen dort, wo sie auf dem Platz stehen. Eine Reihe von Kürzeln sagt
+   einem Fußballfan nichts; eine Aufstellungstafel sagt alles auf einen Blick. */
+const FELD_PLATZ = {
+  LA: [17, 13], ST: [50, 9], RA: [83, 13],
+  OM: [50, 26],
+  LM: [14, 38], ZM: [50, 41], RM: [86, 38],
+  DM: [50, 55],
+  LV: [14, 68], RV: [86, 68], IV: [50, 71],
+  TW: [50, 88],
+};
+
+function Spielfeld({ pos, setPos }) {
+  return (
+    <div className="kaFeld">
+      <svg className="kaFeldLinien" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <rect x="1" y="1" width="98" height="98" rx="2" fill="none" stroke="currentColor" strokeWidth=".5" />
+        <line x1="1" y1="50" x2="99" y2="50" stroke="currentColor" strokeWidth=".4" />
+        <circle cx="50" cy="50" r="11" fill="none" stroke="currentColor" strokeWidth=".4" />
+        <rect x="28" y="1" width="44" height="14" fill="none" stroke="currentColor" strokeWidth=".4" />
+        <rect x="28" y="85" width="44" height="14" fill="none" stroke="currentColor" strokeWidth=".4" />
+        <rect x="40" y="1" width="20" height="6" fill="none" stroke="currentColor" strokeWidth=".4" />
+        <rect x="40" y="93" width="20" height="6" fill="none" stroke="currentColor" strokeWidth=".4" />
+      </svg>
+      {K.POSITIONEN.map((p) => {
+        const [x, y] = FELD_PLATZ[p.key] || [50, 50];
+        return (
+          <button key={p.key} type="button" title={p.name}
+            className={"kaFeldPos" + (pos === p.key ? " an" : "")}
+            style={{ left: `${x}%`, top: `${y}%` }}
+            onClick={() => setPos(p.key)}>{p.key}</button>
+        );
+      })}
+    </div>
+  );
+}
+
 const prozent = (p) => `${Math.round(p * 100)} %`;
 /* Wie eine Wirkung auf der Karte steht. Ohne diese Zeile wäre die Entscheidung
    wieder ein Blindflug — sie ist der Kern des Modus. */
@@ -120,6 +227,7 @@ export default function Karriere({ onLeave }) {
   const [pos, setPos] = useState("ST");
   const [fuss, setFuss] = useState("rechts");
   const [tempo, setTempo] = useState("normal");
+  const [landSuche, setLandSuche] = useState("");
 
   // Lauf
   const [k, setK] = useState(null);
@@ -313,34 +421,56 @@ export default function Karriere({ onLeave }) {
     <div className="ppRoot">
       {kopf}
       <div className="panel kaAnlage">
-        <h2>Wer wirst du?</h2>
-        <div className="kaFeldreihe">
-          <label>Name
-            <input value={name} onChange={(e) => setName(e.target.value)} maxLength={20} placeholder="Nachname" />
-          </label>
-          <label>Nummer
-            <input type="number" min="1" max="99" value={nummer} onChange={(e) => setNummer(+e.target.value)} />
-          </label>
-        </div>
-        <div className="kaFeldreihe">
-          <label>Land
-            <select value={land} onChange={(e) => setLand(e.target.value)}>
-              {LAENDER.map((c) => <option key={c} value={c}>{landName(c)}</option>)}
-            </select>
-          </label>
-          <label>Starker Fuß
-            <select value={fuss} onChange={(e) => setFuss(e.target.value)}>
-              <option value="rechts">rechts</option><option value="links">links</option>
-            </select>
-          </label>
-        </div>
+        <Bild pfad="/bilder/karriere-kopf.jpg" klasse="kaKopfbild" alt="" />
+        <h2>Definiere deine Identität</h2>
 
-        <h3>Position</h3>
-        <div className="kaPositionen">
-          {K.POSITIONEN.map((p) => (
-            <button key={p.key} className={"kaPos" + (pos === p.key ? " an" : "")}
-              onClick={() => setPos(p.key)} title={p.name}>{p.key}</button>
-          ))}
+        <div className="kaAnlageSpalten">
+          {/* Wer bist du */}
+          <section className="kaSpalte">
+            <h3>Identität</h3>
+            <Trikot name={name} nummer={nummer} />
+            <div className="kaFeldreihe">
+              <label>Nachname
+                <input value={name} onChange={(e) => setName(e.target.value)} maxLength={20} placeholder="Nachname" />
+              </label>
+              <label>Nummer
+                <input type="number" min="1" max="99" value={nummer}
+                  onChange={(e) => setNummer(Math.max(1, Math.min(99, +e.target.value || 1)))} />
+              </label>
+            </div>
+            {/* Zwei Schaltflächen statt einer Auswahlliste — wie im Vorbild, und damit
+                sind beide Angaben so gross wie die Felder darüber. */}
+            <label className="kaFussLabel">Starker Fuß</label>
+            <div className="kaFuss">
+              {[["links", "Links"], ["rechts", "Rechts"]].map(([wert, text]) => (
+                <button key={wert} type="button" className={"kaFussKnopf" + (fuss === wert ? " an" : "")}
+                  onClick={() => setFuss(wert)}>{text}</button>
+              ))}
+            </div>
+          </section>
+
+          {/* Woher kommst du — jedes Land, nicht nur die mit Liga */}
+          <section className="kaSpalte">
+            <h3>Nationalität</h3>
+            <input className="kaLandSuche" value={landSuche} placeholder="Land suchen"
+              onChange={(e) => setLandSuche(e.target.value)} />
+            <div className="kaLandListe">
+              {alleLaender().filter((l) => passtAufSuche(l, landSuche)).map((l) => (
+                <button key={l.key} type="button" className={"kaLand" + (land === l.key ? " an" : "")}
+                  onClick={() => setLand(l.key)}>
+                  <span className="kaLandFlagge">{l.flagge}</span>
+                  <span className="kaLandName">{l.name}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* Wo spielst du */}
+          <section className="kaSpalte">
+            <h3>Position</h3>
+            <Spielfeld pos={pos} setPos={setPos} />
+            <p className="kaFeldName">{K.posDaten(pos).name}</p>
+          </section>
         </div>
 
         <h3>Tempo</h3>
@@ -368,7 +498,8 @@ export default function Karriere({ onLeave }) {
             <tr key={i}>
               <td>{z.alter}</td>
               <td><span className="kaZeilenWappen"><Emblem def={defVon({ key: z.key, name: z.verein })} /></span>{z.verein} <small>{z.lg}</small>{z.titel.length ? <em> · {z.titel.map((t) => TITEL_NAME[t] || t).join(", ")}</em> : null}</td>
-              <td><b>{z.ovr}</b></td><td>{z.spiele}</td><td>{z.tore}</td><td>{z.vorlagen}</td>
+              <td><span className="kaRatingMarke">{z.ovr}</span></td>
+              <td>{z.spiele}</td><td>{z.tore}</td><td>{z.vorlagen}</td>
             </tr>
           ))}
         </tbody>
@@ -389,7 +520,7 @@ export default function Karriere({ onLeave }) {
 
   const kopfzeile = (
     <div className="kaKopf">
-      <div className="kaOvr"><b>{k.ovr}</b><small>Stärke</small></div>
+      <div className="kaOvr"><small>RATING</small><b><Zaehler wert={k.ovr} /></b></div>
       {k.verein && <span className="kaWappen"><Emblem def={defVon(k.verein)} /></span>}
       <div className="kaWer">
         <b>#{k.nummer} {k.name}</b>
@@ -461,6 +592,7 @@ export default function Karriere({ onLeave }) {
 
         {karte?.art === "ereignis" && (
           <div className="kaEntscheidung">
+            <Bild pfad={`/bilder/ereignis/${karte.ereignis.key}.jpg`} klasse="kaKartenBild" alt="" />
             <h3>{karte.ereignis.titel}</h3>
             <p>{karte.ereignis.text}</p>
             <div className="kaOptionen">
@@ -520,7 +652,10 @@ export default function Karriere({ onLeave }) {
             <div className="kaAuszeichnungen">
               {karte.auszeichnungen.length
                 ? karte.auszeichnungen.map((a) => (
-                    <div key={a.key} className="kaAuszeichnung"><b>{a.name}</b><small>{a.text}</small></div>
+                    <div key={a.key} className="kaAuszeichnung">
+                      <Bild pfad={`/bilder/auszeichnung/${a.key}.png`} klasse="kaAbzeichen" alt="" />
+                      <span><b>{a.name}</b><small>{a.text}</small></span>
+                    </div>
                   ))
                 : <p className="kaLeer">
                     Keine der {K.AUSZEICHNUNGEN.length} Auszeichnungen erreicht — sie verlangen mehr
