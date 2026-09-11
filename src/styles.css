@@ -1353,3 +1353,79 @@ body::after {
    statt flacher Zeichnungen — bei 46 Pixeln geht ihr Motiv verloren, und dann waere
    der Unterschied zwischen fuenfzehn Auszeichnungen dahin. */
 .kaAbzeichen { width: 64px; height: 64px; flex: 0 0 auto; object-fit: contain; }
+
+/* ── Vereinskarten ───────────────────────────────────────────────────────────
+   Wer einen Verein waehlt, will den Verein sehen. Das Wappen war eine 30-Pixel-
+   Marke neben zwei Textzeilen; bei einer Entscheidung, die eine Laufbahn praegt,
+   ist das zu wenig. Jetzt beherrscht es die Karte. */
+.kaVereine { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 10px; }
+.kaVereine.einer { grid-template-columns: minmax(150px, 240px); justify-content: center; }
+.kaVerein {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 14px 12px 12px; border-radius: 14px; cursor: pointer; text-align: center;
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--text);
+  font-family: 'Archivo', sans-serif; min-width: 0;
+  transition: border-color .15s, transform .12s, background .15s;
+}
+.kaVerein:hover { border-color: var(--teal); transform: translateY(-2px); background: var(--bg-3); }
+.kaVereinAnlass { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.kaVereinWappen { display: block; margin: 4px 0 2px; }
+.kaVereinWappen .emblem { width: 64px; height: 64px; }
+.kaVereinName { font-size: 14px; line-height: 1.25; }
+.kaVereinLiga { font-size: 11.5px; color: var(--muted); }
+/* Die Rufstufe als Punktreihe: schneller zu erfassen als eine Zahl. */
+.kaVereinStufe { font-size: 9px; letter-spacing: 2px; color: var(--gold); margin-top: 2px; }
+.kaVereinStufe i { color: rgba(148,178,208,.25); font-style: normal; }
+.kaVereinZusatz { font-size: 11px; color: var(--teal); margin-top: 3px; }
+
+/* ── Titelfeier ──────────────────────────────────────────────────────────────
+   Ein gewonnener Titel stand bisher als Zeile Text da. Jetzt kommt er als eigener
+   Moment: Die Trophaee faehrt heran, ein Lichtstrahl wandert darueber, der Name
+   steht darunter. Mehrere Titel laufen nacheinander. */
+.kaFeier {
+  position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+  background: rgba(4, 8, 12, .82); backdrop-filter: blur(6px); cursor: pointer;
+  animation: kaFeierAuf .25s both;
+}
+@keyframes kaFeierAuf { from { opacity: 0; } to { opacity: 1; } }
+.kaFeierInhalt { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px; }
+.kaFeierPokal {
+  position: relative; width: 148px; height: 148px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 60px -8px var(--pokalLicht, rgba(250,204,21,.7));
+  animation: kaPokalHeran .55s cubic-bezier(.2,1.3,.4,1) backwards;
+}
+/* Auch hier keine Deckkraft in den Bildern — nur die Bewegung. */
+@keyframes kaPokalHeran {
+  from { transform: scale(.4) rotate(-12deg); }
+  to   { transform: scale(1) rotate(0); }
+}
+.kaFeierPokal .emblem { width: 118px; height: 118px; }
+.kaFeierPokal .emblem svg { width: 62px; height: 62px; }
+/* Der Lichtstrahl, der einmal ueber die Trophaee wandert. */
+.kaFeierPokal::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%; overflow: hidden;
+  background: linear-gradient(105deg, transparent 38%, rgba(255,255,255,.55) 48%, transparent 58%);
+  background-size: 260% 100%; background-position: 130% 0;
+  animation: kaGlanz 1.1s .45s ease-out both;
+}
+@keyframes kaGlanz { to { background-position: -60% 0; } }
+/* SICHTBARKEIT DARF NIE AN EINER ANIMATION HAENGEN. Vorher blendeten diese Zeilen
+   mit `opacity: 0` und Verzoegerung ein — laeuft die Animation nicht (verdeckter
+   Tab, angehaltene Wiedergabe), bleibt der Text FUER IMMER unsichtbar. Gemessen:
+   Feier offen, Trophaee da, Name mit Deckkraft 0. Es ist dieselbe Falle wie beim
+   Zaehler und den verzoegerten Bildern.
+   Animiert wird deshalb nur noch die Bewegung; die Deckkraft bleibt unberuehrt. */
+.kaFeierName {
+  font-size: 26px; font-weight: 800; text-align: center; color: var(--text);
+  animation: kaFeierText .4s .3s backwards;
+}
+.kaFeierUnten { font-size: 13px; color: var(--muted); animation: kaFeierText .4s .45s backwards; }
+@keyframes kaFeierText { from { transform: translateY(8px); } to { transform: none; } }
+.kaFeierPunkte { display: flex; gap: 6px; margin-top: 4px; }
+.kaFeierPunkt { width: 7px; height: 7px; border-radius: 50%; background: rgba(148,178,208,.3); }
+.kaFeierPunkt.an { background: var(--gold); }
+
+@media (prefers-reduced-motion: reduce) {
+  .kaFeier, .kaFeierPokal, .kaFeierPokal::after, .kaFeierName, .kaFeierUnten { animation: none; }
+}

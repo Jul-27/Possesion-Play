@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { CLUBS } from "./gameData.js";
+import { CLUBS, HONOURS } from "./gameData.js";
 import { alleLaender, passtAufSuche, namenVon, EIGENE, flaggeVon } from "./laender.js";
 import { WELT_LIGEN, WELT_VEREINE } from "./careerWorld.js";
 import { baueZiehungen, baueKlassen, kader, DRAFT_AB_JAHR } from "./draft.js";
@@ -143,23 +143,101 @@ function Zaehler({ wert, dauer = 900 }) {
    statt fotografiert — so trägt es jede Auflösung und braucht keine Datei. */
 function Trikot({ name, nummer }) {
   const beschriftung = (name || "").trim().toUpperCase() || "NACHNAME";
+  /* LANGE NAMEN WURDEN ABGESCHNITTEN. Vorher stand hier ein slice(0, 12) — aus
+     „Schweinsteiger" wurde „SCHWEINSTEI". Ein Trikot schneidet keinen Namen ab, es
+     staucht ihn. `textLength` zwingt die Schrift auf die Breite; damit kurze Namen
+     nicht auseinandergezogen werden, greift es erst ab neun Zeichen. */
+  const breit = beschriftung.length > 9;
   return (
-    <svg className="kaTrikot" viewBox="0 0 200 220" role="img" aria-label="Trikot mit Name und Nummer">
+    <svg className="kaTrikot" viewBox="0 0 200 216" role="img" aria-label="Trikot mit Name und Nummer">
       <defs>
         <linearGradient id="kaTrikotF" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#F7FAFF" /><stop offset="100%" stopColor="#D6E0EC" />
+          <stop offset="0%" stopColor="#FAFCFF" /><stop offset="100%" stopColor="#CFDAE8" />
         </linearGradient>
       </defs>
-      <path fill="url(#kaTrikotF)" stroke="rgba(0,0,0,.25)"
-        d="M70 14 L44 26 L14 52 L34 78 L52 66 L52 206 L148 206 L148 66 L166 78 L186 52 L156 26 L130 14
-           C126 30 112 38 100 38 C88 38 74 30 70 14 Z" />
-      <text x="100" y="86" textAnchor="middle" fill="#16202C" fontSize="17" fontWeight="700"
-        letterSpacing="1" style={{ fontFamily: "inherit" }}>
-        {beschriftung.length > 12 ? beschriftung.slice(0, 12) : beschriftung}
+      {/* Schultern breiter als der Rumpf, Ärmel fallen ab, Saum leicht schmaler —
+          die alte Form war oben zu schmal und wirkte wie ein Kittel. */}
+      <path fill="url(#kaTrikotF)" stroke="rgba(0,0,0,.28)" strokeWidth="1.5" strokeLinejoin="round"
+        d="M74 16 C79 33 90 40 100 40 C110 40 121 33 126 16
+           L156 25 L192 60 L164 92 L150 80 L150 206 L50 206 L50 80 L36 92 L8 60 L44 25 Z" />
+      {/* Kragen */}
+      <path fill="none" stroke="rgba(0,0,0,.22)" strokeWidth="2"
+        d="M74 16 C79 33 90 40 100 40 C110 40 121 33 126 16" />
+      <text x="100" y="84" textAnchor="middle" fill="#16202C" fontSize="16" fontWeight="700"
+        letterSpacing={breit ? "0" : "1.5"} style={{ fontFamily: "inherit" }}
+        {...(breit ? { textLength: 92, lengthAdjust: "spacingAndGlyphs" } : {})}>
+        {beschriftung}
       </text>
-      <text x="100" y="168" textAnchor="middle" fill="#16202C" fontSize="72" fontWeight="800"
+      <text x="100" y="170" textAnchor="middle" fill="#16202C" fontSize="74" fontWeight="800"
         style={{ fontFamily: "inherit" }}>{nummer || "0"}</text>
     </svg>
+  );
+}
+
+/* ── Die Titelfeier ───────────────────────────────────────────────────────────
+   Ein gewonnener Titel stand als Zeile Text zwischen zwei Karten — man hat ihn
+   überlesen. Jetzt bekommt er einen eigenen Moment: Die Trophäe fährt heran, ein
+   Lichtstrahl wandert darüber, der Name steht darunter. Mehrere Titel laufen
+   nacheinander, und ein Klick überspringt.
+
+   Gezeichnet wird sie aus unseren eigenen Titeldaten — Symbol und Farbpaar, die
+   überall im Spiel dieselben sind. */
+function Titelfeier({ titel, onFertig }) {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    /* setTimeout statt Einzelbildern: Der Takt läuft auch weiter, wenn der Tab
+       verdeckt ist, und die Feier hängt dann nicht fest. */
+    const t = setTimeout(() => (i + 1 < titel.length ? setI(i + 1) : onFertig()), 1900);
+    return () => clearTimeout(t);
+  }, [i, titel.length, onFertig]);
+
+  const key = titel[i];
+  const def = HONOURS.find((h) => h.key === key);
+  if (!def) return null;
+  const weiter = () => (i + 1 < titel.length ? setI(i + 1) : onFertig());
+
+  return (
+    <div className="kaFeier" onClick={weiter} role="button" tabIndex={0}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && weiter()}
+      aria-label={`Titel gewonnen: ${def.name}`}>
+      <div className="kaFeierInhalt">
+        <div className="kaFeierPokal" key={key}
+          style={{ "--pokalLicht": `${def.c1}cc` }}>
+          <Emblem def={def} />
+        </div>
+        <div className="kaFeierName">{def.name}</div>
+        <div className="kaFeierUnten">
+          {titel.length > 1 ? `${i + 1} von ${titel.length} · zum Weiterklicken tippen` : "Zum Weiterklicken tippen"}
+        </div>
+        {titel.length > 1 && (
+          <div className="kaFeierPunkte">
+            {titel.map((_, n) => <span key={n} className={"kaFeierPunkt" + (n <= i ? " an" : "")} />)}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Die Vereinskarte ─────────────────────────────────────────────────────────
+   Wer einen Verein wählt, will den Verein sehen. Vorher stand das Wappen als
+   30-Pixel-Marke neben zwei Textzeilen — bei einer Entscheidung, die eine Laufbahn
+   prägt, ist das zu wenig. Jetzt beherrscht es die Karte, wie im Vorbild.
+
+   `zusatz` trägt das, was je nach Anlass unterschiedlich ist: bei einer Leihe die
+   Zahl der Spiele, bei einem Angebot die geforderte Stärke. */
+function VereinsKarte({ verein, anlass, zusatz, onClick }) {
+  return (
+    <button type="button" className="kaVerein" onClick={onClick}>
+      <span className="kaVereinAnlass">{anlass}</span>
+      <span className="kaVereinWappen"><Emblem def={defVon(verein)} /></span>
+      <b className="kaVereinName">{verein.name}</b>
+      <span className="kaVereinLiga">{verein.liga.name}</span>
+      <span className="kaVereinStufe" data-stufe={verein.stufe}>
+        {"●".repeat(verein.stufe + 1)}<i>{"●".repeat(5 - verein.stufe)}</i>
+      </span>
+      {zusatz && <small className="kaVereinZusatz">{zusatz}</small>}
+    </button>
   );
 }
 
@@ -233,6 +311,7 @@ export default function Karriere({ onLeave }) {
   const [k, setK] = useState(null);
   const [karte, setKarte] = useState(null);   // { art: "jugend"|"ereignis"|"angebot"|"ende", ... }
   const [meldung, setMeldung] = useState([]); // was im letzten Schritt geschah
+  const [feier, setFeier] = useState(null);   // Titel, die gerade gefeiert werden
   const zufallRef = useRef(null);
   const modRef = useRef({ liga: 1, pokal: 1, europa: 1 });
   const verletztRef = useRef(0);
@@ -284,6 +363,7 @@ export default function Karriere({ onLeave }) {
     seitAngebotRef.current = 0;
     setK(neu);
     setMeldung([]);
+    setFeier(null);
     setKarte({ art: "jugend", vereine: K.jugendAngebote(welt, land, zufallRef.current) });
     play("start");
   }
@@ -350,7 +430,9 @@ export default function Karriere({ onLeave }) {
 
     setK(k2);
     setMeldung([...neueTitel.map((t) => `🏆 ${TITEL_NAME[t] || t}`), ...ereignisse.map((e) => `↕ ${e}`)]);
-    if (neueTitel.length) play("win");
+    /* Jeder Titel bekommt seinen Moment — auch wenn in einem Schritt mehrere fallen.
+       Doppelte werden zusammengefasst, sonst liefe dieselbe Trophaee zweimal. */
+    if (neueTitel.length) { setFeier([...new Set(neueTitel)]); play("win"); }
     naechsteKarte(k2, verein);
   }
 
@@ -542,6 +624,7 @@ export default function Karriere({ onLeave }) {
 
   return (
     <div className="ppRoot">
+      {feier && <Titelfeier titel={feier} onFertig={() => setFeier(null)} />}
       {kopf}
       <div className="panel">
         {kopfzeile}
@@ -559,12 +642,10 @@ export default function Karriere({ onLeave }) {
             <p>{karte.vereine.every((v) => v.liga.land === land)
               ? `Drei Vereine aus ${landName(land)} wollen dich in ihre Jugend holen.`
               : `In ${landName(land)} spielt keiner unserer Vereine — diese drei würden dich trotzdem nehmen.`}</p>
-            <div className="kaOptionen">
+            <div className="kaVereine">
               {karte.vereine.map((v) => (
-                <button key={v.key} className="kaOption mitWappen" onClick={() => spieleSchritt(k, v)}>
-                  <Emblem def={defVon(v)} />
-                  <span><b>{v.name}</b><small>{v.liga.name} · Stufe {v.stufe}</small></span>
-                </button>
+                <VereinsKarte key={v.key} verein={v} anlass="Anfangen bei"
+                  onClick={() => spieleSchritt(k, v)} />
               ))}
             </div>
           </div>
@@ -574,15 +655,14 @@ export default function Karriere({ onLeave }) {
           <div className="kaEntscheidung">
             <h3>Leihe</h3>
             <p>Bei {karte.bleiben.name} kommst du nicht zum Zug. Eine Saison woanders bringt dir Spiele.</p>
-            <div className="kaOptionen">
+            <div className="kaVereine">
               {karte.vereine.map((v) => (
-                <button key={v.key} className="kaOption mitWappen"
-                  onClick={() => spieleSchritt({ ...k, leiheVon: karte.bleiben }, v)}>
-                  <Emblem def={defVon(v)} />
-                  <span><b>Leihe zu {v.name}</b>
-                  <small>{v.liga.name} · Stufe {v.stufe} · dort {Math.round(K.einsatzAnteil(k.ovr, v.stufe, k.rolle) * K.SPIELE_JE_SAISON)} Spiele statt {Math.round(K.einsatzAnteil(k.ovr, karte.bleiben.stufe, k.rolle) * K.SPIELE_JE_SAISON)}</small></span>
-                </button>
+                <VereinsKarte key={v.key} verein={v} anlass="Leihe zu"
+                  zusatz={`${Math.round(K.einsatzAnteil(k.ovr, v.stufe, k.rolle) * K.SPIELE_JE_SAISON)} statt ${Math.round(K.einsatzAnteil(k.ovr, karte.bleiben.stufe, k.rolle) * K.SPIELE_JE_SAISON)} Spiele`}
+                  onClick={() => spieleSchritt({ ...k, leiheVon: karte.bleiben }, v)} />
               ))}
+            </div>
+            <div className="kaOptionen">
               <button className="kaOption" onClick={() => spieleSchritt(k, karte.bleiben)}>
                 <b>Bleiben und kämpfen</b>
                 <small>Wenig Einsatzzeit bei {karte.bleiben.name}</small>
@@ -595,11 +675,9 @@ export default function Karriere({ onLeave }) {
           <div className="kaEntscheidung">
             <h3>Zurück von der Leihe</h3>
             <p>Die Zeit bei {karte.verein.name} ist vorbei — {karte.heim.name} holt dich zurück.</p>
-            <div className="kaOptionen">
-              <button className="kaOption mitWappen" onClick={() => spieleSchritt(k, karte.heim)}>
-                <Emblem def={defVon(karte.heim)} />
-                <span><b>Zurück zu {karte.heim.name}</b><small>{karte.heim.liga.name} · Stufe {karte.heim.stufe}</small></span>
-              </button>
+            <div className="kaVereine einer">
+              <VereinsKarte verein={karte.heim} anlass="Zurück zu"
+                onClick={() => spieleSchritt(k, karte.heim)} />
             </div>
           </div>
         )}
@@ -629,13 +707,16 @@ export default function Karriere({ onLeave }) {
           <div className="kaEntscheidung">
             <h3>Wie geht es weiter?</h3>
             <p>{karte.vereine.length ? "Andere Vereine klopfen an." : "Es klopft niemand an."}</p>
+            {karte.vereine.length > 0 && (
+              <div className="kaVereine">
+                {karte.vereine.map((v) => (
+                  <VereinsKarte key={v.key} verein={v} anlass="Wechseln zu"
+                    zusatz={`verlangt Stärke ${K.STUFE_MINDEST_OVR[v.stufe]}`}
+                    onClick={() => spieleSchritt(k, v)} />
+                ))}
+              </div>
+            )}
             <div className="kaOptionen">
-              {karte.vereine.map((v) => (
-                <button key={v.key} className="kaOption mitWappen" onClick={() => spieleSchritt(k, v)}>
-                  <Emblem def={defVon(v)} />
-                  <span><b>Wechseln zu {v.name}</b><small>{v.liga.name} · Stufe {v.stufe} · verlangt Stärke {K.STUFE_MINDEST_OVR[v.stufe]}</small></span>
-                </button>
-              ))}
               <button className="kaOption mitWappen" onClick={() => spieleSchritt(k, karte.bleiben)}>
                 <Emblem def={defVon(karte.bleiben)} />
                 <span><b>Bleiben bei {karte.bleiben.name}</b><small>{karte.bleiben.liga.name} · Stufe {karte.bleiben.stufe}</small></span>
