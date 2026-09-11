@@ -1429,3 +1429,57 @@ body::after {
 @media (prefers-reduced-motion: reduce) {
   .kaFeier, .kaFeierPokal, .kaFeierPokal::after, .kaFeierName, .kaFeierUnten { animation: none; }
 }
+
+/* ── Die breite Bühne der Karriere ───────────────────────────────────────────
+   Die Zeitleiste stand unter dem Spiel: Auf 600 Pixel Breite hing die ganze
+   Laufbahn unterhalb der Entscheidung, und wer sie ansehen wollte, scrollte an
+   der Karte vorbei und wieder zurück. Ab 1000 Pixel steht sie daneben und bleibt
+   beim Scrollen stehen. Darunter fällt alles auf eine Spalte zurück — die
+   Reihenfolge im Quelltext ist dieselbe, also stimmt sie auch dort. */
+.ppRoot.weit { max-width: 1180px; }
+/* Die Anlage hat keine zweite Spalte — auf voller Breite zoege sie die
+   Laenderliste unnoetig auseinander. */
+.ppRoot.weit .kaAnlage { max-width: 980px; margin-inline: auto; }
+.kaBuehne { display: grid; grid-template-columns: 1fr; gap: 12px; align-items: start; }
+/* Ohne `min-width: 0` sprengt die breiteste Karte die Spalte statt umzubrechen. */
+.kaAktion { min-width: 0; }
+.kaLaufbahn > h3 {
+  font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted); margin: 0 0 10px;
+}
+@media (min-width: 1000px) {
+  .kaBuehne { grid-template-columns: minmax(0, 1fr) 390px; }
+  /* `sticky` braucht eine eigene Höhe, sonst wächst die Spalte mit der Laufbahn
+     mit und klebt nie. */
+  .kaLaufbahn { position: sticky; top: 14px; max-height: calc(100vh - 32px); overflow-y: auto; }
+  .kaLaufbahn .kaLeiste { margin-top: 10px; }
+}
+@media (max-width: 999px) { .ppRoot.weit { max-width: 600px; } }
+
+/* ── Was die Entscheidung gebracht hat ───────────────────────────────────────
+   Ausgang oben, Folgen darunter, jede Zeile in ihrer Farbe. */
+.kaFolgeKopf {
+  display: flex; align-items: center; gap: 12px; padding: 13px 14px;
+  border: 1px solid var(--brd); border-radius: 14px; margin-bottom: 12px;
+}
+.kaFolgeKopf b { display: block; font-size: 16px; }
+.kaFolgeKopf small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.kaFolgeZeichen {
+  flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 17px; font-weight: 800;
+}
+.kaFolgeKopf.gut { border-color: rgba(52,211,153,.45); background: rgba(52,211,153,.09); }
+.kaFolgeKopf.gut .kaFolgeZeichen { background: rgba(52,211,153,.2); color: #34D399; }
+.kaFolgeKopf.schlecht { border-color: rgba(248,113,113,.45); background: rgba(248,113,113,.09); }
+.kaFolgeKopf.schlecht .kaFolgeZeichen { background: rgba(248,113,113,.2); color: #F87171; }
+.kaFolgeKopf.neutral .kaFolgeZeichen { background: rgba(255,255,255,.09); color: var(--muted); }
+
+.kaFolgen { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 7px; }
+.kaFolgen li {
+  position: relative; padding: 9px 12px 9px 30px; border-radius: 11px; font-size: 13.5px;
+  background: rgba(255,255,255,.04); border: 1px solid var(--line);
+}
+.kaFolgen li::before { position: absolute; left: 12px; font-weight: 800; }
+.kaFolgen li.gut { color: #A7F3D0; } .kaFolgen li.gut::before { content: "▲"; color: #34D399; font-size: 10px; }
+.kaFolgen li.schlecht { color: #FECACA; } .kaFolgen li.schlecht::before { content: "▼"; color: #F87171; font-size: 10px; }
+.kaFolgen li.neutral { color: var(--muted); } .kaFolgen li.neutral::before { content: "–"; color: var(--muted); }

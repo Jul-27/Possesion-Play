@@ -513,20 +513,61 @@ export function ziehEreignis(k, zufall, zuletzt = []) {
   return moeglich[Math.floor(zufall() * moeglich.length)] || EREIGNISSE[0];
 }
 
+export const ROLLEN_NAME = { stamm: "Stammspieler", rotation: "Rotation", kader: "nur im Kader" };
+
+/* ── Was die Entscheidung gebracht hat ────────────────────────────────────────
+   VORHER SAH MAN ES NICHT. Wer einen Privattrainer verpflichtete, hörte einen Ton
+   und stand in der nächsten Saison — ob der Trainer angeschlagen hat oder nicht,
+   liess sich nur aus der Stärke in der Zeitleiste zurückrechnen. Ein Spiel, das
+   nach einer Wahl fragt, muss die Antwort auch zeigen.
+
+   Die Sätze entstehen aus dem Vergleich VORHER/NACHHER, nicht aus der Beschreibung
+   der Option. So kann hier nichts stehen, was nicht wirklich passiert ist: Ein
+   Zuwachs, der an der Obergrenze verpufft, taucht nicht als Zuwachs auf. */
+export function folgen(vorher, nachher, w, verletzt) {
+  const liste = [];
+  if (nachher.ovr !== vorher.ovr)
+    liste.push({ text: `Stärke ${vorher.ovr} → ${nachher.ovr}`, art: nachher.ovr > vorher.ovr ? "gut" : "schlecht" });
+  if (nachher.rolle !== vorher.rolle)
+    liste.push({
+      text: `Rolle im Team: ${ROLLEN_NAME[vorher.rolle]} → ${ROLLEN_NAME[nachher.rolle]}`,
+      art: nachher.rolle === "stamm" ? "gut" : "schlecht",
+    });
+  if (verletzt) liste.push({ text: "Du fällst die kommende Saison verletzt aus", art: "schlecht" });
+  for (const [feld, name] of [["liga", "Meisterschaft"], ["pokal", "Pokal"], ["europa", "Europapokal"]]) {
+    const f = w[feld];
+    if (f === undefined || f === 1) continue;
+    liste.push({
+      text: f > 1 ? `Aussicht auf die ${name}: ${f}-fach` : `Aussicht auf die ${name}: auf ${Math.round(f * 100)} Prozent gesenkt`,
+      art: f > 1 ? "gut" : "schlecht",
+    });
+  }
+  if (w.verbandswechsel) liste.push({ text: "Du spielst künftig für den anderen Verband", art: "neutral" });
+  if (w.abschluss) liste.push({ text: "Der Schulabschluss ist in der Tasche", art: "gut" });
+  if (!liste.length) liste.push({ text: "Es bleibt alles, wie es war", art: "neutral" });
+  return liste;
+}
+
 /** Wendet eine gewählte Option an und sagt, was passiert ist. */
 export function entscheide(k, option, zufall) {
-  const gelungen = option.chance === undefined ? true : zufall() < option.chance;
+  /* `gewagt` trennt die Wette von der sicheren Wahl: Wer „Beim Gewohnten bleiben"
+     wählt, hat nichts gewonnen — die Folge darf dort nicht „Es geht auf" heissen. */
+  const gewagt = option.chance !== undefined;
+  const gelungen = gewagt ? zufall() < option.chance : true;
   const w = gelungen ? option.wirkung : (option.sonst || {});
   const naechster = { ...k };
   if (w.ovr) naechster.ovr = grenze(k.ovr + w.ovr, OVR_MIN, OVR_MAX);
   if (w.rolle) naechster.rolle = w.rolle;
   if (w.verbandswechsel) naechster.verbandGewechselt = true;
   if (w.abschluss) naechster.abschluss = true;
+  const verletzt = w.verletzt ?? 0;
   return {
     karriere: naechster,
     gelungen,
+    gewagt,
     mod: { liga: w.liga ?? 1, pokal: w.pokal ?? 1, europa: w.europa ?? 1 },
-    verletzt: w.verletzt ?? 0,
+    verletzt,
+    folgen: folgen(k, naechster, w, verletzt),
   };
 }
 

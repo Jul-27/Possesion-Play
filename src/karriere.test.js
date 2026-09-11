@@ -600,3 +600,50 @@ test("wer nichts im Band findet, steht trotzdem nicht ohne Angebot da", () => {
   const k = { ...K.neueKarriere({ name: "T", land: "XXX", nummer: 9, pos: "ST" }), ovr: 95, alter: 26 };
   assert.equal(K.angebote(klein, k, zufall).length, 1);
 });
+
+/* ── Die Folgen einer Entscheidung ───────────────────────────────────────────
+   Sie werden dem Spieler wörtlich gezeigt. Also darf dort nur stehen, was
+   tatsächlich eingetreten ist. */
+test("die Folge nennt die neue Stärke, nicht die versprochene", () => {
+  const k = { ...K.neueKarriere({ name: "T", pos: "ZM", land: "GER", nummer: 9 }), ovr: K.OVR_MAX - 1 };
+  const r = K.entscheide(k, { label: "x", wirkung: { ovr: 6 } }, () => 0);
+  assert.equal(r.karriere.ovr, K.OVR_MAX);
+  assert.deepEqual(r.folgen.map((f) => f.text), [`Stärke ${K.OVR_MAX - 1} → ${K.OVR_MAX}`]);
+});
+
+test("ein Zuwachs, der an der Decke verpufft, wird nicht als Zuwachs gemeldet", () => {
+  const k = { ...K.neueKarriere({ name: "T", pos: "ZM", land: "GER", nummer: 9 }), ovr: K.OVR_MAX };
+  const r = K.entscheide(k, { label: "x", wirkung: { ovr: 4 } }, () => 0);
+  assert.deepEqual(r.folgen.map((f) => f.text), ["Es bleibt alles, wie es war"]);
+});
+
+test("eine Wahl ohne Risiko gilt nicht als gelungene Wette", () => {
+  const k = K.neueKarriere({ name: "T", pos: "ZM", land: "GER", nummer: 9 });
+  assert.equal(K.entscheide(k, { label: "x", wirkung: {} }, () => 0).gewagt, false);
+  assert.equal(K.entscheide(k, { label: "x", chance: 0.5, wirkung: {} }, () => 0).gewagt, true);
+});
+
+test("Rollenwechsel, Verletzung und Titelaussicht stehen im Klartext", () => {
+  const k = K.neueKarriere({ name: "T", pos: "ZM", land: "GER", nummer: 9 });
+  const r = K.entscheide(k, { label: "x", wirkung: { rolle: "rotation", verletzt: 1, liga: 1.6, pokal: 0.5 } }, () => 0);
+  const texte = r.folgen.map((f) => f.text);
+  assert.ok(texte.some((t) => t.includes("Stammspieler → Rotation")), texte.join(" | "));
+  assert.ok(texte.some((t) => t.includes("verletzt")), texte.join(" | "));
+  assert.ok(texte.some((t) => t.includes("Meisterschaft") && t.includes("1.6")), texte.join(" | "));
+  assert.ok(texte.some((t) => t.includes("Pokal") && t.includes("50")), texte.join(" | "));
+});
+
+test("jede Option jeder Ereigniskarte erzeugt eine beschreibbare Folge", () => {
+  const k = K.neueKarriere({ name: "T", pos: "ZM", land: "GER", nummer: 9 });
+  for (const e of K.EREIGNISSE)
+    for (const o of e.optionen)
+      for (const zufall of [() => 0, () => 0.999]) {
+        const r = K.entscheide({ ...k, ovr: 70 }, o, zufall);
+        assert.ok(r.folgen.length >= 1, `${e.key} / ${o.label}`);
+        for (const f of r.folgen) {
+          assert.ok(f.text && f.text.length > 3, `${e.key}: leerer Folgentext`);
+          assert.ok(["gut", "schlecht", "neutral"].includes(f.art), `${e.key}: ${f.art}`);
+          assert.ok(!/undefined|NaN/.test(f.text), `${e.key}: ${f.text}`);
+        }
+      }
+});
