@@ -237,6 +237,7 @@ export default function Karriere({ onLeave }) {
   const modRef = useRef({ liga: 1, pokal: 1, europa: 1 });
   const verletztRef = useRef(0);
   const letzteRef = useRef([]);
+  const seitAngebotRef = useRef(0);
 
   useEffect(() => { loadPlayers().then(setPlayers); }, []);
   useEffect(() => { loadAppearances().then((e) => setEinsaetze(e || null)); }, []);
@@ -280,6 +281,7 @@ export default function Karriere({ onLeave }) {
     modRef.current = { liga: 1, pokal: 1, europa: 1 };
     verletztRef.current = 0;
     letzteRef.current = [];
+    seitAngebotRef.current = 0;
     setK(neu);
     setMeldung([]);
     setKarte({ art: "jugend", vereine: K.jugendAngebote(welt, land, zufallRef.current) });
@@ -298,6 +300,9 @@ export default function Karriere({ onLeave }) {
     let spiele = 0, tore = 0, vorlagen = 0;
 
     for (let s = 0; s < saisons; s++) {
+      /* Schluss ist Schluss — MITTEN im Schritt. Die Pruefung stand danach, und weil
+         ein Schritt zwei Saisons umfasst, endeten Laufbahnen mit 39 statt 38. */
+      if (k2.alter >= K.ALTERSGRENZE) break;
       if (verletztRef.current > 0) { verletztRef.current--; continue; }
       const l = K.saisonLeistung(k2, verein.stufe, zufall);
       spiele += l.spiele; tore += l.tore; vorlagen += l.vorlagen;
@@ -306,7 +311,7 @@ export default function Karriere({ onLeave }) {
       k2.saisonNr = (k2.saisonNr || 0) + 1;
       for (const t of K.nationalTitel(k2, verein, zufall, k2.saisonNr)) neueTitel.push(t);
       k2.alter += 1;
-      k2.ovr = K.grenze(k2.ovr + K.wachstum(k2.typ, k2.alter, zufall), K.OVR_MIN, K.OVR_MAX);
+      k2.ovr = K.grenze(k2.ovr + K.wachstumImVerein(k2, verein.stufe, zufall), K.OVR_MIN, K.OVR_MAX);
       /* Auf- und Abstieg am Saisonende. Wer aufsteigt, wird vermerkt — nur so kann
          später „Aus der Zweiten" überhaupt zutreffen. */
       const w = K.ligaWechsel(verein, zufall);
@@ -376,8 +381,13 @@ export default function Karriere({ onLeave }) {
       if (ziele.length) return setKarte({ art: "leihe", vereine: ziele, bleiben: verein });
     }
 
-    const seitWechsel = k2.verlauf.filter((z) => z.verein === verein.name).length;
-    if (seitWechsel >= 3 || zufall() < 0.45) {
+    /* WER BLEIBT, SAH KEINE EREIGNISSE MEHR. Gezaehlt wurden alle Zeilen mit
+       diesem Verein — ab drei Schritten kippte die Wahl dauerhaft auf "Angebot",
+       und ein treuer Spieler bekam in achtzehn Saisons ein einziges Ereignis.
+       Gezaehlt werden jetzt die Schritte SEIT DEM LETZTEN Angebot. */
+    seitAngebotRef.current += 1;
+    if (seitAngebotRef.current >= 3 || zufall() < 0.4) {
+      seitAngebotRef.current = 0;
       setKarte({ art: "angebot", vereine: offerten, bleiben: verein, rücktritt: k2.alter >= K.RUECKTRITT_AB });
     } else {
       const e = K.ziehEreignis(k2, zufall, letzteRef.current);
@@ -544,7 +554,11 @@ export default function Karriere({ onLeave }) {
         {karte?.art === "jugend" && (
           <div className="kaEntscheidung">
             <h3>Dein erster Verein</h3>
-            <p>Drei Vereine aus {landName(land)} wollen dich in ihre Jugend holen.</p>
+            {/* Bei Laendern ohne eigene Liga greift der Rueckfall auf beliebige kleine
+                Vereine — dann darf hier nicht das Gegenteil stehen. */}
+            <p>{karte.vereine.every((v) => v.liga.land === land)
+              ? `Drei Vereine aus ${landName(land)} wollen dich in ihre Jugend holen.`
+              : `In ${landName(land)} spielt keiner unserer Vereine — diese drei würden dich trotzdem nehmen.`}</p>
             <div className="kaOptionen">
               {karte.vereine.map((v) => (
                 <button key={v.key} className="kaOption mitWappen" onClick={() => spieleSchritt(k, v)}>

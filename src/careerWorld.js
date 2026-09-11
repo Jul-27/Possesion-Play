@@ -183,7 +183,6 @@ export const WELT_VEREINE = [
   { key: "EIB", name: "SD Eibar", qid: "Q770740", lg: "LL2" },
   { key: "HUE", name: "SD Huesca", qid: "Q11971", lg: "LL2" },
   { key: "SDP", name: "SD Ponferradina", qid: "Q12168", lg: "LL2" },
-  { key: "SEO", name: "Sevilla Atlético", qid: "Q950835", lg: "LL2" },
   { key: "SPG", name: "Sporting Gijón", qid: "Q12278", lg: "LL2" },
   { key: "ALM", name: "UD Almería", qid: "Q10407", lg: "LL2" },
   { key: "LPA", name: "UD Las Palmas", qid: "Q11979", lg: "LL2" },
