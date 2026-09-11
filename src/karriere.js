@@ -130,7 +130,13 @@ export function wachstum(typ, alter, zufall) {
    Abgeleitet wird sie aus unserer gemessenen Mannschaftsstärke, nicht gesetzt. Ein
    Zweitligist kann Stufe 2 nicht überschreiten, auch wenn sein Kader stark ist:
    Aus der zweiten Liga gewinnt man keine Meisterschaft. */
-export const STUFEN_SCHWELLE = [0, 73, 78, 82, 86, 90];
+/* GEMESSEN an allen 305 Vereinen mit Kaderdaten: Die Stärken laufen von 74 (Virtus
+   Entella) bis 97,9 (Real Madrid), der Median liegt bei 76,5 — die Hälfte drängt
+   sich zwischen 74 und 76,5. Mit den alten Schwellen fiel deshalb 58 % der Welt in
+   EINE Stufe, und Millwall stand als Premier-League-Verein auf Stufe 1.
+   Die neuen Werte ergeben eine Pyramide: 27/26/15/19/9/3 Prozent, und Stufe 5 sind
+   genau die zehn Vereine, die man dort erwartet. */
+export const STUFEN_SCHWELLE = [0, 75, 77, 80, 85, 92];
 export const STUFE_MAX_2_LIGA = 2;
 
 export function stufeVon(staerke, ligaStufe = 1) {
@@ -141,6 +147,33 @@ export function stufeVon(staerke, ligaStufe = 1) {
 
 /** Welchen Wert muss man haben, damit eine Stufe einen überhaupt will? */
 export const STUFE_MINDEST_OVR = [48, 56, 64, 72, 79, 85];
+
+/* ── Wie weit trägt der eigene Verein? ────────────────────────────────────────
+   Entwicklung hing nur an Alter und Typ. Gemessen im Spiel: Ein Torwart erreichte
+   88, ohne je einen Zweitligisten zu verlassen — damit war jede Transferentscheidung
+   folgenlos, und genau davon lebt der Modus.
+
+   Jede Rufstufe trägt nur bis zu einer Decke. Darunter wächst man voll, darüber nur
+   noch zu einem Drittel: Man kann sich auch bei einem kleinen Verein über sein
+   Umfeld hinaus entwickeln, aber nicht beliebig weit. Wer nach oben will, muss
+   wechseln.
+
+   Und wer nicht spielt, entwickelt sich nicht — unter einem Drittel Einsatzzeit
+   bleibt die Hälfte des Zuwachses liegen. Das macht die Leihe zu einer echten
+   Entscheidung statt zu einer Verlegenheitslösung. */
+export const DECKE_UEBER_ANFORDERUNG = 16;
+export const UEBER_DER_DECKE = 0.5;
+export const WENIG_EINSATZ = 0.34;
+
+export const deckeVon = (stufe) => STUFE_MINDEST_OVR[grenze(stufe, 0, 5)] + DECKE_UEBER_ANFORDERUNG;
+
+/** Zuwachs im Verein: Alter und Typ, gebremst vom Niveau und von der Einsatzzeit. */
+export function wachstumImVerein(k, stufe, zufall) {
+  const roh = wachstum(k.typ, k.alter, zufall);
+  if (roh <= 0) return roh;                       // den Abbau bremst niemand
+  const gebremst = k.ovr >= deckeVon(stufe) ? roh * UEBER_DER_DECKE : roh;
+  return einsatzAnteil(k.ovr, stufe, k.rolle) < WENIG_EINSATZ ? gebremst * 0.5 : gebremst;
+}
 
 /* Wie oft gewinnt ein Verein dieser Stufe etwas? Je Saison, unabhängig gezogen.
    Die Liga ist steiler als der Pokal: Über 34 Spieltage setzt sich Klasse durch, im
@@ -299,12 +332,23 @@ export function einsatzAnteil(ovr, stufe, rolle = "stamm") {
   return grenze(basis * rollenFaktor, 0.02, 0.97);
 }
 
-/** Tore und Vorlagen einer Saison. Die dritte Potenz trennt den Torjäger vom
-    soliden Stürmer, ohne ins Absurde zu laufen. */
+/* WIE STARK SCHLÄGT KLASSE DURCH?
+   Die erste Fassung nahm die dritte Potenz von (Rating − 45) / 45. Gemessen ergab
+   das bei Rating 58 noch zwei Prozent des Spitzenwerts — ein Mittelstürmer machte
+   28 Spiele und schoss NULL Tore, ein Innenverteidiger kam auf 722 Spiele und null
+   Tore, und die halbe Laufbahn produzierte nichts. Damit war jede Endstatistik
+   wertlos.
+
+   Die neue Kurve läuft von rund 0,29 bei 50 auf 1,16 bei 92: Klasse schlägt weiter
+   deutlich durch — Faktor vier zwischen Anfänger und Weltklasse —, aber ein Stürmer
+   in der zweiten Liga trifft auch. */
+export const gueteVon = (ovr) => 0.28 + Math.pow(grenze(ovr - 45, 0, 55) / 50, 2);
+
+/** Tore und Vorlagen einer Saison. */
 export function saisonLeistung(k, stufe, zufall) {
   const p = posDaten(k.pos);
   const spiele = Math.round(SPIELE_JE_SAISON * einsatzAnteil(k.ovr, stufe, k.rolle));
-  const guete = Math.pow(grenze(k.ovr - 45, 1, 60) / 45, 3);
+  const guete = gueteVon(k.ovr);
   const umfeld = 0.75 + stufe * 0.11;
   const tore = poisson(spiele * 0.42 * p.tore * guete * umfeld, zufall);
   const vorlagen = poisson(spiele * 0.26 * p.vorlagen * guete * umfeld, zufall);
@@ -339,8 +383,12 @@ export function saisonTitel(verein, zufall, mod = {}) {
 /* Ballon d'Or: nur für die Allerbesten, und auch dann selten — es gibt ihn einmal
    im Jahr für die ganze Welt. */
 export function einzelTitel(k, leistung, zufall) {
-  if (k.ovr < 88) return [];
-  const chance = (k.ovr - 87) * 0.05 + (leistung.tore >= 25 ? 0.06 : 0);
+  /* GEMESSEN nach der Entwicklungsdecke: Der Spitzenwert einer Laufbahn liegt im
+     Median bei 80, im oberen Zehntel bei 87. Eine Schwelle von 88 lag damit ueber
+     dem, was das Spiel hergibt — der Ballon d'Or fiel in 1200 Laufbahnen nie, und
+     mit ihm starben zwei Auszeichnungen. */
+  if (k.ovr < 86) return [];
+  const chance = (k.ovr - 85) * 0.045 + (leistung.tore >= 25 ? 0.06 : 0);
   return zufall() < chance ? ["BDO"] : [];
 }
 
@@ -600,8 +648,10 @@ export const AUSZEICHNUNGEN = [
      bei einem Spitzenverein zu stehen; das schafft nur, wer sein Niveau hält. */
   { key: "der_ewige", name: "Der Ewige", text: "Mit sechsunddreißig noch bei einem Spitzenverein.",
     pruefe: (k) => k.alter >= 36 && (k.verein?.stufe ?? 0) >= 4 },
-  { key: "goldjunge", name: "Goldjunge", text: "Ballon d'Or vor dem dreiundzwanzigsten Geburtstag.",
-    pruefe: (k) => (k.bdoAlter ?? 99) < 23 },
+  /* Vor 23 ist mit der Entwicklungsdecke nicht mehr zu schaffen: Mit 22 steht man
+     typischerweise bei einem Verein der Stufe zwei oder drei. */
+  { key: "goldjunge", name: "Goldjunge", text: "Ballon d'Or vor dem fünfundzwanzigsten Geburtstag.",
+    pruefe: (k) => (k.bdoAlter ?? 99) < 25 },
   { key: "der_groesste", name: "Der Größte", text: "Weltmeister, viermal Champions League und sechs Ballons d'Or.",
     pruefe: (k) => zahl(k, "WM") >= 1 && zahl(k, "CL") >= 4 && zahl(k, "BDO") >= 6 },
   { key: "doppelbuerger", name: "Doppelbürger", text: "Den Verband gewechselt und danach einen Titel mit der neuen Auswahl geholt.",

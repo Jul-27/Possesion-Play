@@ -162,7 +162,10 @@ export async function zweitmannschaften(qids) {
 
 /** Namenszusatz als drittes Signal — nur gültig, wenn es den Mutterverein gibt. */
 export function ueberName(name, namenInWelt) {
-  const m = name.match(/^(.*?)\s+(?:B|II)$/) || name.match(/^Jong\s+(.*)$/);
+  /* „Sevilla Atlético" ist Sevillas B-Mannschaft und rutschte durch: Sie endet
+     weder auf „B" noch auf „II" und traegt keine Kennzeichnung. Spanische und
+     baskische Zweitmannschaften heissen oft „<Verein> Atlético" oder „<Verein> B". */
+  const m = name.match(/^(.*?)\s+(?:B|II|Atl[ée]tico|Atletic)$/) || name.match(/^Jong\s+(.*)$/);
   if (!m) return false;
   const mutter = m[1].trim().toLowerCase();
   return [...namenInWelt].some((n) => {

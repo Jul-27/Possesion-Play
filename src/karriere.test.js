@@ -497,7 +497,7 @@ function spieleDurch(seed, stil, welt) {
       neu.push(...K.saisonTitel(verein, zufall, mod), ...K.einzelTitel(k, l, zufall),
                ...K.nationalTitel(k, verein, zufall, k.saisonNr));
       k.alter++;
-      k.ovr = K.grenze(k.ovr + K.wachstum(k.typ, k.alter, zufall), K.OVR_MIN, K.OVR_MAX);
+      k.ovr = K.grenze(k.ovr + K.wachstumImVerein(k, verein.stufe, zufall), K.OVR_MIN, K.OVR_MAX);
       /* welt.ligen, NICHT die kleine Testwelt oben: Mit der falschen Liste findet
          schwesterLiga nichts, und es steigt nie jemand auf. */
       const w = K.ligaWechsel(verein, zufall, welt.ligen);
@@ -536,7 +536,11 @@ test("jede Auszeichnung kommt im gespielten Spiel wirklich vor", () => {
     for (let i = 0; i < 6; i++) vereine.push({ key: `${lg}${i}`, name: `${lg} ${i}`, qid: `Q${lg}${i}`, lg });
     for (let i = 0; i < 6; i++) vereine.push({ key: `${lg2}${i}`, name: `${lg2} ${i}`, qid: `Q${lg2}${i}`, lg: lg2 });
   }
-  const staerke = (v) => 70 + ((v.key.length * 7 + v.key.charCodeAt(v.key.length - 1) * 3) % 24);
+  /* Die Spanne muss die echte treffen: Gemessen laufen die Mannschaftsstaerken von
+     74 bis 98. Mit einer Kunstwelt, die bei 93 endet, gaebe es keine Vereine der
+     Stufe 5 — und Auszeichnungen, die einen Spitzenverein brauchen, waeren hier tot,
+     obwohl sie im Spiel fallen. */
+  const staerke = (v) => 74 + ((v.key.length * 7 + v.key.charCodeAt(v.key.length - 1) * 3) % 25);
   const w = K.baueWelt(staerke, vereine, ligen);
 
   const zahl = new Map(K.AUSZEICHNUNGEN.map((a) => [a.key, 0]));
