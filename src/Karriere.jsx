@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { CLUBS, HONOURS } from "./gameData.js";
 import { alleLaender, passtAufSuche, namenVon, EIGENE, flaggeVon } from "./laender.js";
+import { trikotVon, kontrast } from "./trikots.js";
 import { WELT_LIGEN, WELT_VEREINE } from "./careerWorld.js";
 import { baueZiehungen, baueKlassen, kader, DRAFT_AB_JAHR } from "./draft.js";
 import { teamStaerke } from "./saison.js";
@@ -141,35 +142,100 @@ function Zaehler({ wert, dauer = 900 }) {
 /* ── Das Trikot ───────────────────────────────────────────────────────────────
    Der Blickfang der Anlage: Was man eingibt, steht sofort auf dem Rücken. Gezeichnet
    statt fotografiert — so trägt es jede Auflösung und braucht keine Datei. */
-function Trikot({ name, nummer }) {
+/* Die Silhouette. Runde Schultern, kurze Ärmel mit abgerundetem Bund, ein leicht
+   nach unten gewölbter Saum — die alte Form hatte spitze Ärmelzipfel und einen
+   schnurgeraden Abschluss und sah dadurch wie ein Kittel aus. Ein Pfad, im
+   Uhrzeigersinn vom linken Kragenrand aus. */
+/* Die Silhouette, nachgezeichnet nach den Verhältnissen des Vorbilds: Das Trikot
+   ist etwa anderthalbmal so breit wie der Rumpf und knapp doppelt so hoch. Runde
+   Schultern, kurze Ärmel mit schrägem Bund, ein flach gewölbter Saum. Die alte
+   Form hatte spitze Ärmelzipfel und einen schnurgeraden Abschluss und sah dadurch
+   wie ein Kittel aus; die Zwischenstufe war zu langärmelig und lief glockenförmig
+   aus. Gemessen wurde am Bild, gezeichnet ist der Pfad hier — ein Umriss im
+   Uhrzeigersinn, beginnend am linken Kragenrand. */
+const TRIKOT_UMRISS = `
+  M80 16 C70 17 62 20 54 26 C47 34 38 44 32 57 C30 60 30 65 32 69
+  C36 77 42 85 48 92 C52 96 55 94 57 87 C58 83 58 78 58 74
+  L56 166 C56 172 68 176 100 176 C132 176 144 172 144 166 L142 74
+  C142 78 142 83 143 87 C145 94 148 96 152 92 C158 85 164 77 168 69
+  C170 65 170 60 168 57 C162 44 153 34 146 26 C138 20 130 17 120 16
+  C118 32 110 40 100 40 C90 40 82 32 80 16 Z`;
+const TRIKOT_KRAGEN = "M80 16 C82 32 90 40 100 40 C110 40 118 32 120 16";
+
+/* Die Muster liegen zwischen Grundfarbe und Schrift und werden auf den Umriss
+   beschnitten — sonst stünden Streifen neben dem Trikot in der Luft. */
+function TrikotMuster({ art, farbe }) {
+  if (art === "streifen") {
+    return [30, 54, 78, 102, 126, 150].map((x) => (
+      <rect key={x} x={x} y="0" width="12" height="200" fill={farbe} />
+    ));
+  }
+  if (art === "karo") {
+    const felder = [];
+    for (let r = 0; r < 14; r++) for (let s = 0; s < 14; s++)
+      if ((r + s) % 2 === 0) felder.push(<rect key={`${r}-${s}`} x={s * 14} y={r * 14} width="14" height="14" fill={farbe} />);
+    return felder;
+  }
+  if (art === "schraeg") return <path d="M42 0 L96 0 L158 200 L104 200 Z" fill={farbe} />;
+  return null;
+}
+
+function Trikot({ name, nummer, land }) {
   const beschriftung = (name || "").trim().toUpperCase() || "NACHNAME";
   /* LANGE NAMEN WURDEN ABGESCHNITTEN. Vorher stand hier ein slice(0, 12) — aus
      „Schweinsteiger" wurde „SCHWEINSTEI". Ein Trikot schneidet keinen Namen ab, es
      staucht ihn. `textLength` zwingt die Schrift auf die Breite; damit kurze Namen
      nicht auseinandergezogen werden, greift es erst ab neun Zeichen. */
-  const breit = beschriftung.length > 9;
+  const breit = beschriftung.length > 8;
+  const t = trikotVon(land);
+  /* AUF EINEM MUSTER VERSCHWINDET SCHRIFT. Perus Nummer ist rot, und die Schärpe,
+     über die sie läuft, ist es auch — im Bild war die Neun nicht zu sehen. Bei
+     Kroatien lag Blau auf roten Karos. Ein schmaler Rand in der Gegenrichtung löst
+     das für jedes Muster, ohne die Farben zu verfälschen. */
+  const rand = t.muster
+    ? { stroke: kontrast(t.schrift, "#FFFFFF") > 2.5 ? "#FFFFFF" : "rgba(0,0,0,.6)",
+        strokeWidth: 3, paintOrder: "stroke", strokeLinejoin: "round" }
+    : {};
   return (
-    <svg className="kaTrikot" viewBox="0 0 200 216" role="img" aria-label="Trikot mit Name und Nummer">
+    /* Der Ausschnitt sitzt eng am Umriss — sonst schwebt das Trikot in einem Feld
+       aus Luft und wirkt kleiner, als es ist. */
+    <svg className="kaTrikot" viewBox="24 8 152 176" role="img"
+      aria-label={`Trikot mit Name und Nummer, Farben von ${namenVon(EIGENE[land] || land) || land}`}>
       <defs>
-        <linearGradient id="kaTrikotF" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#FAFCFF" /><stop offset="100%" stopColor="#CFDAE8" />
+        <clipPath id="kaTrikotSchnitt"><path d={TRIKOT_UMRISS} /></clipPath>
+        {/* Licht von oben, Schatten unten — ohne das wirkt jede Fläche wie Papier. */}
+        <linearGradient id="kaTrikotLicht" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#FFFFFF" stopOpacity=".16" />
+          <stop offset="55%" stopColor="#FFFFFF" stopOpacity="0" />
+          <stop offset="100%" stopColor="#000000" stopOpacity=".14" />
         </linearGradient>
       </defs>
-      {/* Schultern breiter als der Rumpf, Ärmel fallen ab, Saum leicht schmaler —
-          die alte Form war oben zu schmal und wirkte wie ein Kittel. */}
-      <path fill="url(#kaTrikotF)" stroke="rgba(0,0,0,.28)" strokeWidth="1.5" strokeLinejoin="round"
-        d="M74 16 C79 33 90 40 100 40 C110 40 121 33 126 16
-           L156 25 L192 60 L164 92 L150 80 L150 206 L50 206 L50 80 L36 92 L8 60 L44 25 Z" />
-      {/* Kragen */}
-      <path fill="none" stroke="rgba(0,0,0,.22)" strokeWidth="2"
-        d="M74 16 C79 33 90 40 100 40 C110 40 121 33 126 16" />
-      <text x="100" y="84" textAnchor="middle" fill="#16202C" fontSize="16" fontWeight="700"
-        letterSpacing={breit ? "0" : "1.5"} style={{ fontFamily: "inherit" }}
-        {...(breit ? { textLength: 92, lengthAdjust: "spacingAndGlyphs" } : {})}>
+
+      <g clipPath="url(#kaTrikotSchnitt)">
+        <rect x="0" y="0" width="200" height="200" fill={t.grund} />
+        {t.muster && <TrikotMuster art={t.muster} farbe={t.zweit} />}
+        {/* Ärmelbund und Saum: breite Striche entlang der Kanten, am Umriss
+            beschnitten — so liegt der Besatz innen an und steht nirgends über. */}
+        <path d="M32 69 C36 77 42 85 48 92" fill="none" stroke={t.besatz} strokeWidth="12" />
+        <path d="M168 69 C164 77 158 85 152 92" fill="none" stroke={t.besatz} strokeWidth="12" />
+        <path d="M56 166 C56 172 68 176 100 176 C132 176 144 172 144 166"
+          fill="none" stroke={t.besatz} strokeWidth="7" />
+        <rect x="0" y="0" width="200" height="200" fill="url(#kaTrikotLicht)" />
+      </g>
+
+      <path d={TRIKOT_UMRISS} fill="none" stroke="rgba(0,0,0,.32)" strokeWidth="2" strokeLinejoin="round" />
+      <path d={TRIKOT_KRAGEN} fill="none" stroke={t.besatz} strokeWidth="5" strokeLinecap="round" />
+      <path d={TRIKOT_KRAGEN} fill="none" stroke="rgba(0,0,0,.28)" strokeWidth="1.5" />
+
+      <text x="100" y="62" textAnchor="middle" fill={t.schrift} fontSize="14" fontWeight="700"
+        letterSpacing={breit ? "0" : "1.5"} style={{ fontFamily: "inherit" }} {...rand}
+        {...(breit ? { textLength: 74, lengthAdjust: "spacingAndGlyphs" } : {})}>
         {beschriftung}
       </text>
-      <text x="100" y="170" textAnchor="middle" fill="#16202C" fontSize="74" fontWeight="800"
-        style={{ fontFamily: "inherit" }}>{nummer || "0"}</text>
+      <text x="100" y="146" textAnchor="middle" fill={t.schrift} fontSize="66" fontWeight="800"
+        style={{ fontFamily: "inherit" }} {...rand} strokeWidth={rand.strokeWidth ? 5 : undefined}>
+        {nummer || "0"}
+      </text>
     </svg>
   );
 }
@@ -478,12 +544,15 @@ export default function Karriere({ onLeave }) {
     }
   }
 
+  /* DIE FOLGE WURDE ÜBERSPRUNGEN. Vorher lief hier sofort die naechste Saison an —
+     man waehlte den Privattrainer und erfuhr nie, ob er angeschlagen hat. Die Wahl
+     wirkt wie gehabt, aber dazwischen steht jetzt eine Karte, die es ausspricht. */
   function waehleOption(option) {
     const r = K.entscheide(k, option, zufallRef.current);
     modRef.current = r.mod;
     verletztRef.current += r.verletzt;
     play(r.gelungen ? "ok" : "err");
-    spieleSchritt(r.karriere, karte.verein);
+    setKarte({ art: "folge", ereignis: karte.ereignis, option, ergebnis: r, verein: karte.verein });
   }
 
   function beende(k2) {
@@ -506,11 +575,11 @@ export default function Karriere({ onLeave }) {
     </GameTop>
   );
 
-  if (!bereit) return (<div className="ppRoot">{kopf}<div className="panel"><p>Die Vereinswelt wird gebaut …</p></div></div>);
+  if (!bereit) return (<div className="ppRoot weit">{kopf}<div className="panel"><p>Die Vereinswelt wird gebaut …</p></div></div>);
 
   // Anlage
   if (!k) return (
-    <div className="ppRoot">
+    <div className="ppRoot weit">
       {kopf}
       <div className="panel kaAnlage">
         <Bild pfad="/bilder/karriere-kopf.jpg" klasse="kaKopfbild" alt="" />
@@ -520,7 +589,7 @@ export default function Karriere({ onLeave }) {
           {/* Wer bist du */}
           <section className="kaSpalte">
             <h3>Identität</h3>
-            <Trikot name={name} nummer={nummer} />
+            <Trikot name={name} nummer={nummer} land={land} />
             <div className="kaFeldreihe">
               <label>Nachname
                 <input value={name} onChange={(e) => setName(e.target.value)} maxLength={20} placeholder="Nachname" />
@@ -622,13 +691,18 @@ export default function Karriere({ onLeave }) {
     </div>
   );
 
+  /* DIE ZEITLEISTE STAND UNTER DEM SPIEL. Auf 600 Pixel Breite hing die ganze
+     Laufbahn unterhalb der Entscheidung — wer sie ansehen wollte, scrollte an der
+     Karte vorbei und wieder zurück. Bei genug Platz steht sie jetzt daneben und
+     bleibt beim Scrollen stehen; darunter faellt das Raster auf eine Spalte
+     zurueck und alles steht wieder untereinander. */
   return (
-    <div className="ppRoot">
+    <div className="ppRoot weit">
       {feier && <Titelfeier titel={feier} onFertig={() => setFeier(null)} />}
       {kopf}
-      <div className="panel">
+      <div className="kaBuehne">
+      <div className="panel kaAktion">
         {kopfzeile}
-        {vitrine}
 
         {meldung.length > 0 && (
           <div className="kaMeldung">{meldung.map((m, i) => <span key={i}>{m}</span>)}</div>
@@ -702,6 +776,33 @@ export default function Karriere({ onLeave }) {
             </div>
           </div>
         )}
+
+        {karte?.art === "folge" && (() => {
+          const { ergebnis: e, option } = karte;
+          const stimmung = !e.gewagt ? "neutral" : e.gelungen ? "gut" : "schlecht";
+          const kopf = !e.gewagt ? "Deine Entscheidung"
+            : e.gelungen ? "Es ist aufgegangen" : "Es ist schiefgegangen";
+          return (
+            <div className="kaEntscheidung">
+              <div className={"kaFolgeKopf " + stimmung}>
+                <span className="kaFolgeZeichen">{stimmung === "gut" ? "✓" : stimmung === "schlecht" ? "✕" : "·"}</span>
+                <span>
+                  <b>{kopf}</b>
+                  <small>
+                    {karte.ereignis.titel} · „{option.label}“
+                    {e.gewagt ? ` · ${prozent(e.gelungen ? option.chance : 1 - option.chance)} Wahrscheinlichkeit` : ""}
+                  </small>
+                </span>
+              </div>
+              <ul className="kaFolgen">
+                {e.folgen.map((f, i) => <li key={i} className={f.art}>{f.text}</li>)}
+              </ul>
+              <button className="btn primary" onClick={() => spieleSchritt(e.karriere, karte.verein)}>
+                Weiter zur Saison
+              </button>
+            </div>
+          );
+        })()}
 
         {karte?.art === "angebot" && (
           <div className="kaEntscheidung">
@@ -788,8 +889,16 @@ export default function Karriere({ onLeave }) {
           </div>
         )}
 
-        {k.verlauf.length > 0 && zeitleiste}
         <DataStamp />
+      </div>
+
+      <aside className="panel kaLaufbahn">
+        <h3>Laufbahn</h3>
+        {vitrine}
+        {k.verlauf.length > 0
+          ? zeitleiste
+          : <p className="kaLeer">Noch keine Saison gespielt.</p>}
+      </aside>
       </div>
     </div>
   );
