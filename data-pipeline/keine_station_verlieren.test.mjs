@@ -87,3 +87,23 @@ test("kuratiert entfernte Vereine kommen nicht zurück", async () => {
   const { fehlt } = vereinigeListe(gefiltert, ["BVB"]);
   assert.deepEqual(fehlt, [], "ein gestrichener Verein darf nicht als Verlust gelten");
 });
+
+/* Titel stehen unter demselben Schutz wie Stationen — mit einer Ausnahme. */
+test("ein widerlegter Titel kommt nicht zurück", async () => {
+  const { FALSCHE_TITEL } = await import("./wikidata_honours.mjs");
+  const [, eintrag] = Object.entries(FALSCHE_TITEL)[0];
+  const alt = ["CL", ...eintrag.weg];
+  const gefiltert = alt.filter((x) => !eintrag.weg.includes(x));
+  const { wert, fehlt } = vereinigeListe(gefiltert, []);
+  assert.deepEqual(fehlt, ["CL"]);
+  assert.ok(!wert.some((x) => eintrag.weg.includes(x)), "widerlegter Titel wieder da");
+});
+
+test("FALSCHE_TITEL nennt zu jedem Eintrag einen Grund", async () => {
+  const { FALSCHE_TITEL } = await import("./wikidata_honours.mjs");
+  for (const [key, e] of Object.entries(FALSCHE_TITEL)) {
+    assert.match(key, /^[^|]+\|\d{4}$/, "Schlüssel unerwartet: " + key);
+    assert.ok(Array.isArray(e.weg) && e.weg.length, "keine Titel genannt: " + key);
+    assert.ok(e.grund && e.grund.length > 20, "Grund fehlt oder ist zu knapp: " + key);
+  }
+});

@@ -62,6 +62,26 @@ export const HONOUR_OVERRIDES = {
   "tanguy nianzou|2002": ["MBL"],
 };
 
+/* ── Das Gegenstück: Titel, die wir zu Unrecht führen ────────────────────────
+   HONOUR_OVERRIDES ergänzt, was Wikidata verschweigt. Diese Tabelle streicht, was
+   dort einmal stand und nachweislich falsch ist. Sie wurde nötig, als der
+   Stationsschutz auf Titel ausgeweitet wurde: Er vereinigt den neuen Stand mit dem
+   alten, damit kein echter Titel durch eine Quellenlücke verschwindet — und würde
+   ohne Gegenstück auch jeden Fehler festhalten, den die Quelle inzwischen korrigiert
+   hat.
+
+   REGEL WIE ÜBERALL: Hier steht nur, was belegt widerlegt ist. Jeder Eintrag nennt
+   die Vereinszeit des Spielers und das Jahr des Titels — beides aus der
+   Karrieretabelle der englischen Wikipedia bzw. dem Wettbewerb selbst. Sie schließen
+   einander aus, sonst stünde die Zeile hier nicht. */
+export const FALSCHE_TITEL = {
+  "andrey arshavin|1981": { weg: ["FAC"], grund: "Arsenal 2009–2013; die FA Cups fielen 2014, 2015 und 2017" },
+  "kevin de bruyne|1991": { weg: ["EL"], grund: "Chelsea gewann die Europa League 2012/13 — De Bruyne war diese Saison an Werder Bremen verliehen" },
+  "samuel eto'o|1981":    { weg: ["EL"], grund: "Chelsea gewann die Europa League im Mai 2013, Eto'o kam im August 2013" },
+  "samir nasri|1987":     { weg: ["EL"], grund: "Sevilla gewann die Europa League im Mai 2016, Nasri kam im August 2016" },
+  "rodri|1996":           { weg: ["EL"], grund: "Villarreal gewann die Europa League 2021, Rodri war dort 2015–2018" },
+};
+
 // Saison-Sieger, die Wikidata (noch) nicht als P1346 führt (Owner-bestätigt).
 // Honour-Key -> [[Saisonstartjahr, Club-Key], ...]; angewandt über cp mit derselben
 // Regel wie ZEITFILTER: von <= Saisonstart && bis >= Saisonende.

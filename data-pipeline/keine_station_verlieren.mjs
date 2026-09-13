@@ -17,6 +17,12 @@
  * Dieses Skript schliesst die Lücke: Es vereinigt den neuen Stand mit dem alten.
  * Eine Station, die einmal belegt war, bleibt.
  *
+ * Dasselbe gilt seit dem Lauf vom 13.09.2026 für TITEL und LIGEN. Der Refresh davor
+ * hatte 1.319 Titel verloren und nur 335 dazugewonnen — quer durch alle Wettbewerbe,
+ * mit Schwerpunkt Serie A und Coppa Italia. Ein Teil davon waren Korrekturen der
+ * Quelle, ein Teil echte Lücken: Arshavins FA Cup zu verlieren war richtig (Arsenal
+ * gewann ihn erst nach seiner Zeit), Błaszczykowskis Meisterschaft nicht.
+ *
  * ── WAS DAS KOSTET ──────────────────────────────────────────────────────────
  * Der Preis ist die Kehrseite: Wird eine FALSCHE Station upstream korrekt
  * entfernt, halten wir sie fest. Dafür gibt es das Gegenstück — WRONG_CLUBS in
@@ -37,6 +43,7 @@ import { dirname, join, resolve } from "path";
 import { recToString } from "./player_record.mjs";
 import { WRONG_CLUBS } from "./apply_extra_players.mjs";
 import { FALSCHE_CAREER_CLUBS } from "./extra_career_clubs.mjs";
+import { FALSCHE_TITEL } from "./wikidata_honours.mjs";
 import { baueDatei as baueKarussell } from "./wikidata_career_clubs.mjs";
 import { baueDatei as bauePfad } from "./wikidata_career_path.mjs";
 
@@ -79,7 +86,7 @@ async function players(standDir, anwenden) {
   const schluessel = (p) => `${p.n}|${p.by}`;
   const nachKey = new Map(nach.PLAYERS.map((p) => [schluessel(p), p]));
 
-  const bericht = { clubs: [], cp: [], fehlendeSpieler: [] };
+  const bericht = { clubs: [], cp: [], titel: [], ligen: [], fehlendeSpieler: [] };
   for (const alt of vor.PLAYERS) {
     const neu = nachKey.get(schluessel(alt));
     if (!neu) { bericht.fehlendeSpieler.push(`${alt.n} (${alt.by}, sl ${alt.sl || 0})`); continue; }
@@ -97,9 +104,19 @@ async function players(standDir, anwenden) {
 
     const cp = vereinigeDatiert(altCp, neu.cp);
     if (cp.fehlt.length) { neu.cp = cp.wert; bericht.cp.push(`${alt.n}: ${cp.fehlt.map((e) => e[0]).join(", ")}`); }
+
+    /* Titel und Ligen genauso — und mit demselben Vorbehalt: Was FALSCHE_TITEL
+       widerlegt, kommt nicht zurück, sonst hielte der Schutz jeden Fehler fest, den
+       die Quelle inzwischen korrigiert hat. */
+    const widerlegt = new Set(FALSCHE_TITEL[`${normName(alt.n)}|${alt.by}`]?.weg || []);
+    const tt = vereinigeListe((alt.t || []).filter((x) => !widerlegt.has(x)), neu.t);
+    if (tt.fehlt.length) { neu.t = tt.wert; bericht.titel.push(`${alt.n}: ${tt.fehlt.join(", ")}`); }
+
+    const lg = vereinigeListe(alt.lg, neu.lg);
+    if (lg.fehlt.length) { neu.lg = lg.wert; bericht.ligen.push(`${alt.n}: ${lg.fehlt.join(", ")}`); }
   }
 
-  if (anwenden && (bericht.clubs.length || bericht.cp.length)) {
+  if (anwenden && (bericht.clubs.length || bericht.cp.length || bericht.titel.length || bericht.ligen.length)) {
     const kopf = readFileSync(join(SRC, "players.js"), "utf8").split("export const PLAYERS")[0];
     writeFileSync(join(SRC, "players.js"),
       `${kopf}export const PLAYERS = [\n${nach.PLAYERS.map((p) => "  " + recToString(p)).join(",\n")}\n];\n`);
@@ -189,6 +206,8 @@ async function main() {
   const p = await players(standDir, anwenden);
   zeige("players.js — clubs zurückgeholt", p.clubs);
   zeige("players.js — cp zurückgeholt", p.cp);
+  zeige("players.js — Titel zurückgeholt", p.titel);
+  zeige("players.js — Ligen zurückgeholt", p.ligen);
   zeige("players.js — Spieler ohne Entsprechung (NICHT angelegt)", p.fehlendeSpieler);
   zeige("careerClubs.js — Stationen zurückgeholt", await karussell(standDir, anwenden));
   zeige("careerPathClubs.js — Stationen zurückgeholt", await pfad(standDir, anwenden));
