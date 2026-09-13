@@ -14,13 +14,13 @@ import { readFileSync, writeFileSync } from "fs";
 import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
 import { norm } from "../src/gameData.js";
-import { EXTRA_CAREER_CLUBS } from "./extra_career_clubs.mjs";
+import { EXTRA_CAREER_CLUBS, FALSCHE_CAREER_CLUBS } from "./extra_career_clubs.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PFAD = join(HERE, "..", "src", "careerClubs.js");
 
 /** Kuratierte Stationen in die vorhandenen Karten einarbeiten. Rein, damit testbar. */
-export function applyExtraCareerClubs(clubs, byKey, extras = EXTRA_CAREER_CLUBS) {
+export function applyExtraCareerClubs(clubs, byKey, extras = EXTRA_CAREER_CLUBS, falsche = FALSCHE_CAREER_CLUBS) {
   const neueClubs = [...clubs];
   const idxVon = new Map(neueClubs.map((n, i) => [n, i]));
   const neueKarte = { ...byKey };
@@ -44,6 +44,20 @@ export function applyExtraCareerClubs(clubs, byKey, extras = EXTRA_CAREER_CLUBS)
     if (!dazu.length) continue;
     neueKarte[key] = [...vorher].sort((a, b) => a - b);
     bericht.spieler.push({ key, name: e.n, dazu });
+  }
+  /* Erst ergänzen, dann streichen: Stünde ein Verein in beiden Tabellen, gewönne
+     die Widerlegung — und das ist die richtige Rangfolge. */
+  bericht.entfernt = [];
+  for (const f of falsche) {
+    const key = norm(f.n) + "|" + f.by;
+    const drin = neueKarte[key];
+    if (!drin) continue;
+    const raus = new Set(f.clubs.map((n) => idxVon.get(n)).filter((i) => i !== undefined));
+    if (!raus.size) continue;
+    const rest = drin.filter((i) => !raus.has(i));
+    if (rest.length === drin.length) continue;
+    neueKarte[key] = rest;
+    bericht.entfernt.push({ name: f.n, weg: f.clubs });
   }
   return { clubs: neueClubs, byKey: neueKarte, bericht };
 }
@@ -86,8 +100,9 @@ async function main() {
     for (const v of bericht.neueVereine) console.log(`  ? ${v}`);
   }
 
+  for (const e of bericht.entfernt) console.log(`  - ${e.name}: ${e.weg.join(", ")}`);
   if (probe) return console.log("\n--probe: nichts geschrieben.");
-  if (!bericht.ergaenzt) return console.log("\nNichts zu tun.");
+  if (!bericht.ergaenzt && !bericht.entfernt.length) return console.log("\nNichts zu tun.");
   writeFileSync(PFAD, baueDatei(clubs, byKey));
   console.log(`\nGeschrieben: ${PFAD} · ${clubs.length} Vereine`);
 }

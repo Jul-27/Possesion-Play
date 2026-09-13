@@ -76,4 +76,50 @@ export const EXTRA_CAREER_CLUBS = [
   { n: "Jannik Vestergaard", by: 1992, clubs: ["FC Southampton", "Leicester City"] },  // 2018–2021 · 2021–
   { n: "Eren Dinkçi",       by: 2001, clubs: ["1. FC Heidenheim 1846"] },              // 2023–2024
   { n: "Guido Burgstaller", by: 1989, clubs: ["FC St. Pauli"] },                       // 2020–2022
+
+  /* ── Aus „Fehler melden", Durchsicht vom 13.09.2026 ────────────────────────
+     Wer einmal gemeldet wird, hat meist mehrere Lücken — es sind dieselben Leihen
+     und jüngeren Wechsel, die Wikidata verschweigt. Alle Stationen stehen in der
+     Infobox-Karrieretabelle der deutschen Wikipedia; die Schreibweise ist die aus
+     careerClubs.js.
+
+     NICHT übernommen wurden Schreibvarianten von Vereinen, die wir bereits führen —
+     „FC Parma" zu unserem „Parma Calcio 1913", „UD Levante" zu „Levante UD",
+     „1. FC Heidenheim" zu „1. FC Heidenheim 1846", „FC Magna Wiener Neustadt" zu
+     „SC Wiener Neustadt", „Deportivo La Coruña" zu „Deportivo A Coruña",
+     „Al-Gharafa" zu „Al-Gharafa Sports Club", „FK IMT Belgrad" zu „FK IMT". Sie
+     ergäben je einen zweiten Eintrag für denselben Verein. Ebenso weggelassen sind
+     Zweitmannschaften (Real Madrid Castilla, Red Bull Juniors). */
+  /* Die Spielvereine stehen doppelt — in EXTRA_PLAYERS als Kürzel für Hexfeld und
+     Wappen, hier unter ihrem vollen Namen fürs Karussell. Der Karussell-Bestand wird
+     von wikidata_career_clubs.mjs gebaut und kennt die kuratierten Nachträge nicht;
+     ohne diese Zeilen fehlte Capaldo dort Salzburg, obwohl es im Hexspiel zählt. */
+  { n: "Jacob Bruun Larsen", by: 1998, clubs: ["RSC Anderlecht", "FC Burnley", "TSG 1899 Hoffenheim"] },  // 2021, Leihe · 2023–2024, Leihe · 2020–2025
+  { n: "Gonçalo Paciência",  by: 1994, clubs: ["Rio Ave FC", "Vitória Setúbal", "Celta Vigo",
+                                               "VfL Bochum", "Sanfrecce Hiroshima", "Sport Recife",
+                                               "CD Santa Clara", "FC Schalke 04"] },                     // 2017 bis 2026– · S04 2020–2021
+  { n: "Sejad Salihović",    by: 1984, clubs: ["DJK SC Schwarz-Weiß Frankenthal", "Hamburger SV"] },     // 2019–2020 · 2017–2018
+  { n: "Mads Bidstrup",      by: 2001, clubs: ["FC Brentford", "FC Nordsjælland",
+                                               "FC Red Bull Salzburg"] },                                // 2020–2023 · 2022–2023 · 2023–2026
+  { n: "Robert Glatzel",     by: 1994, clubs: ["SV Heimstetten", "Wacker Burghausen", "Cardiff City",
+                                               "1. FC Heidenheim 1846", "1. FSV Mainz 05",
+                                               "Hamburger SV"] },                                        // 2013 bis 2021–2026
+  /* Capaldo: Boca Juniors und Salzburg stehen in beiden Wikipedias, im Karussell
+     fehlte beides — er hatte dort nur den HSV. Schlüssel ist das im Bestand geführte
+     Jahr 1997, siehe die Anmerkung in apply_extra_players.mjs. */
+  { n: "Nicolás Capaldo",    by: 1997, clubs: ["Boca Juniors", "FC Red Bull Salzburg"] },                // 2015–2021 · 2021–2025
 ];
+
+/* ── Das Gegenstück: Stationen, die wir zu Unrecht führen ────────────────────
+   WRONG_CLUBS in apply_extra_players.mjs streicht einen der 47 Spielvereine aus
+   `clubs`. Fürs Karussell gab es das nicht — Sejad Salihović stand dort weiter bei
+   Inter Mailand, wo er nie gespielt hat, obwohl der Eintrag im Hexspiel längst
+   entfernt war. Zwei Korrekturwege für dieselbe Falschangabe, und einer fehlte.
+
+   Wie überall gilt: Hier steht nur, was belegt widerlegt ist, mit dem Grund. */
+export const FALSCHE_CAREER_CLUBS = [
+  { n: "Sejad Salihović", by: 1984, clubs: ["Inter Mailand"],
+    grund: "Karrieretabelle auf de- und en.wikipedia nennt Hertha BSC, Hoffenheim, "
+      + "Guizhou/Beijing Renhe, St. Gallen, HSV und Frankenthal — kein Inter." },
+];
+

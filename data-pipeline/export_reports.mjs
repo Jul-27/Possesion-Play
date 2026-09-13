@@ -48,6 +48,13 @@ const NAME_VON_KEY = new Map(CLUBS.map((c) => [c.key, c.name]));
  * fälschlich FÜHREN, dies hier verhindert, dass wir einen aufnehmen. */
 export const ABGELEHNT = [
   {
+    n: "Joselu", by: 1990, club: "VfL Wolfsburg",
+    grund: "Karrieretabelle nennt auf de.wikipedia UND en.wikipedia dieselben zwölf "
+      + "Stationen — Celta, Real Madrid Castilla, Real Madrid, Hoffenheim, Eintracht "
+      + "Frankfurt, Hannover 96, Stoke, Deportivo, Newcastle, Alavés, Espanyol, "
+      + "Al-Gharafa. Wolfsburg kommt in keiner davon vor (13.09.2026).",
+  },
+  {
     n: "Raheem Sterling", by: 1994, club: "PSV Eindhoven",
     grund: "Karrieretabelle nennt Liverpool, Manchester City, Chelsea, Arsenal und "
       + "Feyenoord Rotterdam — kein PSV. Vermutlich mit Feyenoord verwechselt (26.08.2026).",

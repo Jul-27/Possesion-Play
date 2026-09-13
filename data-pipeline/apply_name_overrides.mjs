@@ -71,6 +71,13 @@ export function applyOverrides(players, overrides = NAME_OVERRIDES, excluded = E
     if (!o) continue;
     p.n = o.to;
     p.ln = deriveLastName(o.to);
+    /* `byTo` korrigiert zusätzlich das Geburtsjahr. Umbenennen allein reicht nicht,
+       wenn WIKIDATA SELBST das Datum verdirbt: Q188241 (Quaresma) führt derzeit das
+       Jahr 1000, Q485697 (Pepe) das Jahr 1984, während der Wikipedia-Artikel „Pepe
+       (Fußballspieler, 1983)" heißt. Der Schlüssel ist Name UND Jahr — ohne die
+       Korrektur legt jeder Lauf erneut einen zweiten Datensatz an, und die Titel
+       landen dort statt beim echten Spieler. */
+    if (o.byTo) p.by = o.byTo;
     stats.renamed++;
   }
 

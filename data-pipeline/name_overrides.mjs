@@ -183,11 +183,61 @@ export const NAME_OVERRIDES = [
   { from: "Vinicius Souza",                      by: 1999, to: "Vini Souza",                        src: "Q69968896", note: "Dublette, gleiche QID" },
   { from: "Yann Aurel Bisseck",                  by: 2000, to: "Yann Bisseck",                      src: "Q43769705", note: "Dublette, gleiche QID" },
   { from: "Yevhen Konoplyanka",                  by: 1989, to: "Yevgen Konoplyanka",                src: "Q284078", note: "Dublette, gleiche QID" },
+
+  /* ── Lauf vom 12.09.2026 ───────────────────────────────────────────────────
+     Derselbe Mechanismus wie oben, neue Fälle. Wikidata hatte die Labels dieser
+     Spieler auf den Vollnamen umgestellt oder sie waren vandaliert; der Lauf legte
+     daraufhin je einen ZWEITEN Datensatz an. Die Titel landeten am neuen, die
+     Vereine blieben am alten — im Spiel standen danach zwei halbe Personen. Am
+     sichtbarsten: ein „Lionel Andrés Messi" mit sieben Titeln neben einem „Lionel
+     Messi" ohne einen einzigen.
+
+     Jede Zeile ist an EINER Entität belegt: Sie trägt beide Namen als Label oder
+     Alias, und ihr Geburtsjahr stimmt mit unserem Datensatz überein. Geprüft von
+     data-pipeline/finde_doppel.mjs; das `to` ist jeweils der dewiki-Artikeltitel. */
+  { from: "Anthony Lopez maresca",               by: 1990, to: "Anthony Lopes",                    src: "Q1392235", note: "Vandalismus im Label" },
+  { from: "Cuauhtémoc Blanco Bravo",             by: 1973, to: "Cuauhtémoc Blanco",                src: "Q207644", note: "Dublette, gleiche QID" },
+  { from: "Frédéric baldi",                      by: 1977, to: "Frédéric Kanouté",                 src: "Q218394", note: "Vandalismus im Label" },
+  { from: "Gareth Bal",                          by: 1989, to: "Gareth Bale",                      src: "Q184586", note: "Vandalismus im Label" },
+  { from: "Gerard Piqué i Bernabeu",             by: 1987, to: "Gerard Piqué",                     src: "Q17507", note: "Dublette, gleiche QID" },
+  { from: "Josep Guardiola",                     by: 1971, to: "Pep Guardiola",                    src: "Q164038", note: "Dublette, gleiche QID" },
+  { from: "Lionel Andrés Messi",                 by: 1987, to: "Lionel Messi",                     src: "Q615", note: "Dublette, gleiche QID" },
+  { from: "Martín Palermo Dacquino Guillermo",   by: 1973, to: "Martín Palermo",                   src: "Q208436", note: "Vandalismus im Label" },
+  { from: "Rodri Hernández",                     by: 1996, to: "Rodri",                            src: "Q20994118", note: "Dublette, gleiche QID" },
+  { from: "Rodri Mendoza",                       by: 2005, to: "Rodrigo Mendoza",                  src: "Q122910207", note: "Dublette, gleiche QID" },
+  { from: "el petero martinez",                  by: 1994, to: "Roger Martínez",                   src: "Q15130650", note: "Vandalismus im Label" },
+  { from: "Ederson Santana de Moraes",           by: 1993, to: "Ederson",                          src: "Q23960214", note: "Dublette, gleiche QID" },
+
+  /* ── Kaputtes Geburtsjahr in der Quelle: `byTo` schlüsselt um ──────────────
+     Nicht der Name ist hier falsch, sondern das Datum — und weil der Schlüssel
+     aus Name UND Jahr besteht, entsteht bei jedem Lauf erneut ein zweiter
+     Datensatz, auf dem die Titel landen.
+
+     Pepe:     Q485697 führt P569 = 1984-02-26, der deutsche Wikipedia-Artikel
+               heißt aber „Pepe (Fußballspieler, 1983)".
+     Quaresma: Q188241 führt P569 = +1000-00-00, also gar kein brauchbares Datum;
+               de.wikipedia nennt den 26. September 1983. */
+  { from: "Pepe",                                by: 1984, to: "Pepe",              byTo: 1983,     src: "Q485697", note: "dewiki-Artikeltitel nennt 1983" },
+  { from: "Ricardo Quaresma",                    by: 1000, to: "Ricardo Quaresma",  byTo: 1983,     src: "Q188241", note: "P569 in Wikidata unbrauchbar (Jahr 1000); dewiki nennt 26.09.1983" },
 ];
 
 // Records, die aus dem Datensatz verschwinden. `aliases` fängt Schreibweisen ab,
 // unter denen derselbe Record nach einem Pipeline-Lauf wieder auftauchen kann.
 export const EXCLUDED_PLAYERS = [
+  /* Aus dem Lauf vom 12.09.2026: drei Datensätze, die derselbe Spieler sind wie ein
+     vorhandener, sich aber NICHT belegbar verschmelzen lassen. Bei den ersten beiden
+     ist der vandalierte Name inzwischen aus Wikidata zurückgesetzt — die Entität
+     trägt ihn nicht mehr, also fehlt der Beleg für eine Zusammenlegung. Beim dritten
+     ist das Geburtsdatum selbst kaputt: Wikidata führt für Q188241 derzeit das Jahr
+     1000, wodurch der Schlüssel nicht zum echten Datensatz (1983) passt.
+
+     Verschmelzen ohne Beleg hiesse zwei Personen zusammenzulegen, weil sie ähnlich
+     heissen. Der Ausschluss verliert dagegen nur, was am Falschen hängt: Jadon Sancho
+     und Cristian Pavón behalten ihre eigenen Datensätze unverändert. */
+  { n: "Sancho Panza", by: 2000,
+    reason: "vandaliertes Label zu Jadon Sancho (Q1188508); Name in Wikidata zurückgesetzt, daher kein Beleg für eine Zusammenlegung" },
+  { n: "pavon river plate", by: 1996,
+    reason: "vandaliertes Label zu Cristian Pavón (Q19595248); Name in Wikidata zurückgesetzt, daher kein Beleg" },
   /* Trainer, die über die Wikipedia-Kadertabelle als Spieler ihres Vereins gelandet
      sind. Beide sind Ex-Profis (P106 „Fußballspieler"), haben aber für Valencia bzw.
      Villarreal nie gespielt — sie trainieren sie. wikipedia_squads.mjs filtert das

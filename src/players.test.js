@@ -30,8 +30,12 @@ test("players.js: keine verstümmelte Variante aus NAME_OVERRIDES überlebt", ()
 });
 
 test("players.js: jeder korrigierte Name ist im Datensatz angekommen", () => {
-  const missing = NAME_OVERRIDES.filter((o) => !PLAYERS.some((p) => p.n === o.to && p.by === o.by));
-  assert.deepEqual(missing.map((o) => `${o.to} (${o.by})`), []);
+  /* `byTo` schlüsselt zusätzlich das Geburtsjahr um (Pepe, Quaresma — dort ist das
+     Datum in Wikidata selbst kaputt). Der Zieldatensatz steht dann unter dem
+     KORRIGIERTEN Jahr; unter dem alten zu suchen ginge zwangsläufig ins Leere. */
+  const zielJahr = (o) => o.byTo ?? o.by;
+  const missing = NAME_OVERRIDES.filter((o) => !PLAYERS.some((p) => p.n === o.to && p.by === zielJahr(o)));
+  assert.deepEqual(missing.map((o) => `${o.to} (${zielJahr(o)})`), []);
 });
 
 test("players.js: kuratierte Ausschlüsse sind entfernt (inkl. Aliasse)", () => {

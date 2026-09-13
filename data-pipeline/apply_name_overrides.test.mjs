@@ -123,3 +123,28 @@ test("mergeInto behandelt eine offene Spanne als spätestes Ende", async () => {
   mergeInto(a, { n: "A", ln: "A", by: 1990, nat: [], clubs: [], span: [2015, 0] });
   assert.deepEqual(a.span, [2012, 0], "0 heißt „läuft noch“ und schlägt jedes Jahr");
 });
+
+/* ── Ein korrigiertes Geburtsjahr ────────────────────────────────────────────
+   Der Schlüssel ist Name UND Jahr. Verdirbt Wikidata das Datum, hilft Umbenennen
+   nicht — der Datensatz bleibt ein zweiter. */
+test("byTo schlüsselt den Datensatz auf das richtige Jahr um und verschmilzt ihn", () => {
+  const spieler = [
+    { n: "Pepe", by: 1983, nat: ["PRT"], clubs: ["RMA"], t: [] },
+    { n: "Pepe", by: 1984, nat: [], clubs: ["POR"], t: ["CL", "MLL"] },
+  ];
+  const { players, stats } = applyOverrides(spieler,
+    [{ from: "Pepe", by: 1984, to: "Pepe", byTo: 1983, src: "Q485697" }], []);
+  assert.equal(players.length, 1);
+  assert.equal(players[0].by, 1983);
+  assert.deepEqual(players[0].clubs, ["POR", "RMA"]);
+  assert.deepEqual(players[0].t, ["CL", "MLL"]);
+  assert.equal(stats.merged, 1);
+});
+
+test("ohne byTo bleibt das Geburtsjahr unangetastet", () => {
+  const { players } = applyOverrides(
+    [{ n: "Gareth Bal", by: 1989, nat: [], clubs: [], t: [] }],
+    [{ from: "Gareth Bal", by: 1989, to: "Gareth Bale", src: "Q184586" }], []);
+  assert.equal(players[0].by, 1989);
+  assert.equal(players[0].n, "Gareth Bale");
+});

@@ -62,7 +62,12 @@ const PARTICLES = new Set(["van","von","de","del","della","di","da","dos","der",
    Schlüssel abbildet. So sind 12 Doppel-Datensätze entstanden — mit geteilten Vereinen
    (Tytoń hatte Ajax nur auf einer der beiden Karten) und ohne Foto, weil der Bildindex
    mehrdeutige Schlüssel verwirft. */
-export { norm } from "../src/gameData.js";
+/* `export { norm } from "…"` REICHT NICHT. Das reicht den Namen nach aussen weiter,
+   legt ihn aber NICHT im eigenen Gültigkeitsbereich an — und main() benutzt ihn:
+   der Lauf brach mit „ReferenceError: norm is not defined" beim ersten Verein ab.
+   Also erst holen, dann weitergeben. */
+import { norm } from "../src/gameData.js";
+export { norm };
 
 export function deriveLastName(name) {
   const parts = String(name).trim().split(/\s+/);
