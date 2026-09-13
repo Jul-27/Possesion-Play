@@ -14,7 +14,10 @@ test("NAME_OVERRIDES: jeder Eintrag ist vollständig und belegt", () => {
 test("NAME_OVERRIDES: Zielnamen sind echte Namen, keine QIDs", () => {
   for (const o of NAME_OVERRIDES) {
     assert.ok(!/^Q\d+$/.test(o.to), "Zielname ist eine QID: " + o.to);
-    assert.notEqual(o.to, o.from, "Override ohne Wirkung: " + o.from);
+    /* Ein Eintrag muss etwas bewirken — entweder den Namen ändern oder, bei
+       kaputtem Geburtsdatum in der Quelle, das Jahr umschlüsseln. */
+    assert.ok(o.to !== o.from || (o.byTo && o.byTo !== o.by),
+      "Override ohne Wirkung: " + o.from);
   }
 });
 
@@ -48,5 +51,14 @@ test("EXCLUDED_PLAYERS: keine doppelten Schlüssel (n|by)", () => {
     const k = x.n + "|" + x.by;
     assert.ok(!seen.has(k), "doppelter Schlüssel: " + k);
     seen.add(k);
+  }
+});
+
+test("NAME_OVERRIDES: byTo ist ein plausibles Geburtsjahr", () => {
+  for (const o of NAME_OVERRIDES) {
+    if (o.byTo === undefined) continue;
+    assert.equal(typeof o.byTo, "number", "byTo ist keine Zahl: " + JSON.stringify(o));
+    assert.ok(o.byTo >= 1850 && o.byTo <= 2015, "byTo unplausibel: " + JSON.stringify(o));
+    assert.notEqual(o.byTo, o.by, "byTo gleich by, also wirkungslos: " + JSON.stringify(o));
   }
 });

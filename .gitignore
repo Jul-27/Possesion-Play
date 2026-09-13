@@ -22,3 +22,4 @@ src/.players.before.js
 
 # Export der Fehlermeldungen — Arbeitsdatei, wird bei Bedarf neu erzeugt
 data-pipeline/player-club-reports.json
+.stand-vor-lauf/

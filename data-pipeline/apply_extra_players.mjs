@@ -21,6 +21,37 @@ export const EXTRA_PLAYERS = [
   { n: "Adam Daghim",    by: 2005, clubs: ["RBS"], cp: [["RBS", 2023, 2024]] },  // RB Salzburg
   { n: "Sergio Agüero",  by: 1988, clubs: ["ATM"], cp: [["ATM", 2006, 2011]] },  // Atlético Madrid
 
+  /* Ricardo Quaresma, Lauf vom 12.09.2026. Wikidata führt für Q188241 derzeit
+     P569 = +1000-00-00, also gar kein brauchbares Geburtsdatum. Der Titel-Lauf legte
+     dadurch einen Datensatz „Ricardo Quaresma|1000" an und schrieb IHM diese vier
+     Titel zu, während der echte Datensatz (1983, belegt durch de.wikipedia:
+     26. September 1983) leer zurückblieb.
+
+     Die Titel sind also nicht geraten — sie stammen aus demselben Wikidata-Lauf wie
+     alle anderen, nur unter dem falschen Schlüssel. NAME_OVERRIDES korrigiert das
+     Jahr künftig über `byTo`; hier stehen sie, weil der falsch geschlüsselte
+     Datensatz zum Zeitpunkt der Korrektur bereits entfernt war. */
+  { n: "Ricardo Quaresma", by: 1983, t: ["CIT", "CL", "EM", "MSA"] },
+
+  /* ── Aus „Fehler melden", Durchsicht vom 13.09.2026 ────────────────────────
+     Acht Meldungen waren anwendbar; drei davon (Dedić→Newcastle, Bouaddi→Man City,
+     Diallo→Mainz) hat der Datenlauf selbst geschlossen. Die übrigen stehen hier.
+
+     Jede ist an ZWEI Quellen belegt — de.wikipedia und en.wikipedia, jeweils die
+     Karrieretabelle der Infobox, mit abgeglichenem Geburtsjahr. Die Zeiträume
+     stammen aus derselben Tabelle. */
+  { n: "Jacob Bruun Larsen",  by: 1998, clubs: ["TSG"], cp: [["TSG", 2020, 2025]] },
+  { n: "Gonçalo Paciência",   by: 1994, clubs: ["S04"], cp: [["S04", 2020, 2021]] },
+  { n: "Sejad Salihović",     by: 1984, clubs: ["HSV"], cp: [["HSV", 2017, 2018]] },
+  { n: "Mads Bidstrup",       by: 2001, clubs: ["RBS"], cp: [["RBS", 2023, 2026]] },
+  { n: "Robert Glatzel",      by: 1994, clubs: ["M05", "HSV"], cp: [["M05", 2021, 2021], ["HSV", 2021, 2026]] },
+  /* Capaldo steht bei uns unter 1997, Wikidata und beide Wikipedias nennen den
+     14.09.1998. Der Eintrag folgt dem Schlüssel, der im Bestand existiert — sonst
+     liefe er ins Leere. Das falsche Jahr ist gesondert zu klären; es hat schon
+     einmal dazu geführt, dass eine Prüfung Capaldo mit Guilherme Ramos verwechselt
+     hat, weil beide Namen zu einem Artikel mit Jahrgang 1997 führten. */
+  { n: "Nicolás Capaldo",     by: 1997, clubs: ["RBS"], cp: [["RBS", 2021, 2025]] },
+
   // RB Salzburg: Wikidata führt bei diesen fünf gar keinen Salzburg-Eintrag (P54),
   // obwohl alle dort spielten. Nur der Vereins-Bezug wird gesetzt (das HEX-Club-Feld
   // prüft clubs[], keine Jahre); cp bleibt weg, weil sich die Spielzeiträume nicht
@@ -89,6 +120,11 @@ export const EXTRA_PLAYERS = [
    Die übrigen 39 aus derselben Liste bleiben bewusst unangetastet — darunter De Bruynes
    Chelsea-/City-Jahre und Magaths fünf Bundesliga-Stationen, die Wikidata verloren hat. */
 export const WRONG_CLUBS = {
+  /* Beim Nachtragen der gemeldeten Vereine aufgefallen (13.09.2026): Salihovićs
+     Karriere führt Hertha BSC, Hoffenheim, Guizhou/Beijing Renhe, St. Gallen, den
+     HSV und Frankenthal — auf beiden Wikipedias, in dieser Reihenfolge. Inter
+     Mailand kommt in keiner der beiden vor. */
+  "sejad salihovic|1984":    ["INT"],
   "jay-jay okocha|1973":     ["MUN"],
   "mason greenwood|2001":    ["ARS", "PSG"],
   "nico schlotterbeck|1999": ["RBL", "SVW"],

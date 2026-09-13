@@ -10,11 +10,16 @@
 import { spawnSync } from "child_process";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { copyFileSync } from "fs";
+import { copyFileSync, mkdirSync, existsSync } from "fs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLAYERS = join(HERE, "..", "src", "players.js");
 const SNAPSHOT = join(HERE, "..", "src", ".players.before.js");
+/* Der volle Stand vor dem Lauf. players.js allein reicht nicht: careerClubs.js und
+   careerPathClubs.js werden ebenfalls jedes Mal komplett neu geschrieben, und was
+   Wikidata gerade nicht führt, fehlt danach auch bei uns. */
+const STAND = join(HERE, "..", ".stand-vor-lauf");
+const GENERIERT = ["players.js", "careerClubs.js", "careerPathClubs.js", "squads.js", "appearances.js"];
 /* Jeder Eintrag ist [Skript, Argumente]. Die Reihenfolge ist nicht verhandelbar —
    siehe die Kommentare je Schritt. */
 const CHAIN = [
@@ -34,6 +39,15 @@ const CHAIN = [
      apply_name_overrides: Der Lauf legt neue Spieler an, und bei dreien stand zum
      Zeitpunkt des ersten Laufs Vandalismus im englischen Wikidata-Label. */
   ["wikidata_league_squads.mjs"],
+  /* 5d) DIESELBEN KADER FUER DIE VEREINSWELT DES KARRIERE-MODUS. Der Schritt fehlte,
+     und das war teuer: `cp` wird bei jedem Lauf neu geschrieben, die 362 Vereine aus
+     careerWorld.js stehen aber nicht in LIGA_VEREINE — ein Voll-Refresh loeschte
+     ihre Kader also jedes Mal still mit. Gemessen an diesem Lauf: 10.818 verlorene
+     cp-Eintraege, 330 Vereinskuerzel auf null, darunter Fiorentina, Sampdoria,
+     Atalanta, Udinese und Nizza. Ein Verein ohne Kader hat keine Staerke und faellt
+     aus dem Karriere-Modus. Beim Bau des Modus wurde der Lauf einmal von Hand
+     gestartet; in der Kette stand er nie. */
+  ["wikidata_league_squads.mjs", "--welt"],
   ["apply_name_overrides.mjs"],   // 6) kuratierte Namen/Ausschlüsse
   /* 6b) EXTRA_PLAYERS/WRONG_CLUBS NACH den Namenskorrekturen: die Tabellen sind über
      norm(name)|by verschlüsselt und träfen auf den unkorrigierten Namen ins Leere.
@@ -80,7 +94,12 @@ const CHAIN = [
    wird aktiv vandaliert — ohne diesen Vergleich gingen gelöschte Vereine und Titel
    still live. */
 copyFileSync(PLAYERS, SNAPSHOT);
-console.log(`Stand gesichert: ${SNAPSHOT}`);
+mkdirSync(STAND, { recursive: true });
+for (const f of GENERIERT) {
+  const q = join(HERE, "..", "src", f);
+  if (existsSync(q)) copyFileSync(q, join(STAND, f));
+}
+console.log(`Stand gesichert: ${SNAPSHOT} und ${STAND}`);
 
 for (const [script, ...args] of CHAIN) {
   console.log(`\n════════ ${[script, ...args].join(" ")} ════════`);
@@ -90,6 +109,18 @@ for (const [script, ...args] of CHAIN) {
     process.exit(r.status || 1);
   }
 }
+/* ZUERST ZURUECKHOLEN, DANN PRUEFEN. verify_refresh meldet Verluste seit je, aber
+   es verhindert sie nicht — und careerClubs.js sieht es gar nicht an. Dieser Schritt
+   traegt jede Station wieder ein, die der Lauf verloren hat, und schreibt auf, welche
+   das waren. Was verify_refresh danach noch findet, ist etwas anderes als ein
+   fehlender Verein: ein Spieler, dessen Schluessel sich geaendert hat. */
+console.log("\n════════ keine_station_verlieren.mjs ════════");
+const rettung = spawnSync(process.execPath, [join(HERE, "keine_station_verlieren.mjs"), STAND], { stdio: "inherit" });
+if (rettung.status !== 0) {
+  console.error("\nAbbruch: keine_station_verlieren.mjs endete mit Exit-Code " + rettung.status);
+  process.exit(rettung.status || 1);
+}
+
 console.log("\n════════ verify_refresh.mjs ════════");
 const check = spawnSync(process.execPath, [join(HERE, "verify_refresh.mjs"), SNAPSHOT], { stdio: "inherit" });
 if (check.status === 1) {
