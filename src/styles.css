@@ -1374,7 +1374,6 @@ body::after {
 .kaVereinName { font-size: 14px; line-height: 1.25; }
 .kaVereinLiga { font-size: 11.5px; color: var(--muted); }
 /* Die Rufstufe als Punktreihe: schneller zu erfassen als eine Zahl. */
-.kaVereinZusatz { font-size: 11px; color: var(--teal); margin-top: 3px; }
 
 /* ── Titelfeier ──────────────────────────────────────────────────────────────
    Ein gewonnener Titel stand bisher als Zeile Text da. Jetzt kommt er als eigener
@@ -1592,7 +1591,6 @@ body::after {
 .ppRoot.karriere .kaVereinWappen { display: block; }
 .ppRoot.karriere .kaVereinWappen .emblem { width: 78px; height: 78px; }
 .ppRoot.karriere .kaVereinLiga { font-size: 12px; color: var(--kaLeise); text-align: center; }
-.ppRoot.karriere .kaVereinZusatz { font-size: 11.5px; color: var(--kaAkzent); text-align: center; }
 
 /* ── Entscheidungen ─────────────────────────────────────────────────────────
    Die Optionen waren zwei Textzeilen untereinander. Jetzt zeigt ein Balken die
@@ -1724,3 +1722,22 @@ body::after {
   .ppRoot.karriere .kaVereine { grid-template-columns: 1fr; }
 }
 .ppRoot.karriere .kaVereine.einer { grid-template-columns: minmax(190px, 260px); justify-content: center; }
+
+/* ── Trophäen ───────────────────────────────────────────────────────────────
+   Gezeichnet statt fotografiert, eine Form je Wettbewerb (src/Trophaeen.jsx).
+   Vorher trug jeder Titel dasselbe Wappenzeichen in anderer Farbe. */
+.trophaee { display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,.45)); }
+.ppRoot.karriere .kaVitrine { gap: 10px; align-items: flex-end; }
+.ppRoot.karriere .kaTitel {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  background: none; border: none; padding: 0; color: var(--kaLeise);
+}
+.ppRoot.karriere .kaTitel small { font-size: 10px; letter-spacing: .02em; text-align: center; max-width: 92px; }
+.ppRoot.karriere .kaLeiste em { display: inline-flex; gap: 3px; vertical-align: -4px; margin-left: 5px; }
+
+/* Am Karriereende bekommt die Zusammenfassung die ganze Breite — in der schmalen
+   Aktionsspalte schrumpfte sie auf ein Drittel und wurde unleserlich. */
+@media (min-width: 1000px) {
+  .ppRoot.karriere .kaBuehne.einspaltig { grid-template-columns: minmax(0, 1fr); }
+  .ppRoot.karriere .kaBuehne.einspaltig .kaLaufbahn { position: static; max-height: none; }
+}

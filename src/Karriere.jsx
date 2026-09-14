@@ -18,6 +18,7 @@ import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
 import { Emblem } from "./Emblems.jsx";
 import UrkundeKarriere from "./UrkundeKarriere.jsx";
+import Trophaee from "./Trophaeen.jsx";
 
 /* Titelnamen für die Vitrine. Die Schlüssel sind dieselben wie im Feld `t` der
    Spielerdaten — „CL" heißt in der Karriere dasselbe wie in jedem anderen Modus. */
@@ -281,9 +282,11 @@ function Titelfeier({ titel, onFertig }) {
       onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && weiter()}
       aria-label={`Titel gewonnen: ${def.name}`}>
       <div className="kaFeierInhalt">
+        {/* Die Trophäe, nicht das Wappenzeichen: Champions League und DFB-Pokal
+            sahen vorher identisch aus, nur in anderer Farbe. */}
         <div className="kaFeierPokal" key={key}
           style={{ "--pokalLicht": `${def.c1}cc` }}>
-          <Emblem def={def} />
+          <Trophaee titel={key} groesse={124} titelText={def.name} />
         </div>
         <div className="kaFeierName">{def.name}</div>
         <div className="kaFeierUnten">
@@ -304,19 +307,17 @@ function Titelfeier({ titel, onFertig }) {
    30-Pixel-Marke neben zwei Textzeilen — bei einer Entscheidung, die eine Laufbahn
    prägt, ist das zu wenig. Jetzt beherrscht es die Karte, wie im Vorbild.
 
-   `zusatz` trägt das, was je nach Anlass unterschiedlich ist: bei einer Leihe die
-   Zahl der Spiele, bei einem Angebot die geforderte Stärke. */
-function VereinsKarte({ verein, anlass, zusatz, onClick }) {
+   VIER DINGE, NICHT SIEBEN. Erst trug die Kachel zusätzlich fünf Stufenpunkte und
+   eine Anforderungszeile, dann bei einer Leihe noch die zu erwartende Zahl der
+   Spiele. Beides ist weg: Wer wählt, soll den Verein sehen, nicht eine Vorschau auf
+   seine Statistik. Das Niveau steht ohnehin im Ligennamen. */
+function VereinsKarte({ verein, anlass, onClick }) {
   return (
-    /* VIER DINGE, NICHT SIEBEN. Vorher trug die Kachel zusätzlich fünf Stufenpunkte
-       und eine Anforderungszeile — auf engem Raum wirkte sie dadurch klein UND
-       überladen zugleich. Das Niveau steht ohnehin im Ligennamen. */
     <button type="button" className="kaVerein" onClick={onClick}>
       <span className="kaVereinAnlass">{anlass}</span>
       <b className="kaVereinName">{verein.name}</b>
       <span className="kaVereinWappen"><Emblem def={defVon(verein)} /></span>
       <span className="kaVereinLiga">{verein.liga.name}</span>
-      {zusatz && <small className="kaVereinZusatz">{zusatz}</small>}
     </button>
   );
 }
@@ -708,7 +709,7 @@ export default function Karriere({ onLeave }) {
           {k.verlauf.map((z, i) => (
             <tr key={i}>
               <td>{z.alter}</td>
-              <td><span className="kaZeilenWappen"><Emblem def={defVon({ key: z.key, name: z.verein })} /></span>{z.verein} <small>{z.lg}</small>{z.titel.length ? <em> · {z.titel.map((t) => TITEL_NAME[t] || t).join(", ")}</em> : null}</td>
+              <td><span className="kaZeilenWappen"><Emblem def={defVon({ key: z.key, name: z.verein })} /></span>{z.verein} <small>{z.lg}</small>{z.titel.length ? <em>{z.titel.map((t, n) => <Trophaee key={n} titel={t} groesse={18} titelText={TITEL_NAME[t] || t} />)}</em> : null}</td>
               <td><span className="kaRatingMarke">{z.ovr}</span></td>
               <td>{z.spiele}</td><td>{z.tore}</td><td>{z.vorlagen}</td>
             </tr>
@@ -718,12 +719,42 @@ export default function Karriere({ onLeave }) {
     </div>
   );
 
+  /* ── Die Laufbahn nach Vereinen ──────────────────────────────────────────
+     Der Verlauf steht je SCHRITT, die Zusammenfassung will es je VEREIN: Wer
+     dreimal hintereinander bei Freiburg war, hat dort eine Station mit der Summe
+     aus drei Schritten, nicht drei Karten. Aufeinanderfolgende Schritte beim
+     selben Verein werden deshalb zusammengefasst — eine Rückkehr Jahre später
+     bleibt eine eigene Station, so wie man sie auch erzählen würde. */
+  const stationen = (() => {
+    const out = [];
+    for (const z of k?.verlauf || []) {
+      const letzte = out[out.length - 1];
+      if (letzte && letzte.key === z.key) {
+        letzte.spiele += z.spiele; letzte.tore += z.tore; letzte.vorlagen += z.vorlagen;
+        letzte.titel.push(...(z.titel || []).filter((x) => x !== "BDO"));
+        continue;
+      }
+      const def = defVon({ key: z.key, name: z.verein });
+      out.push({
+        key: z.key, name: z.verein, label: def.label || z.key, c1: def.c1, c2: def.c2,
+        spiele: z.spiele, tore: z.tore, vorlagen: z.vorlagen,
+        titel: (z.titel || []).filter((x) => x !== "BDO"),
+      });
+    }
+    return out;
+  })();
+
   const vitrine = (() => {
     const eintraege = TITEL_REIHE.filter((t) => k.titel[t]);
     return (
       <div className="kaVitrine">
         {eintraege.length
-          ? eintraege.map((t) => <span key={t} className="kaTitel">{TITEL_NAME[t]}{k.titel[t] > 1 ? ` ×${k.titel[t]}` : ""}</span>)
+          ? eintraege.map((t) => (
+              <span key={t} className="kaTitel" title={TITEL_NAME[t]}>
+                <Trophaee titel={t} groesse={34} titelText={TITEL_NAME[t]} />
+                <small>{TITEL_NAME[t]}{k.titel[t] > 1 ? ` ×${k.titel[t]}` : ""}</small>
+              </span>
+            ))
           : <span className="kaLeer">Vitrine leer</span>}
       </div>
     );
@@ -750,7 +781,10 @@ export default function Karriere({ onLeave }) {
     <div className="ppRoot weit karriere">
       {feier && <Titelfeier titel={feier} onFertig={() => setFeier(null)} />}
       {kopf}
-      <div className="kaBuehne">
+      {/* AM ENDE DIE VOLLE BREITE. Die Zusammenfassung ist 1240 Pixel breit gedacht;
+          in der schmalen Aktionsspalte schrumpfte sie auf ein Drittel, und die
+          Vereinskarten wurden unleserlich. Die Laufbahn rutscht dafür darunter. */}
+      <div className={"kaBuehne" + (karte?.art === "ende" ? " einspaltig" : "")}>
       <div className="panel kaAktion">
         {kopfzeile}
 
@@ -804,7 +838,6 @@ export default function Karriere({ onLeave }) {
             <div className="kaVereine">
               {karte.vereine.map((v) => (
                 <VereinsKarte key={v.key} verein={v} anlass="Leihe zu"
-                  zusatz={`${Math.round(K.einsatzAnteil(k.ovr, v.stufe, k.rolle) * K.SPIELE_JE_SAISON)} statt ${Math.round(K.einsatzAnteil(k.ovr, karte.bleiben.stufe, k.rolle) * K.SPIELE_JE_SAISON)} Spiele`}
                   onClick={() => spieleSchritt({ ...k, leiheVon: karte.bleiben }, v)} />
               ))}
             </div>
@@ -944,12 +977,12 @@ export default function Karriere({ onLeave }) {
               nummer={k.nummer}
               position={K.posDaten(k.pos).name}
               land={landName(k.land)}
-              verlauf={k.verlauf}
               gesamt={k.gesamt}
               hoechste={Math.max(...k.verlauf.map((z) => z.ovr), k.ovr)}
-              titel={TITEL_REIHE.filter((x) => k.titel[x]).map((x) => ({ name: TITEL_NAME[x], anzahl: k.titel[x] }))}
+              marktwert={K.werteText(K.marktwert(Math.max(...k.verlauf.map((z) => z.ovr), k.ovr)))}
+              titel={TITEL_REIHE.filter((x) => k.titel[x]).map((x) => ({ key: x, name: TITEL_NAME[x], anzahl: k.titel[x] }))}
               auszeichnungen={karte.auszeichnungen}
-              vereine={[...new Set(k.verlauf.map((z) => z.verein))]}
+              stationen={stationen}
               datum={new Date().toLocaleDateString("de-DE")}
             />
 
