@@ -54,3 +54,26 @@ test("die Helligkeitsrechnung stimmt an den Enden", () => {
   assert.equal(helligkeit("#FFFFFF"), 1);
   assert.equal(Math.round(kontrast("#000000", "#FFFFFF")), 21);
 });
+
+/* DER FEHLER, DEN DAS FÄNGT: Dreizehn Spielvereine tragen dreistellige Farbwerte
+   („#fff", „#111"). Wer stur je zwei Zeichen abschneidet, liest aus „#fff" die
+   Werte 255/15/NaN — und setzt weisse Schrift auf Real Madrids weisse Scheibe. */
+test("istHell versteht auch dreistellige Farbwerte", async () => {
+  const { istHell } = await import("./trikots.js");
+  assert.equal(istHell("#fff"), true, "Weiss muss hell sein");
+  assert.equal(istHell("#FFFFFF"), true);
+  assert.equal(istHell("#111"), false, "fast Schwarz muss dunkel sein");
+  assert.equal(istHell("#034694"), false, "Chelsea-Blau ist dunkel");
+  assert.equal(istHell(""), false, "leerer Wert darf nicht abstürzen");
+  assert.equal(istHell(undefined), false);
+  assert.equal(istHell("kein hex"), false);
+});
+
+test("jeder Spielverein hat einen auswertbaren Farbwert", async () => {
+  const { istHell } = await import("./trikots.js");
+  const { CLUBS } = await import("./gameData.js");
+  for (const c of CLUBS) {
+    assert.match(String(c.c1), /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, `${c.name}: ${c.c1}`);
+    assert.equal(typeof istHell(c.c1), "boolean", `${c.name}: ${c.c1}`);
+  }
+});

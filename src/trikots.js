@@ -297,6 +297,20 @@ export function helligkeit(hex) {
   return 0.2126 * teil(0) + 0.7152 * teil(1) + 0.0722 * teil(2);
 }
 
+/* Ist diese Farbe hell genug, dass dunkle Schrift darauf besser steht als helle?
+   Gebraucht von der Laufbahn-Zusammenfassung, die Vereinsfarben einfärbt.
+
+   DREISTELLIGE FARBWERTE ZUERST AUSSCHREIBEN: Dreizehn Spielvereine tragen sie —
+   Real Madrid ist „#fff", Eintracht Frankfurt „#111". Wer stur je zwei Zeichen
+   abschneidet, liest aus „#fff" die Werte 255/15/NaN und hält Weiss für dunkel.
+   Genau das liess das Kürzel auf Real Madrids weisser Scheibe verschwinden. */
+export function istHell(hex) {
+  const roh = String(hex || "").replace("#", "");
+  const voll = roh.length === 3 ? roh.split("").map((c) => c + c).join("") : roh;
+  if (!/^[0-9a-fA-F]{6}$/.test(voll)) return false;
+  return helligkeit("#" + voll) > 0.45;
+}
+
 export function kontrast(a, b) {
   const [h, d] = [helligkeit(a), helligkeit(b)].sort((x, y) => y - x);
   return (h + 0.05) / (d + 0.05);
