@@ -454,7 +454,7 @@ export default function Karriere({ onLeave }) {
     let k2 = { ...basis, verein };
     const neueTitel = [];
     const ereignisse = [];
-    let spiele = 0, tore = 0, vorlagen = 0;
+    let spiele = 0, tore = 0, vorlagen = 0, ausgefallen = 0;
 
     for (let s = 0; s < saisons; s++) {
       /* Schluss ist Schluss — MITTEN im Schritt. Die Pruefung stand danach, und weil
@@ -467,6 +467,7 @@ export default function Karriere({ onLeave }) {
          Abbau kommt trotzdem, denn der hört im Krankenstand nicht auf. */
       if (verletztRef.current > 0) {
         verletztRef.current--;
+        ausgefallen++;
         k2.alter += 1;
         const ab = K.wachstumGanz(k2, verein.stufe, zufall);
         if (ab.zuwachs < 0) { k2.rest = ab.rest; k2.ovr = K.grenze(k2.ovr + ab.zuwachs, K.OVR_MIN, K.OVR_MAX); }
@@ -525,7 +526,7 @@ export default function Karriere({ onLeave }) {
     /* DIE SAISON HATTE KEINEN MOMENT. Man klickte, und die Tabelle rechts hatte eine
        Zeile mehr — 66 Spiele, 13 Tore, 15 Vorlagen liefen unsichtbar vorbei. Jetzt
        steht die Bilanz über der nächsten Entscheidung. */
-    setSaison({ saisons, bis: k2.alter, verein: verein.name, spiele, tore, vorlagen });
+    setSaison({ saisons, bis: k2.alter, verein: verein.name, spiele, tore, vorlagen, verletzt: ausgefallen });
     /* Jeder Titel bekommt seinen Moment — auch wenn in einem Schritt mehrere fallen.
        Doppelte werden zusammengefasst, sonst liefe dieselbe Trophaee zweimal. */
     if (neueTitel.length) { setFeier([...new Set(neueTitel)]); play("win"); }
@@ -748,6 +749,14 @@ export default function Karriere({ onLeave }) {
           <div className="kaSaison">
             <span className="kaSaisonKopf">
               {saison.saisons === 1 ? "Eine Saison" : `${saison.saisons} Saisons`} bei {saison.verein}
+              {/* Ohne diesen Zusatz stünde bei einer durchverletzten Spielzeit nur
+                  „0 Spiele" da, und niemand wüsste, warum. */}
+              {saison.verletzt > 0 && (
+                <i className="kaSaisonAus">
+                  {saison.verletzt === saison.saisons ? "verletzt ausgefallen"
+                    : `${saison.verletzt} Saison verletzt`}
+                </i>
+              )}
             </span>
             <span className="kaSaisonZahlen">
               {/* „1 Vorlagen" liest sich falsch, und die Zahl eins kommt oft genug vor. */}

@@ -1695,3 +1695,15 @@ body::after {
 
 /* Warum die Laufbahn zu Ende ist — steht nur da, wenn es einen Grund gab. */
 .kaGrund { font-size: 13.5px; color: var(--kaAkzent); margin: 2px 0 6px; }
+
+/* Die Titelfeier folgt den Farben und der Schrift des Modus — sie kam noch mit den
+   Haus-Tokens und der Grundschrift. */
+.ppRoot.karriere ~ .kaFeier .kaFeierName,
+.kaFeier .kaFeierName {
+  font-family: 'Barlow Condensed', 'Archivo', sans-serif; font-weight: 700;
+  font-size: 30px; letter-spacing: .02em; text-transform: uppercase;
+}
+.kaSaisonAus {
+  display: block; font-style: normal; font-size: 11.5px; letter-spacing: .04em;
+  text-transform: none; color: var(--kaSchlecht, #FB7185); margin-top: 2px;
+}
