@@ -160,11 +160,17 @@ const TRIKOT_UMRISS = `
   C142 78 142 83 143 87 C145 94 148 96 152 92 C158 85 164 77 168 69
   C170 65 170 60 168 57 C164 44 157 34 148 27 C142 22 134 19 122 18
   C112 13 88 13 78 18 Z`;
-/* KEIN AUSSCHNITT. Vorher lief der Umriss oben in eine Kerbe — das ist der Kragen
-   von VORNE gesehen. Auf dem Rücken gibt es kein Loch: Die Oberkante geht durch,
-   und der Kragen ist ein geschlossener Bogen darunter. Er wird als breiter Strich
-   gezeichnet und am Umriss beschnitten, liegt also innen an. */
-const TRIKOT_KRAGEN = "M74 23 C82 38 91 44 100 44 C109 44 118 38 126 23";
+/* DER KRAGEN SASS AN DER FALSCHEN STELLE. Kein Ausschnitt ist er schon länger, aber
+   als eigener Bogen schwebte er UNTERHALB der Oberkante — darüber blieb ein Streifen
+   Trikotstoff stehen, und das sieht kein Trikot so.
+
+   Der Kragen IST die Oberkante. Deshalb ist er jetzt kein Strich mehr, sondern eine
+   Fläche: oben die Schulterlinie des Umrisses, unten ein Bogen, der zur Mitte hin
+   abfällt. Beide Kanten treffen sich exakt in den Schulterpunkten (78,18) und
+   (122,18) — dieselben Werte wie im Umriss, sonst klafft eine Lücke. */
+const TRIKOT_KRAGEN = `
+  M78 18 C88 13 112 13 122 18
+  C119 32 111 39 100 39 C89 39 81 32 78 18 Z`;
 
 /* Die Muster liegen zwischen Grundfarbe und Schrift und werden auf den Umriss
    beschnitten — sonst stünden Streifen neben dem Trikot in der Luft. */
@@ -221,8 +227,9 @@ function Trikot({ name, nummer, land }) {
         {/* Ärmelbund und Saum: breite Striche entlang der Kanten, am Umriss
             beschnitten — so liegt der Besatz innen an und steht nirgends über. */}
         <path d="M32 69 C36 77 42 85 48 92" fill="none" stroke={t.besatz} strokeWidth="12" />
-        {/* Der Kragen liegt INNERHALB der Schnittmaske — so entsteht ein Bogen, kein Loch. */}
-        <path d={TRIKOT_KRAGEN} fill="none" stroke={t.besatz} strokeWidth="13" strokeLinecap="round" />
+        {/* Als Fläche, nicht als Strich: nur so liegt die Oberkante des Kragens auf der
+            Schulterlinie statt darunter. */}
+        <path d={TRIKOT_KRAGEN} fill={t.besatz} />
         <path d="M168 69 C164 77 158 85 152 92" fill="none" stroke={t.besatz} strokeWidth="12" />
         <path d="M56 166 C56 172 68 176 100 176 C132 176 144 172 144 166"
           fill="none" stroke={t.besatz} strokeWidth="7" />
@@ -230,7 +237,9 @@ function Trikot({ name, nummer, land }) {
       </g>
 
       <path d={TRIKOT_UMRISS} fill="none" stroke="rgba(0,0,0,.32)" strokeWidth="2" strokeLinejoin="round" />
-      <path d={TRIKOT_KRAGEN} fill="none" stroke="rgba(0,0,0,.22)" strokeWidth="1.2" />
+      {/* Nur die UNTERE Kante nachziehen — die obere ist schon die Umrisslinie. */}
+      <path d="M78 18 C81 32 89 39 100 39 C111 39 119 32 122 18" fill="none"
+        stroke="rgba(0,0,0,.22)" strokeWidth="1.2" />
 
       <text x="100" y="66" textAnchor="middle" fill={t.schrift} fontSize="14" fontWeight="700"
         letterSpacing={breit ? "0" : "1.5"} style={{ fontFamily: "inherit" }} {...rand}

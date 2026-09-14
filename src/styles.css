@@ -1707,3 +1707,20 @@ body::after {
   display: block; font-style: normal; font-size: 11.5px; letter-spacing: .04em;
   text-transform: none; color: var(--kaSchlecht, #FB7185); margin-top: 2px;
 }
+
+/* ── Drei Vereine, zwei Reihen ──────────────────────────────────────────────
+   Bei drei Angeboten sass der dritte linksbündig unter dem ersten. Im Vorbild
+   steht er mittig zwischen den beiden darüber. Zwei feste Spalten statt `auto-fit`,
+   und die dritte Kachel überspannt beide und zentriert sich auf Spaltenbreite. */
+.ppRoot.karriere .kaVereine { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 561px) {
+  .ppRoot.karriere .kaVereine > .kaVerein:nth-child(3):last-child {
+    grid-column: 1 / -1;
+    width: calc(50% - 6px);   /* halbe Breite minus halbe Lücke = eine Spalte */
+    justify-self: center;
+  }
+}
+@media (max-width: 560px) {
+  .ppRoot.karriere .kaVereine { grid-template-columns: 1fr; }
+}
+.ppRoot.karriere .kaVereine.einer { grid-template-columns: minmax(190px, 260px); justify-content: center; }
