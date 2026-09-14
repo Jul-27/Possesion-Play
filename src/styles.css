@@ -1642,3 +1642,56 @@ body::after {
   .ppRoot.karriere .kaOvr { min-width: 78px; }
   .ppRoot.karriere .kaOvr b { font-size: 34px; }
 }
+
+/* ── Die Spielerstellung ────────────────────────────────────────────────────
+   Beim Umbau des Modus übrig geblieben: Fuss-Umschalter, Positionsmarken,
+   Länderliste, Tempo-Karten und Eingabefelder trugen weiter das Haus-Türkis. Ein
+   grünes Panel mit türkisen Knöpfen darin sieht nach halber Arbeit aus. */
+.ppRoot.karriere .kaFeldreihe input:focus,
+.ppRoot.karriere .kaFeldreihe select:focus,
+.ppRoot.karriere .kaLandSuche:focus { border-color: var(--kaAkzent); }
+.ppRoot.karriere .kaPos:hover,
+.ppRoot.karriere .kaWahl:hover,
+.ppRoot.karriere .kaFussKnopf:hover,
+.ppRoot.karriere .kaFeldPos:hover { border-color: var(--kaAkzent); color: var(--kaText); }
+.ppRoot.karriere .kaPos.an,
+.ppRoot.karriere .kaFussKnopf.an,
+.ppRoot.karriere .kaFeldPos.an {
+  background: linear-gradient(160deg, #F5B301, #D98A02); border-color: transparent; color: #1B1401;
+}
+.ppRoot.karriere .kaWahl.an { border-color: var(--kaAkzent); background: rgba(245,179,1,.10); }
+.ppRoot.karriere .kaLand.an { background: rgba(245,179,1,.10); border-color: var(--kaAkzent); }
+.ppRoot.karriere .kaWahl,
+.ppRoot.karriere .kaLand,
+.ppRoot.karriere .kaPos,
+.ppRoot.karriere .kaFussKnopf,
+.ppRoot.karriere .kaFeldreihe input,
+.ppRoot.karriere .kaLandSuche {
+  background: rgba(10, 26, 20, .7); border-color: var(--kaRand); color: var(--kaText);
+}
+.ppRoot.karriere .kaWahl b { font-family: 'Barlow Condensed', sans-serif; font-size: 17px; }
+.ppRoot.karriere .kaWahl small,
+.ppRoot.karriere .kaFeldName,
+.ppRoot.karriere .kaFeldreihe label { color: var(--kaLeise); }
+
+/* ── Die Bilanz einer Spielzeit ─────────────────────────────────────────────
+   Vorher verschwand eine ganze Saison lautlos in der Tabelle rechts. */
+.kaSaison {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+  padding: 12px 16px; margin: 4px 0 12px; border-radius: 14px;
+  background: rgba(245,179,1,.07); border: 1px solid rgba(245,179,1,.22);
+}
+.kaSaisonKopf {
+  font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 600;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--kaLeise);
+}
+.kaSaisonZahlen { display: flex; align-items: baseline; gap: 6px; }
+.kaSaisonZahlen b {
+  font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 700;
+  color: var(--kaAkzent); font-variant-numeric: tabular-nums;
+}
+.kaSaisonZahlen small { font-size: 11px; color: var(--kaLeise); margin-right: 12px; }
+.kaSaisonZahlen small:last-child { margin-right: 0; }
+
+/* Warum die Laufbahn zu Ende ist — steht nur da, wenn es einen Grund gab. */
+.kaGrund { font-size: 13.5px; color: var(--kaAkzent); margin: 2px 0 6px; }

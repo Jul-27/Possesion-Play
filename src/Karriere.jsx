@@ -382,6 +382,7 @@ export default function Karriere({ onLeave }) {
   const [k, setK] = useState(null);
   const [karte, setKarte] = useState(null);   // { art: "jugend"|"ereignis"|"angebot"|"ende", ... }
   const [meldung, setMeldung] = useState([]); // was im letzten Schritt geschah
+  const [saison, setSaison] = useState(null);  // die Bilanz des letzten Schritts
   const [feier, setFeier] = useState(null);   // Titel, die gerade gefeiert werden
   const zufallRef = useRef(null);
   const modRef = useRef({ liga: 1, pokal: 1, europa: 1 });
@@ -438,6 +439,7 @@ export default function Karriere({ onLeave }) {
     seitEreignisRef.current = Infinity;
     setK(neu);
     setMeldung([]);
+    setSaison(null);
     setFeier(null);
     setKarte({ art: "jugend", vereine: K.jugendAngebote(welt, land, zufallRef.current) });
     play("start");
@@ -458,7 +460,18 @@ export default function Karriere({ onLeave }) {
       /* Schluss ist Schluss — MITTEN im Schritt. Die Pruefung stand danach, und weil
          ein Schritt zwei Saisons umfasst, endeten Laufbahnen mit 39 statt 38. */
       if (k2.alter >= K.ALTERSGRENZE) break;
-      if (verletztRef.current > 0) { verletztRef.current--; continue; }
+      /* EINE VERLETZUNG KOSTET AUCH LEBENSZEIT. Vorher sprang `continue` über das
+         Altern mit — wer zweimal verletzt war, spielte zwei Jahre länger, und in der
+         Zeitleiste stand ein Einerschritt (28, 29) mitten zwischen Zweierschritten.
+         Das Jahr vergeht jetzt. Fortschritt bringt es keinen; der altersbedingte
+         Abbau kommt trotzdem, denn der hört im Krankenstand nicht auf. */
+      if (verletztRef.current > 0) {
+        verletztRef.current--;
+        k2.alter += 1;
+        const ab = K.wachstumGanz(k2, verein.stufe, zufall);
+        if (ab.zuwachs < 0) { k2.rest = ab.rest; k2.ovr = K.grenze(k2.ovr + ab.zuwachs, K.OVR_MIN, K.OVR_MAX); }
+        continue;
+      }
       const l = K.saisonLeistung(k2, verein.stufe, zufall);
       spiele += l.spiele; tore += l.tore; vorlagen += l.vorlagen;
       for (const t of K.saisonTitel(verein, zufall, modRef.current)) neueTitel.push(t);
@@ -509,6 +522,10 @@ export default function Karriere({ onLeave }) {
 
     setK(k2);
     setMeldung([...neueTitel.map((t) => `🏆 ${TITEL_NAME[t] || t}`), ...ereignisse.map((e) => `↕ ${e}`)]);
+    /* DIE SAISON HATTE KEINEN MOMENT. Man klickte, und die Tabelle rechts hatte eine
+       Zeile mehr — 66 Spiele, 13 Tore, 15 Vorlagen liefen unsichtbar vorbei. Jetzt
+       steht die Bilanz über der nächsten Entscheidung. */
+    setSaison({ saisons, bis: k2.alter, verein: verein.name, spiele, tore, vorlagen });
     /* Jeder Titel bekommt seinen Moment — auch wenn in einem Schritt mehrere fallen.
        Doppelte werden zusammengefasst, sonst liefe dieselbe Trophaee zweimal. */
     if (neueTitel.length) { setFeier([...new Set(neueTitel)]); play("win"); }
@@ -526,7 +543,9 @@ export default function Karriere({ onLeave }) {
     if (k2.alter >= K.ALTERSGRENZE) return beende(k2);
     const offerten = K.angebote(welt, k2, zufall);
     const mussWechseln = k2.alter >= K.RUECKTRITT_AB && offerten.length === 0;
-    if (mussWechseln) return beende(k2);
+    if (mussWechseln) return beende(k2, "Es rief kein Verein mehr an.");
+    /* Nicht jede Laufbahn läuft bis zur Altersgrenze — vorher taten es 299 von 300. */
+    if (K.ruecktrittFaellig(k2, zufall)) return beende(k2, "Der Körper hat entschieden.");
 
     /* Eine Leihe endet immer nach einem Schritt — man kehrt zu seinem Verein zurück
        und entscheidet dort neu. */
@@ -576,10 +595,10 @@ export default function Karriere({ onLeave }) {
     setKarte({ art: "folge", ereignis: karte.ereignis, option, ergebnis: r, verein: karte.verein });
   }
 
-  function beende(k2) {
+  function beende(k2, grund = null) {
     const fertig = { ...k2, beendet: true };
     setK(fertig);
-    setKarte({ art: "ende", auszeichnungen: K.erreichteAuszeichnungen(fertig) });
+    setKarte({ art: "ende", auszeichnungen: K.erreichteAuszeichnungen(fertig), grund });
     play("end");
   }
 
@@ -725,6 +744,20 @@ export default function Karriere({ onLeave }) {
       <div className="panel kaAktion">
         {kopfzeile}
 
+        {saison && (
+          <div className="kaSaison">
+            <span className="kaSaisonKopf">
+              {saison.saisons === 1 ? "Eine Saison" : `${saison.saisons} Saisons`} bei {saison.verein}
+            </span>
+            <span className="kaSaisonZahlen">
+              {/* „1 Vorlagen" liest sich falsch, und die Zahl eins kommt oft genug vor. */}
+              <b>{saison.spiele}</b><small>{saison.spiele === 1 ? "Spiel" : "Spiele"}</small>
+              <b>{saison.tore}</b><small>{saison.tore === 1 ? "Tor" : "Tore"}</small>
+              <b>{saison.vorlagen}</b><small>{saison.vorlagen === 1 ? "Vorlage" : "Vorlagen"}</small>
+            </span>
+          </div>
+        )}
+
         {meldung.length > 0 && (
           <div className="kaMeldung">{meldung.map((m, i) => <span key={i}>{m}</span>)}</div>
         )}
@@ -846,7 +879,7 @@ export default function Karriere({ onLeave }) {
             <div className="kaOptionen">
               <button className="kaOption mitWappen" onClick={() => spieleSchritt(k, karte.bleiben)}>
                 <Emblem def={defVon(karte.bleiben)} />
-                <span><b>Bleiben bei {karte.bleiben.name}</b><small>{karte.bleiben.liga.name} · Stufe {karte.bleiben.stufe}</small></span>
+                <span><b>Bleiben bei {karte.bleiben.name}</b><small>{karte.bleiben.liga.name}</small></span>
               </button>
               {karte.rücktritt && (
                 <button className="kaOption kaEnde" onClick={() => beende(k)}>
@@ -860,8 +893,9 @@ export default function Karriere({ onLeave }) {
 
         {karte?.art === "ende" && (
           <div className="kaEnde">
-            <Confetti an={karte.auszeichnungen.length > 1} />
+            <Confetti farben={["#F5B301", "#4ADE80", "#E8F3ED", "#D98A02", "#7DF3C0"]} />
             <h2>Laufbahn beendet</h2>
+            {karte.grund && <p className="kaGrund">{karte.grund}</p>}
             <p className="kaBilanz">
               {k.verlauf.length ? `${k.verlauf[0].alter - K.TEMPO[k.tempo].saisons} bis ${k.alter}` : k.alter} ·{" "}
               {k.gesamt.spiele} Spiele · {k.gesamt.tore} Tore · {k.gesamt.vorlagen} Vorlagen ·{" "}
@@ -910,7 +944,7 @@ export default function Karriere({ onLeave }) {
                   tore: k.gesamt.tore, vorlagen: k.gesamt.vorlagen, overall: k.ovr,
                   titel: TITEL_REIHE.filter((t) => k.titel[t]).map((t) => TITEL_NAME[t]),
                 })} />
-              <button className="btn" onClick={() => { setK(null); setKarte(null); setMeldung([]); }}>Neue Laufbahn</button>
+              <button className="btn" onClick={() => { setK(null); setKarte(null); setMeldung([]); setSaison(null); }}>Neue Laufbahn</button>
             </div>
           </div>
         )}
