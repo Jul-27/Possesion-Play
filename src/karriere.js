@@ -175,14 +175,66 @@ export function wachstumImVerein(k, stufe, zufall) {
   return einsatzAnteil(k.ovr, stufe, k.rolle) < WENIG_EINSATZ ? gebremst * 0.5 : gebremst;
 }
 
+/* ── Ganze Ratings ─────────────────────────────────────────────────────────────
+   Die beiden Bremsen oben halbieren den Zuwachs — und damit stand in der
+   Zeitleiste irgendwann „78.5". Ein Rating ist eine ganze Zahl; Fußballspiele
+   führen keine halben Stärken.
+
+   Einfach zu runden wäre falsch: Ein gebremster Zuwachs von 0,5 würde je nach
+   Rundungsregel entweder immer zu 1 (Bremse wirkungslos) oder immer zu 0 (Bremse
+   absolut). Deshalb wandert der Rest in die nächste Saison. Über eine Laufbahn
+   kommt exakt dieselbe Summe heraus wie vorher, nur eben in ganzen Schritten. */
+export function wachstumGanz(k, stufe, zufall) {
+  const roh = wachstumImVerein(k, stufe, zufall) + (k.rest || 0);
+  /* Math.trunc statt floor: Bei Abbau (-1,5) soll -1 wirken und -0,5 liegen
+     bleiben, nicht -2 wirken und +0,5 gutgeschrieben werden. */
+  const zuwachs = Math.trunc(roh);
+  return { zuwachs, rest: Math.round((roh - zuwachs) * 100) / 100 };
+}
+
 /* Wie oft gewinnt ein Verein dieser Stufe etwas? Je Saison, unabhängig gezogen.
    Die Liga ist steiler als der Pokal: Über 34 Spieltage setzt sich Klasse durch, im
    K.-o.-System reicht ein schlechter Abend. */
+/* ── Wer gewinnt die Meisterschaft? ────────────────────────────────────────────
+   FRÜHER EINE FESTE CHANCE JE STUFE — und das war der Fehler. Jeder Verein würfelte
+   für sich, unabhängig von seinen Gegnern. Gemessen an der gebauten Welt kam dabei
+   heraus:
+
+     Premier League 5,24 Meister pro Saison · LaLiga 4,36 · Serie A 3,77 ·
+     Bundesliga 3,55
+
+   Eine Liga hat einen Meister. Ein Verein der Stufe 3 — Mainz, Espanyol — kam auf
+   14 % je Saison und damit über eine Laufbahn fast sicher zu einem Titel. Genau das
+   war die Rückmeldung: „mehrfach mit Espanyol Spanischer Meister".
+
+   JETZT WIRD DIE MEISTERSCHAFT IM FELD AUSGESPIELT. Die Zahlen unten sind Gewichte,
+   keine Wahrscheinlichkeiten: Die Meisterschaft geht an genau einen Verein der Liga,
+   und das Verhältnis der Gewichte entscheidet, an welchen. Damit hängt die Chance
+   eines Vereins daran, WER SONST NOCH in seiner Liga steht — so wie im Fußball.
+
+   Die Spreizung ist Absicht. Zwischen Stufe 3 und Stufe 5 liegt Faktor 25, weil
+   sonst zwölf Mittelfeldvereine gemeinsam den einen Spitzenverein überstimmen. Für
+   Bayern in einer Bundesliga mit zwölf Stufe-3-Vereinen ergibt das rund 43 % je
+   Saison, für Mainz rund 1,7 % — über fünfzehn Saisons also etwa jede vierte
+   Laufbahn ein Titel. Vereinzelt, nicht regelmäßig.
+
+   Der Pokal ist flacher: Über ein K.-o.-Turnier reicht ein schlechter Abend. */
+/* Stufe 0 traegt das Gewicht null: Ein Abstiegskandidat wird nicht Meister, auch
+   nicht vereinzelt. Im Pokal dagegen ist er moeglich — dafuer gibt es K.-o.-Runden. */
+export const LIGA_GEWICHT  = [0, 2, 5, 12, 60, 300];
+export const POKAL_GEWICHT = [1, 2, 4, 9, 22, 55];
+
+/* Der Europapokal bleibt eine feste Chance je Stufe: Er wird nicht in der Liga
+   ausgespielt, sondern zwischen den besten Vereinen mehrerer Länder. Ein Feld dafür
+   zu bilden hiesse, alle sieben Ligen zusammenzuwerfen — und dann gewänne ihn ein
+   Zweitligist nie, aber auch kein Aussenseiter mehr. */
 export const TITEL_CHANCE = {
-  liga:   [0.00, 0.01, 0.05, 0.14, 0.30, 0.55],
-  pokal:  [0.01, 0.04, 0.09, 0.16, 0.24, 0.34],
   europa: [0.00, 0.00, 0.02, 0.07, 0.16, 0.30],
 };
+
+/* Der Rang hinter dem Rating — er färbt die Kachel. Vier Stufen, damit ein
+   Aufstieg sichtbar ist: Ein Wert, der immer gleich aussieht, ist eine Zahl. */
+export const rangVon = (ovr) => (ovr >= 85 ? "platin" : ovr >= 75 ? "gold" : ovr >= 62 ? "silber" : "bronze");
 
 /* ── Marktwert ─────────────────────────────────────────────────────────────────
    Hängt allein am Wert, nicht am Verein — sonst wäre er nur eine zweite Anzeige
@@ -220,7 +272,33 @@ export function baueWelt(staerkeVon, vereine = WELT_VEREINE, ligen = WELT_LIGEN)
     out.push({ ...v, staerke: Math.round(s * 10) / 10, stufe: stufeVon(s, liga.stufe), liga });
   }
   out.sort((a, b) => b.staerke - a.staerke);
-  return { vereine: out, ligen };
+  /* DAS FELD GEHÖRT AN DIE LIGA, NICHT AN DEN VEREIN. Der erste Entwurf hängte die
+     Gewichtssumme an jeden Verein — und beim Aufstieg nahm er sie mit. Alemannia
+     Aachen rechnete in der Bundesliga weiter gegen das Feld der zweiten Liga
+     (Summe 31 statt 700) und wurde als Stufe-1-Verein Deutscher Meister. Genau der
+     Fehler, den diese Umstellung beseitigen sollte.
+
+     An der Liga hängend ist es dagegen fälschungssicher: `mitLiga` tauscht die Liga
+     aus, und damit stimmt das Feld automatisch. */
+  const summen = new Map();
+  for (const v of out) {
+    const e = summen.get(v.liga.key) || { liga: 0, pokal: 0 };
+    e.liga += LIGA_GEWICHT[v.stufe];
+    e.pokal += POKAL_GEWICHT[v.stufe];
+    summen.set(v.liga.key, e);
+  }
+  const mitFeld = ligen.map((l) => ({ ...l, feld: summen.get(l.key) || { liga: 0, pokal: 0 } }));
+  const neuVon = new Map(mitFeld.map((l) => [l.key, l]));
+  for (const v of out) v.liga = neuVon.get(v.liga.key) || v.liga;
+  return { vereine: out, ligen: mitFeld };
+}
+
+/** Wie oft gewinnt dieser Verein die Meisterschaft bzw. den Pokal seiner Liga? */
+export function titelAnteil(verein, art) {
+  const summe = verein.liga?.feld?.[art];
+  if (!summe) return 0;
+  const gewicht = (art === "liga" ? LIGA_GEWICHT : POKAL_GEWICHT)[verein.stufe] ?? 0;
+  return gewicht / summe;
 }
 
 /* ── Auf- und Abstieg ──────────────────────────────────────────────────────────
@@ -300,6 +378,7 @@ export function neueKarriere({ name, land, nummer, pos, fuss = "rechts", tempo =
     typ: entwicklungstyp(zufall, pos),
     alter: START_ALTER,
     ovr: OVR_START,
+    rest: 0,                 // Restbetrag des Wachstums, siehe wachstumGanz
     verein: null,
     leiheVon: null,
     /* „stamm" ist der richtige Anfang, nicht „kader": Ob jemand zu schwach für seinen
@@ -365,11 +444,11 @@ export const POKAL_TITEL = { BL: "DFB", PL: "FAC", LL: "CDR", SA: "CIT" };
 
 export function saisonTitel(verein, zufall, mod = {}) {
   const out = [];
-  const chance = (art) => TITEL_CHANCE[art][verein.stufe] * (mod[art] ?? 1);
   const liga = LIGA_TITEL[verein.lg];
-  if (liga && zufall() < chance("liga")) out.push(liga);
+  if (liga && zufall() < titelAnteil(verein, "liga") * (mod.liga ?? 1)) out.push(liga);
   const pokal = POKAL_TITEL[verein.lg];
-  if (pokal && zufall() < chance("pokal")) out.push(pokal);
+  if (pokal && zufall() < titelAnteil(verein, "pokal") * (mod.pokal ?? 1)) out.push(pokal);
+  const chance = (art) => TITEL_CHANCE[art][verein.stufe] * (mod[art] ?? 1);
   /* WELCHER EUROPAPOKAL — nicht gewürfelt, sondern nach Rang. Ein Verein der
      höchsten Stufen spielt die Champions League, kein Mittelfeldverein spielt sie.
      Vorher entschied ein Münzwurf, und damit gewann ein Spitzenverein die Champions
@@ -500,6 +579,24 @@ export const EREIGNISSE = [
       { label: "Anwälte kämpfen lassen", chance: 0.45, wirkung: {}, sonst: { ovr: -3, rolle: "rotation" } },
     ] },
 ];
+
+/* ── Wie oft kommt eine Ereigniskarte? ─────────────────────────────────────────
+   FRÜHER FAST JEDE SAISON. Die Wahl lautete „Angebot oder Ereignis", und das
+   Ereignis gewann in sechs von zehn Fällen — über eine Laufbahn also zehn- bis
+   fünfzehnmal. Der Ernährungsberater kam damit häufiger als ein Vereinswechsel, und
+   was selten ist, wird beachtet; was jede Saison kommt, wird weggeklickt.
+
+   Jetzt sind es höchstens sechs je Laufbahn, mit mindestens zwei Schritten
+   Abstand — genug, dass jede einzelne wieder ein Moment ist. */
+export const EREIGNISSE_JE_LAUFBAHN = 6;
+export const EREIGNIS_ABSTAND = 2;
+export const EREIGNIS_CHANCE = 0.5;
+
+export function ereignisFaellig({ gespielt = 0, seitLetztem = Infinity }, zufall) {
+  if (gespielt >= EREIGNISSE_JE_LAUFBAHN) return false;
+  if (seitLetztem < EREIGNIS_ABSTAND) return false;
+  return zufall() < EREIGNIS_CHANCE;
+}
 
 /** Zieht ein Ereignis, das gerade passt. */
 export function ziehEreignis(k, zufall, zuletzt = []) {

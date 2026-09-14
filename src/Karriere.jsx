@@ -154,13 +154,17 @@ function Zaehler({ wert, dauer = 900 }) {
    aus. Gemessen wurde am Bild, gezeichnet ist der Pfad hier — ein Umriss im
    Uhrzeigersinn, beginnend am linken Kragenrand. */
 const TRIKOT_UMRISS = `
-  M80 16 C70 17 62 20 54 26 C47 34 38 44 32 57 C30 60 30 65 32 69
+  M78 18 C66 19 58 22 52 27 C43 34 36 44 32 57 C30 60 30 65 32 69
   C36 77 42 85 48 92 C52 96 55 94 57 87 C58 83 58 78 58 74
   L56 166 C56 172 68 176 100 176 C132 176 144 172 144 166 L142 74
   C142 78 142 83 143 87 C145 94 148 96 152 92 C158 85 164 77 168 69
-  C170 65 170 60 168 57 C162 44 153 34 146 26 C138 20 130 17 120 16
-  C118 32 110 40 100 40 C90 40 82 32 80 16 Z`;
-const TRIKOT_KRAGEN = "M80 16 C82 32 90 40 100 40 C110 40 118 32 120 16";
+  C170 65 170 60 168 57 C164 44 157 34 148 27 C142 22 134 19 122 18
+  C112 13 88 13 78 18 Z`;
+/* KEIN AUSSCHNITT. Vorher lief der Umriss oben in eine Kerbe — das ist der Kragen
+   von VORNE gesehen. Auf dem Rücken gibt es kein Loch: Die Oberkante geht durch,
+   und der Kragen ist ein geschlossener Bogen darunter. Er wird als breiter Strich
+   gezeichnet und am Umriss beschnitten, liegt also innen an. */
+const TRIKOT_KRAGEN = "M74 23 C82 38 91 44 100 44 C109 44 118 38 126 23";
 
 /* Die Muster liegen zwischen Grundfarbe und Schrift und werden auf den Umriss
    beschnitten — sonst stünden Streifen neben dem Trikot in der Luft. */
@@ -217,6 +221,8 @@ function Trikot({ name, nummer, land }) {
         {/* Ärmelbund und Saum: breite Striche entlang der Kanten, am Umriss
             beschnitten — so liegt der Besatz innen an und steht nirgends über. */}
         <path d="M32 69 C36 77 42 85 48 92" fill="none" stroke={t.besatz} strokeWidth="12" />
+        {/* Der Kragen liegt INNERHALB der Schnittmaske — so entsteht ein Bogen, kein Loch. */}
+        <path d={TRIKOT_KRAGEN} fill="none" stroke={t.besatz} strokeWidth="13" strokeLinecap="round" />
         <path d="M168 69 C164 77 158 85 152 92" fill="none" stroke={t.besatz} strokeWidth="12" />
         <path d="M56 166 C56 172 68 176 100 176 C132 176 144 172 144 166"
           fill="none" stroke={t.besatz} strokeWidth="7" />
@@ -224,15 +230,14 @@ function Trikot({ name, nummer, land }) {
       </g>
 
       <path d={TRIKOT_UMRISS} fill="none" stroke="rgba(0,0,0,.32)" strokeWidth="2" strokeLinejoin="round" />
-      <path d={TRIKOT_KRAGEN} fill="none" stroke={t.besatz} strokeWidth="5" strokeLinecap="round" />
-      <path d={TRIKOT_KRAGEN} fill="none" stroke="rgba(0,0,0,.28)" strokeWidth="1.5" />
+      <path d={TRIKOT_KRAGEN} fill="none" stroke="rgba(0,0,0,.22)" strokeWidth="1.2" />
 
-      <text x="100" y="62" textAnchor="middle" fill={t.schrift} fontSize="14" fontWeight="700"
+      <text x="100" y="66" textAnchor="middle" fill={t.schrift} fontSize="14" fontWeight="700"
         letterSpacing={breit ? "0" : "1.5"} style={{ fontFamily: "inherit" }} {...rand}
         {...(breit ? { textLength: 74, lengthAdjust: "spacingAndGlyphs" } : {})}>
         {beschriftung}
       </text>
-      <text x="100" y="146" textAnchor="middle" fill={t.schrift} fontSize="66" fontWeight="800"
+      <text x="100" y="126" textAnchor="middle" fill={t.schrift} fontSize="64" fontWeight="800"
         style={{ fontFamily: "inherit" }} {...rand} strokeWidth={rand.strokeWidth ? 5 : undefined}>
         {nummer || "0"}
       </text>
@@ -294,14 +299,14 @@ function Titelfeier({ titel, onFertig }) {
    Zahl der Spiele, bei einem Angebot die geforderte Stärke. */
 function VereinsKarte({ verein, anlass, zusatz, onClick }) {
   return (
+    /* VIER DINGE, NICHT SIEBEN. Vorher trug die Kachel zusätzlich fünf Stufenpunkte
+       und eine Anforderungszeile — auf engem Raum wirkte sie dadurch klein UND
+       überladen zugleich. Das Niveau steht ohnehin im Ligennamen. */
     <button type="button" className="kaVerein" onClick={onClick}>
       <span className="kaVereinAnlass">{anlass}</span>
-      <span className="kaVereinWappen"><Emblem def={defVon(verein)} /></span>
       <b className="kaVereinName">{verein.name}</b>
+      <span className="kaVereinWappen"><Emblem def={defVon(verein)} /></span>
       <span className="kaVereinLiga">{verein.liga.name}</span>
-      <span className="kaVereinStufe" data-stufe={verein.stufe}>
-        {"●".repeat(verein.stufe + 1)}<i>{"●".repeat(5 - verein.stufe)}</i>
-      </span>
       {zusatz && <small className="kaVereinZusatz">{zusatz}</small>}
     </button>
   );
@@ -383,6 +388,8 @@ export default function Karriere({ onLeave }) {
   const verletztRef = useRef(0);
   const letzteRef = useRef([]);
   const seitAngebotRef = useRef(0);
+  const ereignisZahlRef = useRef(0);
+  const seitEreignisRef = useRef(Infinity);
 
   useEffect(() => { loadPlayers().then(setPlayers); }, []);
   useEffect(() => { loadAppearances().then((e) => setEinsaetze(e || null)); }, []);
@@ -427,6 +434,8 @@ export default function Karriere({ onLeave }) {
     verletztRef.current = 0;
     letzteRef.current = [];
     seitAngebotRef.current = 0;
+    ereignisZahlRef.current = 0;
+    seitEreignisRef.current = Infinity;
     setK(neu);
     setMeldung([]);
     setFeier(null);
@@ -457,10 +466,14 @@ export default function Karriere({ onLeave }) {
       k2.saisonNr = (k2.saisonNr || 0) + 1;
       for (const t of K.nationalTitel(k2, verein, zufall, k2.saisonNr)) neueTitel.push(t);
       k2.alter += 1;
-      k2.ovr = K.grenze(k2.ovr + K.wachstumImVerein(k2, verein.stufe, zufall), K.OVR_MIN, K.OVR_MAX);
+      const g = K.wachstumGanz(k2, verein.stufe, zufall);
+      k2.rest = g.rest;
+      k2.ovr = K.grenze(k2.ovr + g.zuwachs, K.OVR_MIN, K.OVR_MAX);
       /* Auf- und Abstieg am Saisonende. Wer aufsteigt, wird vermerkt — nur so kann
          später „Aus der Zweiten" überhaupt zutreffen. */
-      const w = K.ligaWechsel(verein, zufall);
+      /* welt.ligen statt der Standardliste: Nur diese Kopien tragen das Titelfeld,
+         und ohne sie stünde ein Aufsteiger ohne Gegner da. */
+      const w = K.ligaWechsel(verein, zufall, welt.ligen);
       if (w.richtung) {
         ereignisse.push(`${verein.name} ${w.richtung === "auf" ? "steigt auf" : "steigt ab"}`);
         if (w.richtung === "auf") k2.aufgestiegenMit = verein.key;
@@ -534,12 +547,20 @@ export default function Karriere({ onLeave }) {
        und ein treuer Spieler bekam in achtzehn Saisons ein einziges Ereignis.
        Gezaehlt werden jetzt die Schritte SEIT DEM LETZTEN Angebot. */
     seitAngebotRef.current += 1;
-    if (seitAngebotRef.current >= 3 || zufall() < 0.4) {
+    seitEreignisRef.current += 1;
+    /* Das Angebot hat Vorrang: Wer drei Schritte lang keines gesehen hat, bekommt
+       eines — sonst klebt man ewig am selben Verein. Erst danach entscheidet die
+       Ereignisregel, und die ist ihrerseits gedeckelt. */
+    const ereignis = seitAngebotRef.current < 3
+      && K.ereignisFaellig({ gespielt: ereignisZahlRef.current, seitLetztem: seitEreignisRef.current }, zufall);
+    if (!ereignis) {
       seitAngebotRef.current = 0;
       setKarte({ art: "angebot", vereine: offerten, bleiben: verein, rücktritt: k2.alter >= K.RUECKTRITT_AB });
     } else {
       const e = K.ziehEreignis(k2, zufall, letzteRef.current);
       letzteRef.current = [...letzteRef.current, e.key].slice(-4);
+      ereignisZahlRef.current += 1;
+      seitEreignisRef.current = 0;
       setKarte({ art: "ereignis", ereignis: e, verein });
     }
   }
@@ -575,11 +596,11 @@ export default function Karriere({ onLeave }) {
     </GameTop>
   );
 
-  if (!bereit) return (<div className="ppRoot weit">{kopf}<div className="panel"><p>Die Vereinswelt wird gebaut …</p></div></div>);
+  if (!bereit) return (<div className="ppRoot weit karriere">{kopf}<div className="panel"><p>Die Vereinswelt wird gebaut …</p></div></div>);
 
   // Anlage
   if (!k) return (
-    <div className="ppRoot weit">
+    <div className="ppRoot weit karriere">
       {kopf}
       <div className="panel kaAnlage">
         <Bild pfad="/bilder/karriere-kopf.jpg" klasse="kaKopfbild" alt="" />
@@ -681,7 +702,7 @@ export default function Karriere({ onLeave }) {
 
   const kopfzeile = (
     <div className="kaKopf">
-      <div className="kaOvr"><small>RATING</small><b><Zaehler wert={k.ovr} /></b></div>
+      <div className="kaOvr" data-rang={K.rangVon(k.ovr)}><small>RATING</small><b><Zaehler wert={k.ovr} /></b></div>
       {k.verein && <span className="kaWappen"><Emblem def={defVon(k.verein)} /></span>}
       <div className="kaWer">
         <b>#{k.nummer} {k.name}</b>
@@ -697,7 +718,7 @@ export default function Karriere({ onLeave }) {
      bleibt beim Scrollen stehen; darunter faellt das Raster auf eine Spalte
      zurueck und alles steht wieder untereinander. */
   return (
-    <div className="ppRoot weit">
+    <div className="ppRoot weit karriere">
       {feier && <Titelfeier titel={feier} onFertig={() => setFeier(null)} />}
       {kopf}
       <div className="kaBuehne">
@@ -768,8 +789,14 @@ export default function Karriere({ onLeave }) {
                   {o.chance === undefined
                     ? <small>{wirkungsText(o.wirkung)}</small>
                     : <>
-                        <small className="gut">{wirkungsText(o.wirkung)} · {prozent(o.chance)}</small>
-                        <small className="schlecht">{wirkungsText(o.sonst)} · {prozent(1 - o.chance)}</small>
+                        {/* Der Balken zeigt dieselbe Quote, die daneben steht — aber
+                            sichtbar. Eine Wette erfasst man schneller, als man sie liest. */}
+                        <span className="kaQuote">
+                          <span className="kaQuoteBalken"><i style={{ width: `${Math.round(o.chance * 100)}%` }} /></span>
+                          <span className="kaQuoteZahl">{prozent(o.chance)}</span>
+                        </span>
+                        <small className="gut">▲ {wirkungsText(o.wirkung)}</small>
+                        <small className="schlecht">▼ {wirkungsText(o.sonst)}</small>
                       </>}
                 </button>
               ))}
@@ -812,7 +839,6 @@ export default function Karriere({ onLeave }) {
               <div className="kaVereine">
                 {karte.vereine.map((v) => (
                   <VereinsKarte key={v.key} verein={v} anlass="Wechseln zu"
-                    zusatz={`verlangt Stärke ${K.STUFE_MINDEST_OVR[v.stufe]}`}
                     onClick={() => spieleSchritt(k, v)} />
                 ))}
               </div>

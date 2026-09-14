@@ -126,6 +126,17 @@ test("ein Spitzenstürmer erreicht eine realistische Ausbeute", () => {
 
 // ── Titel ────────────────────────────────────────────────────────────────────
 
+/* Ein Ligafeld nachbauen. Seit die Meisterschaft IM FELD ausgespielt wird, ist ein
+   Verein ohne Gegner sinnlos — er gewänne jede Saison. Die Verteilung unten ist die
+   gemessene Bundesliga: zwei Vereine auf Stufe 0, zwei auf 1, zwei auf 2, zwölf auf
+   3, vier auf 4 und einer auf 5. */
+const BUNDESLIGA_FELD = [2, 2, 2, 12, 4, 1];
+const feldAus = (stufen) => ({
+  liga: stufen.reduce((s, n, i) => s + n * K.LIGA_GEWICHT[i], 0),
+  pokal: stufen.reduce((s, n, i) => s + n * K.POKAL_GEWICHT[i], 0),
+});
+const blVerein = (stufe) => ({ lg: "BL", stufe, liga: { key: "BL", feld: feldAus(BUNDESLIGA_FELD) } });
+
 test("die Titelchance steigt mit der Rufstufe", () => {
   const zufall = K.rng(21);
   const quote = (verein, key) => {
@@ -133,11 +144,27 @@ test("die Titelchance steigt mit der Rufstufe", () => {
     for (let i = 0; i < 2000; i++) if (K.saisonTitel(verein, zufall).includes(key)) n++;
     return n / 2000;
   };
-  const spitze = { lg: "BL", stufe: 5 }, mitte = { lg: "BL", stufe: 3 }, keller = { lg: "BL", stufe: 0 };
-  assert.ok(quote(spitze, "MBL") > quote(mitte, "MBL"));
-  assert.ok(quote(mitte, "MBL") > 0);
-  assert.equal(quote(keller, "MBL"), 0, "Stufe null wird nie Meister");
-  assert.ok(quote(keller, "DFB") > 0, "im Pokal ist auch unten etwas möglich");
+  assert.ok(quote(blVerein(5), "MBL") > quote(blVerein(3), "MBL"));
+  assert.ok(quote(blVerein(3), "MBL") > 0);
+  assert.equal(quote(blVerein(0), "MBL"), 0, "Stufe null wird nie Meister");
+  assert.ok(quote(blVerein(0), "DFB") > 0, "im Pokal ist auch unten etwas möglich");
+});
+
+/* DIE MESSUNG, DIE DEN FEHLER GEFANGEN HÄTTE: Vorher würfelte jeder Verein für sich,
+   und die Premier League brachte 5,24 Meister pro Saison hervor. Eine Liga hat einen. */
+test("eine Liga vergibt im Mittel genau eine Meisterschaft je Saison", () => {
+  const summe = BUNDESLIGA_FELD.reduce((s, anzahl, stufe) =>
+    s + anzahl * K.titelAnteil({ stufe, liga: { feld: feldAus(BUNDESLIGA_FELD) } }, "liga"), 0);
+  assert.ok(Math.abs(summe - 1) < 1e-9, `Erwartete Meister je Saison: ${summe}`);
+});
+
+/* Und die zweite Hälfte der Rückmeldung: Ein Verein wie Mainz — Stufe 3 — darf
+   vereinzelt Meister werden, nicht regelmäßig. */
+test("ein Mittelfeldverein gewinnt die Meisterschaft nur vereinzelt", () => {
+  const anteil = K.titelAnteil(blVerein(3), "liga");
+  assert.ok(anteil > 0.005 && anteil < 0.03, `Stufe 3 kommt auf ${(anteil * 100).toFixed(1)} % je Saison`);
+  const spitze = K.titelAnteil(blVerein(5), "liga");
+  assert.ok(spitze > anteil * 15, `Spitze ${(spitze * 100).toFixed(0)} % vs Mitte ${(anteil * 100).toFixed(1)} %`);
 });
 
 /* DER FEHLER, DEN DAS FÄNGT: Ohne Meisterschlüssel je Liga bekäme ein Zweitligist
@@ -155,7 +182,7 @@ test("Modifikatoren aus Entscheidungen wirken auf die Titelchance", () => {
   const zufall = K.rng(6);
   const quote = (mod) => {
     let n = 0;
-    for (let i = 0; i < 2000; i++) if (K.saisonTitel({ lg: "BL", stufe: 4 }, zufall, mod).includes("MBL")) n++;
+    for (let i = 0; i < 2000; i++) if (K.saisonTitel(blVerein(4), zufall, mod).includes("MBL")) n++;
     return n / 2000;
   };
   assert.ok(quote({ liga: 2 }) > quote({}) * 1.4, "Priorität Liga verdoppelt die Chance");
@@ -646,4 +673,72 @@ test("jede Option jeder Ereigniskarte erzeugt eine beschreibbare Folge", () => {
           assert.ok(!/undefined|NaN/.test(f.text), `${e.key}: ${f.text}`);
         }
       }
+});
+
+/* ── Ganze Ratings ─────────────────────────────────────────────────────────── */
+test("das Rating bleibt über eine ganze Laufbahn ganzzahlig", () => {
+  const zufall = K.rng(4711);
+  let k = { ...K.neueKarriere({ name: "T", pos: "ZM", land: "GER", nummer: 9 }) };
+  for (let i = 0; i < 40; i++) {
+    const g = K.wachstumGanz(k, i % 6, zufall);
+    k = { ...k, rest: g.rest, ovr: K.grenze(k.ovr + g.zuwachs, K.OVR_MIN, K.OVR_MAX), alter: k.alter + 1 };
+    assert.equal(k.ovr, Math.round(k.ovr), `Rating ${k.ovr} ist nicht ganzzahlig`);
+  }
+});
+
+test("der Rest geht nicht verloren — zwei halbe Schritte ergeben einen ganzen", () => {
+  const halb = { ...K.neueKarriere({ name: "T", pos: "ZM", land: "GER", nummer: 9 }), rest: 0.5 };
+  const a = K.wachstumGanz({ ...halb, rest: 0 }, 0, () => 0);
+  const b = K.wachstumGanz({ ...halb, rest: a.rest }, 0, () => 0);
+  assert.equal(Math.round((a.zuwachs + a.rest + b.zuwachs + b.rest) * 100) / 100,
+    Math.round((a.zuwachs + a.rest) * 100) / 100 + Math.round((b.zuwachs + b.rest) * 100) / 100);
+  assert.ok(Number.isInteger(a.zuwachs) && Number.isInteger(b.zuwachs));
+});
+
+test("beim Abbau bleibt der Rest negativ liegen, statt zu viel abzuziehen", () => {
+  const k = { ...K.neueKarriere({ name: "T", pos: "ZM", land: "GER", nummer: 9 }), rest: -0.5, ovr: 80, alter: 34 };
+  const g = K.wachstumGanz(k, 3, () => 0);
+  assert.ok(Number.isInteger(g.zuwachs));
+  assert.ok(g.rest > -1 && g.rest <= 0, `Rest ${g.rest} ausserhalb der Spanne`);
+});
+
+/* ── Wie oft kommt eine Ereigniskarte? ──────────────────────────────────────── */
+test("nach sechs Ereignissen kommt keines mehr", () => {
+  const immer = () => 0;
+  assert.equal(K.ereignisFaellig({ gespielt: K.EREIGNISSE_JE_LAUFBAHN, seitLetztem: 99 }, immer), false);
+  assert.equal(K.ereignisFaellig({ gespielt: K.EREIGNISSE_JE_LAUFBAHN - 1, seitLetztem: 99 }, immer), true);
+});
+
+test("zwei Ereignisse hintereinander gibt es nicht", () => {
+  const immer = () => 0;
+  assert.equal(K.ereignisFaellig({ gespielt: 1, seitLetztem: 1 }, immer), false);
+  assert.equal(K.ereignisFaellig({ gespielt: 1, seitLetztem: K.EREIGNIS_ABSTAND }, immer), true);
+});
+
+/* Die eigentliche Rückmeldung war die Häufigkeit. Also wird sie gemessen, nicht
+   nur die Grenze geprüft. */
+test("über eine ganze Laufbahn bleiben es höchstens sechs", () => {
+  for (const schritte of [11, 22]) {
+    const zufall = K.rng(99 + schritte);
+    let gespielt = 0, seit = Infinity;
+    for (let i = 0; i < schritte; i++) {
+      if (K.ereignisFaellig({ gespielt, seitLetztem: seit }, zufall)) { gespielt++; seit = 0; }
+      else seit++;
+    }
+    assert.ok(gespielt <= K.EREIGNISSE_JE_LAUFBAHN, `${schritte} Schritte ergaben ${gespielt} Ereignisse`);
+    assert.ok(gespielt >= 3, `${schritte} Schritte ergaben nur ${gespielt} Ereignisse — zu wenige`);
+  }
+});
+
+/* DER FEHLER, DEN DAS FÄNGT: Der Aufsteiger nahm das Feld seiner alten Liga mit und
+   rechnete in der Bundesliga gegen die Zweitliga-Konkurrenz. Ein Stufe-1-Verein kam
+   damit auf 6,5 % Meisterchance — im ersten Probelauf prompt Deutscher Meister. */
+test("ein Aufsteiger rechnet gegen sein neues Feld, nicht gegen das alte", () => {
+  const zweite = { key: "BL2", name: "2. Bundesliga", stufe: 2, feld: { liga: 31, pokal: 60 } };
+  const erste = { key: "BL", name: "Bundesliga", stufe: 1, feld: { liga: 700, pokal: 222 } };
+  const verein = { key: "AAC", staerke: 76, stufe: 1, lg: "BL2", liga: zweite };
+  const vorher = K.titelAnteil(verein, "liga");
+  const nachher = K.titelAnteil(K.mitLiga(verein, erste), "liga");
+  assert.ok(nachher < vorher / 5, `vorher ${(vorher * 100).toFixed(1)} %, nachher ${(nachher * 100).toFixed(1)} %`);
+  assert.ok(nachher < 0.01, `ein Aufsteiger kommt auf ${(nachher * 100).toFixed(2)} % — zu viel`);
 });
