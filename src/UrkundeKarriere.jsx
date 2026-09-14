@@ -12,7 +12,11 @@ import { UrkundeRahmen } from "./Urkunde.jsx";
    Rahmen (Anzeigen und Speichern) teilen sich beide. */
 
 const B = 900, H = 1240;
-const GOLD = "#E7B84B", TINTE = "#0B1220", HELL = "#F4F7FB", MATT = "#9BB0C7", TEAL = "#4FD1E5";
+/* Die Farben folgen dem Karriere-Modus, nicht der Haus-CI. Vorher war die Urkunde
+   marineblau und sass als fremder Block mitten in der grünen Seite — sie ist das
+   Bild, das von einer Laufbahn übrig bleibt, und soll aussehen wie das Spiel, in dem
+   sie entstanden ist. */
+const GOLD = "#F5B301", TINTE = "#06130F", HELL = "#E8F3ED", MATT = "#8CA89A", TEAL = "#4ADE80";
 const SANS = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 
 /* Die Kurve als reine Linienzeichnung — ohne Wappen, siehe oben. */

@@ -224,13 +224,27 @@ export function wachstumGanz(k, stufe, zufall) {
 export const LIGA_GEWICHT  = [0, 2, 5, 12, 60, 300];
 export const POKAL_GEWICHT = [1, 2, 4, 9, 22, 55];
 
-/* Der Europapokal bleibt eine feste Chance je Stufe: Er wird nicht in der Liga
-   ausgespielt, sondern zwischen den besten Vereinen mehrerer Länder. Ein Feld dafür
-   zu bilden hiesse, alle sieben Ligen zusammenzuwerfen — und dann gewänne ihn ein
-   Zweitligist nie, aber auch kein Aussenseiter mehr. */
-export const TITEL_CHANCE = {
-  europa: [0.00, 0.00, 0.02, 0.07, 0.16, 0.30],
-};
+/* ── Und der Europapokal ───────────────────────────────────────────────────────
+   Der blieb beim Umbau zunächst auf der alten festen Chance je Stufe stehen — und
+   damit kippte das Verhältnis. Gemessen danach:
+
+     Mainz 05: Meisterschaft 1,7 % je Saison, Europapokal 7 %
+     Fulham:   Meisterschaft 0,6 % je Saison, Europapokal 7 %
+
+   Weltweit kamen 10,6 Europapokalsieger pro Saison heraus. Es gibt zwei. Über 500
+   Laufbahnen wurde die Champions League zehnmal häufiger gewonnen als die
+   Bundesliga — die Königsklasse war die leichteste Trophäe im Spiel.
+
+   Jetzt gilt dasselbe Prinzip wie im Inland, nur ist das Feld ein anderes: Alle
+   Erstligisten aller Länder spielen es untereinander aus. Zweitligisten nehmen
+   nicht teil, ihre Liga trägt deshalb die Summe null.
+
+   Die Gewichte unterscheiden sich zwischen den Wettbewerben: Die Champions League
+   ist noch steiler als eine Meisterschaft, weil dort nur die Besten Europas
+   antreten. Die Europa League ist ihr Gegenstück — dort fehlt die Spitze, weil sie
+   eine Etage höher spielt, und deshalb hat Stufe 5 hier das KLEINERE Gewicht. */
+export const CL_GEWICHT = [0, 0, 1, 5, 25, 150];
+export const EL_GEWICHT = [0, 1, 5, 14, 20, 12];
 
 /* Der Rang hinter dem Rating — er färbt die Kachel. Vier Stufen, damit ein
    Aufstieg sichtbar ist: Ein Wert, der immer gleich aussieht, ist eine Zahl. */
@@ -287,17 +301,35 @@ export function baueWelt(staerkeVon, vereine = WELT_VEREINE, ligen = WELT_LIGEN)
     e.pokal += POKAL_GEWICHT[v.stufe];
     summen.set(v.liga.key, e);
   }
-  const mitFeld = ligen.map((l) => ({ ...l, feld: summen.get(l.key) || { liga: 0, pokal: 0 } }));
+  /* Das Europafeld ist EINE Summe über alle Erstligisten — es hängt trotzdem an der
+     Liga, damit ein Auf- oder Absteiger automatisch hinein- oder herausfällt. Eine
+     zweite Liga trägt null und kann den Europapokal damit nicht gewinnen. */
+  let clSumme = 0, elSumme = 0;
+  for (const v of out) {
+    if (v.liga.stufe !== 1) continue;
+    clSumme += CL_GEWICHT[v.stufe];
+    elSumme += EL_GEWICHT[v.stufe];
+  }
+  const mitFeld = ligen.map((l) => ({
+    ...l,
+    feld: {
+      ...(summen.get(l.key) || { liga: 0, pokal: 0 }),
+      cl: l.stufe === 1 ? clSumme : 0,
+      el: l.stufe === 1 ? elSumme : 0,
+    },
+  }));
   const neuVon = new Map(mitFeld.map((l) => [l.key, l]));
   for (const v of out) v.liga = neuVon.get(v.liga.key) || v.liga;
   return { vereine: out, ligen: mitFeld };
 }
 
 /** Wie oft gewinnt dieser Verein die Meisterschaft bzw. den Pokal seiner Liga? */
+const GEWICHTE = { liga: LIGA_GEWICHT, pokal: POKAL_GEWICHT, cl: CL_GEWICHT, el: EL_GEWICHT };
+
 export function titelAnteil(verein, art) {
   const summe = verein.liga?.feld?.[art];
   if (!summe) return 0;
-  const gewicht = (art === "liga" ? LIGA_GEWICHT : POKAL_GEWICHT)[verein.stufe] ?? 0;
+  const gewicht = GEWICHTE[art]?.[verein.stufe] ?? 0;
   return gewicht / summe;
 }
 
@@ -448,14 +480,12 @@ export function saisonTitel(verein, zufall, mod = {}) {
   if (liga && zufall() < titelAnteil(verein, "liga") * (mod.liga ?? 1)) out.push(liga);
   const pokal = POKAL_TITEL[verein.lg];
   if (pokal && zufall() < titelAnteil(verein, "pokal") * (mod.pokal ?? 1)) out.push(pokal);
-  const chance = (art) => TITEL_CHANCE[art][verein.stufe] * (mod[art] ?? 1);
-  /* WELCHER EUROPAPOKAL — nicht gewürfelt, sondern nach Rang. Ein Verein der
-     höchsten Stufen spielt die Champions League, kein Mittelfeldverein spielt sie.
-     Vorher entschied ein Münzwurf, und damit gewann ein Spitzenverein die Champions
-     League nur in 11,7 % der Saisons; fünf Titel in einer Laufbahn waren in 1500
-     gespielten Läufen kein einziges Mal zu holen. Real Madrid hat sie in elf Jahren
-     sechsmal gewonnen. */
-  if (zufall() < chance("europa")) out.push(verein.stufe >= 4 ? "CL" : zufall() < 0.3 ? "CL" : "EL");
+  /* Erst die Champions League, dann die Europa League — wer beides gewinnt, gibt es
+     nicht. Welcher der beiden Wettbewerbe einem Verein liegt, steckt schon in den
+     Gewichten: Die Spitze holt die eine, das obere Mittelfeld die andere. */
+  const europa = mod.europa ?? 1;
+  if (zufall() < titelAnteil(verein, "cl") * europa) out.push("CL");
+  else if (zufall() < titelAnteil(verein, "el") * europa) out.push("EL");
   return out;
 }
 
@@ -679,6 +709,25 @@ export const ANGEBOTE_NORMAL = 3;
 export const ANGEBOTE_SPAET = 2;
 export const SPAET_AB = 32;
 export const RUECKTRITT_AB = 34;
+
+/* ── Wann ist Schluss? ─────────────────────────────────────────────────────────
+   VORHER IMMER MIT 38. Gemessen über 300 Laufbahnen endeten 299 auf den Tag genau
+   an der Altersgrenze; die einzige Ausnahme war ein Spieler, den niemand mehr haben
+   wollte. Jede Laufbahn hatte damit dieselbe Länge, und das Ende war kein Ereignis,
+   sondern ein Anschlag.
+
+   Jetzt entscheidet der Körper mit. Ab 32 wächst die Wahrscheinlichkeit Jahr für
+   Jahr, und ein hoher Wert hält dagegen — wer mit 35 noch 88 hat, hört nicht auf,
+   wer mit 33 auf 68 abgebaut hat, sehr wohl. */
+export const RUECKTRITT_PRUEFEN_AB = 32;
+
+export function ruecktrittFaellig(k, zufall) {
+  if (k.alter < RUECKTRITT_PRUEFEN_AB) return false;
+  const jahre = k.alter - RUECKTRITT_PRUEFEN_AB;
+  const drang = 0.05 + jahre * 0.13;
+  const haelt = grenze((k.ovr - 62) / 55, 0, 0.5);
+  return zufall() < grenze(drang - haelt, 0, 1);
+}
 /* Spaetestens hier ist Schluss, auch wenn noch Angebote kaemen. Gemessen: Ohne
    diese Grenze liefen Laufbahnen bis 41, weil die Welt 345 Vereine kennt und sich
    fuer einen Spieler mit Stufe 0 immer noch einer findet. */
@@ -721,9 +770,19 @@ export function angebote(welt, k, zufall) {
   /* Findet sich im Band nichts, wird nach unten geöffnet — ohne das stünde ein
      Spieler ohne Angebot da, obwohl es Vereine für ihn gäbe. */
   if (!infrage.length) infrage = passendeVereine(welt, k.ovr, { ausser: k.verein ? [k.verein.key] : [] });
+  /* GEWICHTET, NICHT GLEICHVERTEILT. Vorher wurde im Band blind gezogen — und weil
+     es 27 Vereine der Stufe 4 gibt, aber nur 10 der Stufe 5, kamen bei Rating 88 von
+     18 Angeboten 13 von Stufe 4 und nur 5 von der Spitze. Wer Weltklasse ist, soll
+     auch von den Grossen angerufen werden. Das Gewicht verdoppelt sich je Stufe. */
   const out = [];
   const kopie = [...infrage];
-  while (out.length < anzahl && kopie.length) out.push(...kopie.splice(Math.floor(zufall() * kopie.length), 1));
+  while (out.length < anzahl && kopie.length) {
+    const gewichte = kopie.map((v) => 2 ** v.stufe);
+    let ziel = zufall() * gewichte.reduce((s, g) => s + g, 0);
+    let i = 0;
+    while (i < kopie.length - 1 && (ziel -= gewichte[i]) > 0) i++;
+    out.push(...kopie.splice(i, 1));
+  }
   return out;
 }
 
@@ -752,8 +811,14 @@ const zahl = (k, key) => k.titel[key] || 0;
 const alleLigaTitel = (k) => Object.values(LIGA_TITEL).filter((t) => zahl(k, t) > 0).length;
 
 export const AUSZEICHNUNGEN = [
-  { key: "fuenf_ohren", name: "Fünf Ohren", text: "Fünfmal die Champions League.",
-    pruefe: (k) => zahl(k, "CL") >= 5 },
+  /* NACHGEZOGEN, nachdem der Europapokal im Feld ausgespielt wird. Vorher gewann ein
+     Stufe-4-Verein ihn zu 16 % je Saison, weltweit fielen 10,6 Titel pro Jahr — es
+     gibt zwei. Mit den richtigen Quoten war „fünfmal" in 1500 ehrgeizig gespielten
+     Laufbahnen kein einziges Mal zu holen; viermal in 4 von 1500 — das schafft die
+     Prüfung nebenan in ihrer kleineren Kunstwelt nicht mehr nachzuweisen. Dreimal
+     gelingt in 23 von 1500 und ist damit immer noch eine der härtesten. */
+  { key: "fuenf_ohren", name: "Die großen Ohren", text: "Dreimal die Champions League.",
+    pruefe: (k) => zahl(k, "CL") >= 3 },
   { key: "unvollendet", name: "Der Unvollendete", text: "Eine ganze Laufbahn ohne einen einzigen Mannschaftstitel.",
     pruefe: (k) => Object.keys(k.titel).filter((t) => t !== "BDO").length === 0 },
   /* GEMESSEN über 1200 Laufbahnen: vier verschiedene große Meisterschaften kamen in
@@ -790,12 +855,15 @@ export const AUSZEICHNUNGEN = [
      typischerweise bei einem Verein der Stufe zwei oder drei. */
   { key: "goldjunge", name: "Goldjunge", text: "Ballon d'Or vor dem fünfundzwanzigsten Geburtstag.",
     pruefe: (k) => (k.bdoAlter ?? 99) < 25 },
-  { key: "der_groesste", name: "Der Größte", text: "Weltmeister, viermal Champions League und sechs Ballons d'Or.",
-    pruefe: (k) => zahl(k, "WM") >= 1 && zahl(k, "CL") >= 4 && zahl(k, "BDO") >= 6 },
+  /* Ebenfalls nachgezogen: „viermal CL und sechs Ballons d'Or" fiel in 3000 Läufen
+     nie. Die neue Schwelle trifft 7 von 1500 — selten genug, dass sie etwas heisst. */
+  { key: "der_groesste", name: "Der Größte", text: "Weltmeister, zweimal Champions League und drei Ballons d'Or.",
+    pruefe: (k) => zahl(k, "WM") >= 1 && zahl(k, "CL") >= 2 && zahl(k, "BDO") >= 3 },
   { key: "doppelbuerger", name: "Doppelbürger", text: "Den Verband gewechselt und danach einen Titel mit der neuen Auswahl geholt.",
     pruefe: (k) => k.verbandGewechselt === true && (zahl(k, "WM") + zahl(k, "EM")) > 0 },
-  { key: "sammler", name: "Der Sammler", text: "Fünfundzwanzig Titel oder mehr.",
-    pruefe: (k) => Object.values(k.titel).reduce((a, b) => a + b, 0) >= 25 },
+  /* Und hier dasselbe: Der höchste in 1500 Läufen erreichte Stand ist 24. */
+  { key: "sammler", name: "Der Sammler", text: "Zwanzig Titel oder mehr.",
+    pruefe: (k) => Object.values(k.titel).reduce((a, b) => a + b, 0) >= 20 },
 ];
 
 export function erreichteAuszeichnungen(k) {

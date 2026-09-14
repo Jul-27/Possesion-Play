@@ -348,9 +348,9 @@ test("ein einziger Titel nimmt dem Unvollendeten seinen Namen", () => {
 });
 
 test("die großen Auszeichnungen verlangen wirklich viel", () => {
-  const fast = { ...leer(), titel: { CL: 4 } };
+  const fast = { ...leer(), titel: { CL: 2 } };
   assert.ok(!K.erreichteAuszeichnungen(fast).some((a) => a.key === "fuenf_ohren"));
-  const ganz = { ...leer(), titel: { CL: 5 } };
+  const ganz = { ...leer(), titel: { CL: 3 } };
   assert.ok(K.erreichteAuszeichnungen(ganz).some((a) => a.key === "fuenf_ohren"));
   const vier = { ...leer(), titel: { MBL: 1, MPL: 1, MLL: 1, MSA: 1 } };
   assert.ok(K.erreichteAuszeichnungen(vier).some((a) => a.key === "europas_erster"));
