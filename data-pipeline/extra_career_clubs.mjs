@@ -107,7 +107,12 @@ export const EXTRA_CAREER_CLUBS = [
   /* Capaldo: Boca Juniors und Salzburg stehen in beiden Wikipedias, im Karussell
      fehlte beides — er hatte dort nur den HSV. Schlüssel ist das im Bestand geführte
      Jahr 1997, siehe die Anmerkung in apply_extra_players.mjs. */
-  { n: "Nicolás Capaldo",    by: 1997, clubs: ["Boca Juniors", "FC Red Bull Salzburg"] },                // 2015–2021 · 2021–2025
+  /* Auch hier auf 1998 umgestellt. „Hamburger SV" steht mit dabei, weil der
+     Karussell-Bestand diese Station unter dem alten Schlüssel 1997 führt und sie
+     beim Umschlüsseln sonst verlorenginge; beim nächsten Voll-Refresh baut sich die
+     Datei ohnehin aus dem korrigierten players.js neu auf. */
+  { n: "Nicolás Capaldo",    by: 1998, clubs: ["Boca Juniors", "FC Red Bull Salzburg",
+                                               "Hamburger SV"] },                                        // 2015–2021 · 2021–2025 · 2025–
 ];
 
 /* ── Das Gegenstück: Stationen, die wir zu Unrecht führen ────────────────────

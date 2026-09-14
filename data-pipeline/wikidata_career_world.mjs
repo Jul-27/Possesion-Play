@@ -35,6 +35,9 @@ import { fileURLToPath, pathToFileURL } from "url";
 import { dirname, join } from "path";
 import { stampDataInfo } from "./stamp.mjs";
 import { CLUB_QID } from "./wikidata_roster.mjs";
+/* Der bereits gebaute Stand — nur für die Schlüsseltreue, siehe alleBekanntenSchluessel. */
+import { WELT_VEREINE as WELT_VEREINE_ALT } from "../src/careerWorld.js";
+import { PLAYERS } from "../src/players.js";
 import { loeseAuf } from "./wikidata_league_clubs.mjs";
 import { LIGA_VEREINE } from "../src/leagueClubs.js";
 import { cleanName } from "./wikidata_label.mjs";
@@ -61,6 +64,14 @@ export const WELT_LIGEN = [
   { key: "PT2", name: "Liga Portugal 2", land: "PRT", stufe: 2, plaetze: 18, qid: "Q754488", quelle: "beide"  },
   { key: "NL",  name: "Eredivisie",      land: "NED", stufe: 1, plaetze: 18, qid: "Q167541", quelle: "beide"  },
   { key: "NL2", name: "Eerste Divisie",  land: "NED", stufe: 2, plaetze: 20, qid: "Q610823", quelle: "p118"   },
+  /* Österreich, nachgetragen am 14.09.2026. Es fehlte als einziges Land, in dem
+     unsere Daten einen Spielverein führen (RB Salzburg) — man konnte dort also
+     spielen, aber nicht anfangen. Die Namen tragen das Land im Titel, weil
+     „Bundesliga" sonst zweimal in derselben Auswahl stünde.
+     Q219592 = höchste Spielklasse im österreichischen Männerfußball,
+     Q650236 = zweithöchste. Beide an Wikidata nachgesehen, nicht geraten. */
+  { key: "AT",  name: "Bundesliga Österreich", land: "AUT", stufe: 1, plaetze: 12, qid: "Q219592", quelle: "beide"  },
+  { key: "AT2", name: "2. Liga Österreich",    land: "AUT", stufe: 2, plaetze: 16, qid: "Q650236", quelle: "beide"  },
 ];
 
 /* Der Kadertest gegen die P118-Schwemme: So viele Spieler muss ein Verein seit
@@ -167,10 +178,20 @@ export function ueberName(name, namenInWelt) {
      baskische Zweitmannschaften heissen oft „<Verein> Atlético" oder „<Verein> B". */
   const m = name.match(/^(.*?)\s+(?:B|II|Atl[ée]tico|Atletic)$/) || name.match(/^Jong\s+(.*)$/);
   if (!m) return false;
-  const mutter = m[1].trim().toLowerCase();
+  /* VERGLICHEN WIRD DER KERN, nicht der ganze Name. „Villarreal CF B" ist die zweite
+     Mannschaft von „FC Villarreal" — aber „fc villarreal" enthält „villarreal cf"
+     nicht, weil die Vereinsform einmal vorn und einmal hinten steht. Sie rutschte
+     dadurch in die Welt und bekam sogar das Wappen der ersten Mannschaft. Ohne die
+     Formwörter bleibt beidseitig „villarreal", und der Vergleich trifft. */
+  const kern = (s) => s.toLowerCase()
+    .replace(/^(fc|cf|sc|ac|as|ss|us|sv|vf[lb]|rc|cd|ud|sd|afc|rcd|club)\s+/i, "")
+    .replace(/\s+(fc|cf|sc|ac|as|ss|us|sv|rc|cd|ud|sd|afc|rcd|club)$/i, "")
+    .trim();
+  const mutter = kern(m[1]);
   return [...namenInWelt].some((n) => {
-    const k = n.toLowerCase();
-    return k !== name.toLowerCase() && (k === mutter || k.includes(mutter));
+    if (n.toLowerCase() === name.toLowerCase()) return false;
+    const k = kern(n);
+    return k === mutter || k.includes(mutter);
   });
 }
 
@@ -179,9 +200,16 @@ export function ueberName(name, namenInWelt) {
    neues Kürzel, obwohl die Spielerdaten sie unter dem alten führen — `cp` ist über
    den Schlüssel verknüpft, ein neuer trifft ins Leere, und der Verein steht ohne
    Kader da. */
-export function alleBekanntenSchluessel() {
+export function alleBekanntenSchluessel(welt = WELT_VEREINE_ALT) {
   const out = { ...CLUB_QID };
   for (const vs of Object.values(LIGA_VEREINE)) for (const v of vs) if (v.qid) out[v.key] = v.qid;
+  /* UND DIE BEREITS GEBAUTE WELT. Sie fehlte, und damit war der Lauf nicht
+     schlüsseltreu: Die rund 200 Vereine, die nur hier vorkommen, haben ihr Kürzel
+     bei einem früheren Lauf aus dem Namen abgeleitet bekommen. Beim nächsten Lauf
+     hinge es an der Reihenfolge der Wikidata-Antworten, ob dasselbe herauskommt —
+     und ein neues Kürzel trennt einen Verein von seinen `cp`-Einträgen. Genau so
+     sind schon einmal 41 Vereine ohne Kader dagestanden. */
+  for (const v of welt) if (v.qid) out[v.key] = v.qid;
   return out;
 }
 
@@ -253,7 +281,60 @@ async function main() {
   const behalten = kandidaten.filter((v) => !istZweit(v));
   console.log(`${raus.length} Zweitmannschaften aussortiert: ${raus.map((v) => v.name).join(", ") || "keine"}`);
 
-  const vereine = schluesselFuer(behalten.map((v) => ({ ...v, label: v.name })))
+  /* KEIN VEREIN GEHT VERLOREN. Gemessen am Lauf vom 14.09.2026: 28 Vereine fielen
+     heraus, darunter Heidenheim, Kaiserslautern, Nürnberg, Bochum und Magdeburg —
+     nicht weil sie aufgehört hätten, sondern weil die Saison- und P118-Abfragen von
+     Lauf zu Lauf schwanken. Ein Verein, der aus der Welt verschwindet, nimmt seine
+     Kader mit: Die `cp`-Einträge in players.js zeigen auf seinen Schlüssel, und der
+     steht dann nirgends mehr.
+
+     Deshalb wird vereinigt. Findet der Lauf einen Verein, gilt seine neue
+     Ligazuordnung; findet er ihn nicht, bleibt der alte Eintrag unverändert stehen.
+     Denselben Weg gehen die Stationen in keine_station_verlieren.mjs. */
+  const gefunden = schluesselFuer(behalten.map((v) => ({ ...v, label: v.name })));
+  const nachQid = new Map(gefunden.map((v) => [v.qid, v]));
+  /* BEWAHRT WIRD NUR, WER SPIELER HAT. Die erste Fassung hielt alles fest, was der
+     Lauf nicht mehr fand — und holte damit 27 Massenimport-Hüllen zurück: Wikidata
+     führt für viele deutsche Vereine ein zweites, leeres Objekt (Q97905874 neben
+     dem echten Q8466 für Kaiserslautern). Die tragen denselben Namen, aber keinen
+     einzigen Spieler, und bei 25 von ihnen stand der echte Verein längst daneben.
+
+     Ein Verein ohne eine einzige Station ist in diesem Modus kein Verein: keine
+     Stärke, keine Rufstufe, kein Angebot. Ihn zu bewahren schützt nichts. */
+  const mitSpielern = new Set();
+  for (const p of PLAYERS) for (const e of p.cp || []) mitSpielern.add(e[0]);
+  /* WAS DER LAUF ABSICHTLICH AUSSORTIERT HAT, WIRD NICHT BEWAHRT. Villarreal CF B
+     wurde als Zweitmannschaft verworfen — und stand danach trotzdem in der Datei,
+     weil die Bewahrung nur fragte, ob der Lauf den Verein FINDET. Er hat ihn
+     gefunden und weggeworfen; das ist etwas anderes als „nicht gefunden". */
+  const verworfen = new Set(raus.map((v) => v.qid));
+  const verwaist = WELT_VEREINE_ALT.filter((v) => !nachQid.has(v.qid) && !verworfen.has(v.qid) && !mitSpielern.has(v.key));
+  if (verwaist.length) console.log(`\n${verwaist.length} verwaiste Einträge ohne Spieler nicht bewahrt: ${verwaist.map((v) => v.name).join(", ")}`);
+  const bewahrt = WELT_VEREINE_ALT.filter((v) => !nachQid.has(v.qid) && !verworfen.has(v.qid) && mitSpielern.has(v.key))
+    .map((v) => ({ ...v, label: v.name }));
+  if (bewahrt.length) {
+    console.log(`\n${bewahrt.length} Vereine aus dem Stand davor bewahrt (dieser Lauf fand sie nicht):`);
+    console.log("  " + bewahrt.map((v) => v.name).join(", "));
+  }
+  /* ── MASSENIMPORT-HÜLLEN ────────────────────────────────────────────────────
+     Wikidata führt für viele deutsche Vereine ein zweites Objekt aus einem
+     Massenimport von 2020 — Q97905874 neben dem echten Q8466 für Kaiserslautern.
+     Beide tragen denselben Namen und beide beantworten die Ligaabfrage, aber an der
+     Hülle hängt kein einziger Spieler. Gemessen am Lauf vom 14.09.2026: 27 solche
+     Einträge, bei 25 stand der echte Verein daneben.
+
+     Erkannt werden sie an BEIDEM: keine einzige Station UND eine QID aus dem
+     Importbereich Q9xxxxxxx. Keins der Merkmale reicht allein — drei Vereine mit
+     solcher QID haben sehr wohl Spieler, und ein frisch aufgenommener Verein hat vor
+     dem Kaderlauf noch keine. Was wegfällt, wird aufgeschrieben. */
+  const huelle = (v) => !mitSpielern.has(v.key) && /^Q9\d{7}$/.test(v.qid);
+  const zusammen = [...gefunden, ...bewahrt];
+  const huellen = zusammen.filter(huelle);
+  if (huellen.length) {
+    console.log(`\n${huellen.length} Massenimport-Hüllen verworfen (kein Spieler, QID aus dem Importbereich):`);
+    console.log("  " + huellen.map((v) => `${v.name} ${v.qid}`).join(", "));
+  }
+  const vereine = zusammen.filter((v) => !huelle(v))
     .sort((a, b) => a.lg.localeCompare(b.lg) || a.label.localeCompare(b.label, "de"));
   console.log(`\n${vereine.length} Vereine insgesamt, ${new Set(vereine.map((v) => v.key)).size} eindeutige Schlüssel`);
   for (const liga of WELT_LIGEN)

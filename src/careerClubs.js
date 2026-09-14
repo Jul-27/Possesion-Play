@@ -24032,6 +24032,7 @@ export const CAREER_BY_KEY = {
   "nicolas burdisso|1981": [437,1269,1722,3414,4556],
   "nicolas cambiasso|1978": [705,2128,2376,5736,6250],
   "nicolas capaldo|1997": [1269,3288,4248],
+  "nicolas capaldo|1998": [1269,3288,4248],
   "nicolas castillo|1993": [56,1199,1545,2049,2416,2918,3929],
   "nicolas cicut|1983": [398,424,3970,5750,7949],
   "nicolas colazo|1990": [705,1269],

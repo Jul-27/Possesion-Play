@@ -219,6 +219,12 @@ export const NAME_OVERRIDES = [
                de.wikipedia nennt den 26. September 1983. */
   { from: "Pepe",                                by: 1984, to: "Pepe",              byTo: 1983,     src: "Q485697", note: "dewiki-Artikeltitel nennt 1983" },
   { from: "Ricardo Quaresma",                    by: 1000, to: "Ricardo Quaresma",  byTo: 1983,     src: "Q188241", note: "P569 in Wikidata unbrauchbar (Jahr 1000); dewiki nennt 26.09.1983" },
+  /* Umgekehrter Fall: Hier ist WIKIDATA richtig und unser Bestand falsch. Capaldo
+     steht bei uns unter 1997, Q60842498 und beide Wikipedias nennen den 14.09.1998.
+     Das falsche Jahr hat schon Schaden angerichtet: Eine Prüfung zog ihn auf den
+     Artikel von Guilherme Ramos, weil dessen Jahrgang 1997 passte, und hätte mir
+     beinahe dessen Karriere als Capaldos untergeschoben. */
+  { from: "Nicolás Capaldo",                     by: 1997, to: "Nicolás Capaldo",   byTo: 1998,     src: "Q60842498", note: "P569 = 14.09.1998, ebenso de- und en.wikipedia" },
 ];
 
 // Records, die aus dem Datensatz verschwinden. `aliases` fängt Schreibweisen ab,
