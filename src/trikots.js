@@ -34,7 +34,7 @@ const FARBEN = {
   PRT: ["#B4152B", "#1BA84A", "#FFFFFF"],
   BE: ["#E30613", "#F5C400", "#FFFFFF"],
   CH: ["#DA291C", "#FFFFFF", "#FFFFFF"],
-  AT: ["#ED2939", "#FFFFFF", "#FFFFFF"],
+  AUT: ["#ED2939", "#FFFFFF", "#FFFFFF"],   // Schlüssel AUT, seit Österreich eine eigene Liga hat
   PL: ["#FFFFFF", "#DC143C", "#DC143C"],
   CZ: ["#D7141A", "#FFFFFF", "#FFFFFF"],
   SK: ["#0B4EA2", "#FFFFFF", "#FFFFFF"],
@@ -186,6 +186,92 @@ const FARBEN = {
   WS: ["#0072CE", "#FFFFFF", "#FFFFFF"],
   SB: ["#0051BA", "#FCD116", "#FFFFFF"],
   VU: ["#009543", "#FDCE12", "#FFFFFF"],
+
+  /* ── AUS DER FLAGGE GEMESSEN ────────────────────────────────────────────────
+     Bis hierher stehen Heimtrikots, die ich sicher weiss. Für die übrigen 67
+     Länder — Amerikanisch-Samoa, Kiribati, Turks- und Caicos — weiss ich sie
+     nicht, und ein geratenes Trikot wäre schlechter als gar keines.
+
+     Diese Zeilen sind deshalb kein Trikot-Wissen, sondern eine MESSUNG:
+     data-pipeline/flaggenfarben.mjs holt die Flagge von der Wikidata-Entität des
+     Landes (P41), entpackt das Bild und zählt die Pixel. Grund ist die grösste
+     Fläche, Besatz die zweitgrösste mit mindestens sechs Prozent Anteil, die
+     Schrift wird nach Lesbarkeit gewählt. Der Kommentar nennt die Bilddatei.
+
+     „Trikot in den Landesfarben" ist damit eine Aussage, die stimmt — anders als
+     „so spielt Kiribati".
+
+     AFGHANISTAN FEHLT BEWUSST: Wikidata führt dort derzeit die Flagge der Taliban.
+     Daraus ein Trikot abzuleiten wäre weder sinnvoll noch neutral; das Land behält
+     das neutrale Trikot, bis jemand die Trikotfarbe belegt nachträgt. */
+  AG:   ["#D81830", "#000000", "#FFFFFF"],   // Antigua und Barbuda, aus Flag of Antigua and Barbuda.svg (#D81830 49%, #000000 25%, #0078C0 10%)
+  AI:   ["#001860", "#FFFFFF", "#FFFFFF"],   // Anguilla, aus Flag of Anguilla.svg (#001860 73%, #FFFFFF 9%, #C01830 8%)
+  AS:   ["#001860", "#FFFFFF", "#FFFFFF"],   // Amerikanisch-Samoa, aus Flag of American Samoa.svg (#001860 48%, #FFFFFF 29%, #C00030 7%)
+  AW:   ["#4890D8", "#FFD800", "#141414"],   // Aruba, aus Flag of Aruba.svg (#4890D8 85%, #FFD800 8%)
+  BB:   ["#183078", "#F0A800", "#FFFFFF"],   // Barbados, aus Flag of Barbados.svg (#183078 67%, #F0A800 29%, #000000 3%)
+  BM:   ["#C01830", "#FFFFFF", "#FFFFFF"],   // Bermuda, aus Flag of Bermuda.svg (#C01830 71%, #FFFFFF 10%, #001860 6%)
+  BN:   ["#F0D818", "#000000", "#141414"],   // Brunei Darussalam, aus Flag of Brunei.svg (#F0D818 53%, #FFFFFF 19%, #000000 16%)
+  BS:   ["#007890", "#000000", "#FFFFFF"],   // Bahamas, aus Flag of the Bahamas.svg (#007890 56%, #000000 21%, #FFC030 21%)
+  BT:   ["#FFD800", "#FF6018", "#141414"],   // Bhutan, aus Flag of Bhutan.svg (#FFD800 42%, #FF6018 38%, #F0F0F0 5%)
+  BZ:   ["#181890", "#D81818", "#FFFFFF"],   // Belize, aus Flag of Belize.svg (#181890 61%, #D81818 19%)
+  CK:   ["#001860", "#C01830", "#FFFFFF"],   // Cookinseln, aus Flag of the Cook Islands.svg (#001860 73%, #C01830 8%, #FFFFFF 8%)
+  CW:   ["#003078", "#F0F018", "#FFFFFF"],   // Curaçao, aus Flag of Curaçao.svg (#003078 86%, #F0F018 13%)
+  DJ:   ["#18A830", "#FFFFFF", "#141414"],   // Dschibuti, aus Flag of Djibouti.svg (#18A830 35%, #60A8F0 35%, #FFFFFF 26%)
+  DM:   ["#006030", "#FFFFFF", "#FFFFFF"],   // Dominica, aus Flag of Dominica.svg (#006030 63%, #FFFFFF 7%, #FFD800 7%)
+  ER:   ["#F00030", "#FFFFFF", "#FFFFFF"],   // Eritrea, aus Flag of Eritrea.svg (#F00030 40%, #48A830 24%, #4890D8 24%)
+  FK:   ["#001860", "#C01830", "#FFFFFF"],   // Falklandinseln, aus Flag of the Falkland Islands.svg (#001860 68%, #C01830 8%, #FFFFFF 7%)
+  FM:   ["#78A8D8", "#FFFFFF", "#141414"],   // Mikronesien, aus Flag of the Federated States of Micronesia.svg (#78A8D8 96%)
+  GD:   ["#D81830", "#FFD818", "#FFFFFF"],   // Grenada, aus Flag of Grenada.svg (#D81830 39%, #007860 26%, #FFD818 26%)
+  GF:   ["#003060", "#FFFFFF", "#FFFFFF"],   // Französisch-Guayana, aus Flag of France.svg (#003060 33%, #FFFFFF 33%, #D81830 33%)
+  GG:   ["#FFFFFF", "#F01830", "#141414"],   // Guernsey, aus Flag of Guernsey.svg (#FFFFFF 63%, #F01830 28%, #F0D818 8%)
+  GL:   ["#C01830", "#FFFFFF", "#FFFFFF"],   // Grönland, aus Flag of Greenland.svg (#C01830 49%, #FFFFFF 49%)
+  GP:   ["#003060", "#FFFFFF", "#FFFFFF"],   // Guadeloupe, aus Flag of France.svg (#003060 33%, #FFFFFF 33%, #D81830 33%)
+  GU:   ["#003078", "#C01830", "#FFFFFF"],   // Guam, aus Flag of Guam.svg (#003078 78%, #C01830 10%, #C01848 3%)
+  GW:   ["#FFD818", "#00A848", "#141414"],   // Guinea-Bissau, aus Flag of Guinea-Bissau.svg (#FFD818 33%, #00A848 33%, #D81830 31%)
+  GY:   ["#309060", "#FFC018", "#141414"],   // Guyana, aus Flag of Guyana.svg (#309060 48%, #C01830 21%, #FFC018 17%)
+  IM:   ["#D81830", "#FFFFFF", "#FFFFFF"],   // Isle of Man, aus Flag of the Isle of Man.svg (#D81830 93%)
+  KG:   ["#FF0000", "#FFFFFF", "#141414"],   // Kirgisistan, aus Flag of Kyrgyzstan.svg (#FF0000 86%)
+  KI:   ["#C01818", "#183078", "#FFFFFF"],   // Kiribati, aus Flag of Kiribati.svg (#C01818 43%, #183078 20%, #FFFFFF 19%)
+  KM:   ["#0048A8", "#FFD800", "#FFFFFF"],   // Komoren, aus Flag of the Comoros.svg (#0048A8 22%, #FFD800 22%, #009030 19%)
+  KN:   ["#000000", "#009030", "#FFFFFF"],   // St. Kitts und Nevis, aus Flag of Saint Kitts and Nevis.svg (#000000 28%, #009030 28%, #C01830 28%)
+  KY:   ["#001860", "#C01830", "#FFFFFF"],   // Kaimaninseln, aus Flag of the Cayman Islands.svg (#001860 70%, #C01830 9%, #FFFFFF 7%)
+  LA:   ["#D81830", "#003060", "#FFFFFF"],   // Laos, aus Flag of Laos.svg (#D81830 50%, #003060 41%, #FFFFFF 8%)
+  LC:   ["#60D8FF", "#141414", "#141414"],   // St. Lucia, aus Flag of Saint Lucia.svg (#60D8FF 85%, #FFD818 6%)
+  LK:   ["#FFC030", "#901830", "#141414"],   // Sri Lanka, aus Flag of Sri Lanka.svg (#FFC030 36%, #901830 28%, #004848 10%)
+  LS:   ["#FFFFFF", "#001890", "#141414"],   // Lesotho, aus Flag of Lesotho.svg (#FFFFFF 36%, #001890 30%, #009048 30%)
+  MC:   ["#D81830", "#FFFFFF", "#FFFFFF"],   // Monaco, aus Flag of Monaco.svg (#D81830 50%, #FFFFFF 50%)
+  MH:   ["#003090", "#FFFFFF", "#FFFFFF"],   // Marshallinseln, aus Flag of the Marshall Islands.svg (#003090 71%, #FFFFFF 10%, #D87800 9%)
+  MM:   ["#FFC000", "#F03030", "#141414"],   // Myanmar, aus Flag of Myanmar.svg (#FFC000 32%, #F03030 30%, #30A830 24%)
+  MO:   ["#187860", "#FFFFFF", "#FFFFFF"],   // Sonderverwaltungsregion Macau, aus Flag of Macau.svg (#187860 89%, #FFFFFF 4%)
+  MQ:   ["#00A848", "#181818", "#141414"],   // Martinique, aus Flag-of-Martinique.svg (#00A848 37%, #181818 37%, #F01818 24%)
+  MS:   ["#001860", "#C01830", "#FFFFFF"],   // Montserrat, aus Flag of Montserrat.svg (#001860 70%, #C01830 8%, #FFFFFF 6%)
+  MU:   ["#D81818", "#303060", "#FFFFFF"],   // Mauritius, aus Flag of Mauritius.svg (#D81818 25%, #303060 25%, #F0C018 25%)
+  MV:   ["#D81830", "#FFFFFF", "#FFFFFF"],   // Malediven, aus Flag of Maldives.svg (#D81830 67%, #007830 31%)
+  NI:   ["#0060C0", "#FFFFFF", "#FFFFFF"],   // Nicaragua, aus Flag of Nicaragua.svg (#0060C0 67%, #FFFFFF 31%)
+  NR:   ["#001860", "#FFC030", "#FFFFFF"],   // Nauru, aus Flag of Nauru.svg (#001860 87%, #FFC030 7%, #787848 3%)
+  PF:   ["#D81830", "#FFFFFF", "#FFFFFF"],   // Französisch-Polynesien, aus Flag of French Polynesia.svg (#D81830 51%, #FFFFFF 40%)
+  PR:   ["#F00000", "#FFFFFF", "#FFFFFF"],   // Puerto Rico, aus Flag of Puerto Rico.svg (#F00000 44%, #FFFFFF 27%, #0048FF 25%)
+  PW:   ["#0090FF", "#FFFF00", "#141414"],   // Palau, aus Flag of Palau.svg (#0090FF 82%, #FFFF00 17%)
+  RE:   ["#3060FF", "#FFFF00", "#FFFFFF"],   // Réunion, aus Proposed flag of Réunion (VAR).svg (#3060FF 61%, #FF0000 24%, #FFFF00 7%)
+  SC:   ["#D83030", "#003078", "#FFFFFF"],   // Seychellen, aus Flag of Seychelles.svg (#D83030 32%, #003078 16%, #007830 16%)
+  SO:   ["#4890D8", "#FFFFFF", "#141414"],   // Somalia, aus Flag of Somalia.svg (#4890D8 95%, #FFFFFF 3%)
+  SR:   ["#307848", "#FFFFFF", "#FFFFFF"],   // Suriname, aus Flag of Suriname.svg (#307848 40%, #C00030 36%, #FFFFFF 20%)
+  SS:   ["#000000", "#009048", "#FFFFFF"],   // Südsudan, aus Flag of South Sudan.svg (#000000 25%, #009048 25%, #00C0F0 19%)
+  SX:   ["#D81818", "#003090", "#FFFFFF"],   // Sint Maarten, aus Flag of Sint Maarten.svg (#D81818 38%, #003090 38%, #FFFFFF 16%)
+  SZ:   ["#4860C0", "#FFD800", "#FFFFFF"],   // Eswatini, aus Flag of Eswatini.svg (#4860C0 38%, #A81818 32%, #FFD800 13%)
+  TC:   ["#003060", "#D81830", "#FFFFFF"],   // Turks- und Caicosinseln, aus Flag of the Turks and Caicos Islands.svg
+  TC:   ["#003060", "#D81830", "#FFFFFF"],   // Turks- und Caicosinseln, aus Flag of the Turks and Caicos Islands.svg (#003060 74%, #D81830 9%, #FFFFFF 6%)
+  TJ:   ["#FFFFFF", "#D81818", "#141414"],   // Tadschikistan, aus Flag of Tajikistan.svg (#FFFFFF 37%, #D81818 28%, #187830 28%)
+  TL:   ["#D83018", "#000000", "#FFFFFF"],   // Timor-Leste, aus Flag of East Timor.svg (#D83018 74%, #000000 14%, #FFC030 7%)
+  TM:   ["#009048", "#FFFFFF", "#141414"],   // Turkmenistan, aus Flag of Turkmenistan.svg (#009048 80%, #D83030 4%)
+  TV:   ["#00A8D8", "#C01830", "#141414"],   // Tuvalu, aus Flag of Tuvalu.svg (#00A8D8 69%, #C01830 8%, #FFFFFF 6%)
+  TW:   ["#FF0000", "#000090", "#141414"],   // Taiwan, aus Flag of the Republic of China.svg (#FF0000 75%, #000090 20%)
+  TZ:   ["#000000", "#18C030", "#FFFFFF"],   // Tansania, aus Flag of Tanzania.svg (#000000 28%, #18C030 28%, #00A8D8 28%)
+  VA:   ["#FFF000", "#141414", "#141414"],   // Vatikanstadt, aus Flag of Vatican City (2023–present).svg (#FFF000 50%, #FFFFFF 41%)
+  VC:   ["#FFD818", "#007830", "#141414"],   // St. Vincent und die Grenadinen, aus Flag of Saint Vincent and the Grenadines.svg (#FFD818 43%, #007830 30%, #003078 25%)
+  VG:   ["#001860", "#C01830", "#FFFFFF"],   // Britische Jungferninseln, aus Flag of the British Virgin Islands.svg (#001860 68%, #C01830 8%, #FFFFFF 6%)
+  VI:   ["#FFFFFF", "#F0C048", "#141414"],   // Amerikanische Jungferninseln, aus Flag of the United States Virgin Islands.svg (#FFFFFF 64%, #F0C048 8%)
+  YE:   ["#D81830", "#FFFFFF", "#FFFFFF"],   // Jemen, aus Flag of Yemen.svg (#D81830 33%, #FFFFFF 33%, #000000 33%)
 };
 
 /** Das Trikot einer Nation — oder das neutrale, wenn wir sie nicht führen. */

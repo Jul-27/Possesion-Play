@@ -45,12 +45,10 @@ export const EXTRA_PLAYERS = [
   { n: "Sejad Salihović",     by: 1984, clubs: ["HSV"], cp: [["HSV", 2017, 2018]] },
   { n: "Mads Bidstrup",       by: 2001, clubs: ["RBS"], cp: [["RBS", 2023, 2026]] },
   { n: "Robert Glatzel",      by: 1994, clubs: ["M05", "HSV"], cp: [["M05", 2021, 2021], ["HSV", 2021, 2026]] },
-  /* Capaldo steht bei uns unter 1997, Wikidata und beide Wikipedias nennen den
-     14.09.1998. Der Eintrag folgt dem Schlüssel, der im Bestand existiert — sonst
-     liefe er ins Leere. Das falsche Jahr ist gesondert zu klären; es hat schon
-     einmal dazu geführt, dass eine Prüfung Capaldo mit Guilherme Ramos verwechselt
-     hat, weil beide Namen zu einem Artikel mit Jahrgang 1997 führten. */
-  { n: "Nicolás Capaldo",     by: 1997, clubs: ["RBS"], cp: [["RBS", 2021, 2025]] },
+  /* Capaldo unter 1998 — das falsche Jahr 1997 korrigiert NAME_OVERRIDES per `byTo`,
+     und dieser Eintrag muss dem korrigierten Schlüssel folgen, sonst liefe er ins
+     Leere. */
+  { n: "Nicolás Capaldo",     by: 1998, clubs: ["RBS"], cp: [["RBS", 2021, 2025]] },
 
   // RB Salzburg: Wikidata führt bei diesen fünf gar keinen Salzburg-Eintrag (P54),
   // obwohl alle dort spielten. Nur der Vereins-Bezug wird gesetzt (das HEX-Club-Feld

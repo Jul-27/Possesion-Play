@@ -39,9 +39,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /* Unser Ligaland -> die Länder, die TheSportsDB dafür führt. Monaco steht bei
    Frankreich, weil die AS Monaco in der Ligue 1 spielt, aber in Monaco liegt. */
 export const LAND = {
-  GER: ["Germany"], ENG: ["England", "Wales"], ESP: ["Spain"], ITA: ["Italy"],
+  GER: ["Germany"], ENG: ["England", "Wales"], ESP: ["Spain", "Andorra"], ITA: ["Italy"],
   FRA: ["France", "Monaco"], PRT: ["Portugal"], NED: ["Netherlands", "The Netherlands"],
+  AUT: ["Austria"],
 };
+/* Andorra steht bei ESP, Monaco bei FRA und Wales bei ENG: Diese Vereine spielen in
+   der Liga des Nachbarlandes, und die Quelle führt sie unter ihrem eigenen Land.
+   Ohne die Ausnahme fiel der FC Andorra durch die Länderprüfung und blieb ohne
+   Wappen, obwohl die Quelle ihn kennt. */
 
 /* Deutsche Ortsformen, die TheSportsDB nicht kennt. Gemessen: siebzehn unserer
    Vereinsnamen tragen eine — fast alle italienisch, weil dort die deutsche
@@ -59,7 +64,27 @@ export const EXONYME = {
   "Betis Sevilla": "Real Betis", "Sporting Braga": "Braga",
   "Racing Straßburg": "Strasbourg", "CD Teneriffa": "Tenerife",
   "Willem II Tilburg": "Willem II",
+
+  /* Zweiter Nachtrag (14.09.2026): die zehn Vereine, die nach dem Lauf ohne Wappen
+     dastanden. Jeder Begriff wurde einzeln gegen die Quelle probiert und der Treffer
+     angesehen — „Brighton" allein liefert das Frauenteam, „Nottingham Forest" eine
+     Netball-Mannschaft, „Red Star FC" den belgischen SK Beveren. Die Länderprüfung
+     hat diese Fehlgriffe abgefangen; hier stehen die Begriffe, die treffen. */
+  "Brighton & Hove Albion": "Brighton and Hove Albion",
+  "Red Star Paris": "Red Star",
+  "FC Oss": "TOP Oss",
+  "Roda JC Kerkrade": "Roda JC",
+  "Nacional Funchal": "Clube Desportivo Nacional",
+  "Real SC Queluz": "Real SC",
+  "SC União Torreense": "Torreense",
 };
+
+/* NICHT ERREICHBAR, und zwar belegt: Nottingham Forest führt die Quelle nur als
+   Netball-Mannschaft (die Liga-Liste der Premier League gibt im freien Zugang
+   lediglich zehn Vereine aus), SC Freamunde gar nicht — der Verein hat sich 2018
+   aufgelöst. Beide haben auch in Wikidata kein P154-Logo. Sie bleiben ohne Wappen,
+   und das ist besser als ein falsches. */
+export const OHNE_WAPPEN = ["Nottingham Forest", "SC Freamunde"];
 
 /* Vorangestellte Vereinsformen. NUR generische Kürzel — „Real" oder „Athletic"
    stehen bewusst nicht hier, die sind Teil des Namens. */

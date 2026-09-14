@@ -33,7 +33,7 @@ export function flaggeVon(code) {
 }
 
 /* Unser interner Schlüssel -> ISO-Code, für die Länder mit eigener Liga. */
-export const EIGENE = { GER: "DE", ENG: "ENG", ESP: "ES", ITA: "IT", FRA: "FR", PRT: "PT", NED: "NL" };
+export const EIGENE = { GER: "DE", ENG: "ENG", ESP: "ES", ITA: "IT", FRA: "FR", PRT: "PT", NED: "NL", AUT: "AT" };
 
 /* Alle übrigen Länder als ISO-Codes. Ob jeder davon wirklich existiert, prüft ein
    Test — ein Tippfehler ergäbe sonst still eine weiße Fahne und einen Code als
