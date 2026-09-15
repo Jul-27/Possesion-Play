@@ -55,16 +55,25 @@ const defVon = (v) => CLUBS.find((c) => c.key === v.key)
    Perlenkette; so markieren sie die Wendepunkte. */
 function Verlaufskurve({ verlauf, defVon }) {
   if (verlauf.length < 2) return null;
-  const B = 600, H = 150, RAND = { o: 18, u: 26, l: 8, r: 8 };
+  /* Links Platz für die Skala: Ohne sie war die Kurve eine hübsche Linie, an der
+     sich nicht ablesen liess, WIE STARK der Spieler an einer Stelle war. */
+  const B = 600, H = 168, RAND = { o: 16, u: 26, l: 30, r: 10 };
   const werte = verlauf.map((z) => z.ovr);
-  const min = Math.min(...werte) - 4, max = Math.max(...werte) + 4;
+  /* Die Skala läuft auf runde Zehner, damit die Linien beschriftbar sind. */
+  const min = Math.max(0, Math.floor((Math.min(...werte) - 4) / 10) * 10);
+  const max = Math.ceil((Math.max(...werte) + 4) / 10) * 10;
+  const linien = [];
+  for (let v = min; v <= max; v += Math.max(10, Math.round((max - min) / 40) * 10)) linien.push(v);
   const x = (i) => RAND.l + (i / (verlauf.length - 1)) * (B - RAND.l - RAND.r);
   const y = (v) => RAND.o + (1 - (v - min) / (max - min || 1)) * (H - RAND.o - RAND.u);
   const punkte = verlauf.map((z, i) => `${x(i)},${y(z.ovr)}`).join(" ");
   const flaeche = `${x(0)},${H - RAND.u} ${punkte} ${x(verlauf.length - 1)},${H - RAND.u}`;
 
   return (
-    <svg className="kaKurve" viewBox={`0 0 ${B} ${H}`} preserveAspectRatio="none" role="img"
+    /* KEIN `preserveAspectRatio="none"` MEHR. Damit wurde die Zeichnung auf die
+       Kastenbreite gezerrt — Wappen wurden zu Ovalen, Punkte zu Strichen, und die
+       Steigung log über die Entwicklung. Jetzt behält sie ihr Seitenverhältnis. */
+    <svg className="kaKurve" viewBox={`0 0 ${B} ${H}`} preserveAspectRatio="xMidYMid meet" role="img"
       aria-label="Stärkeverlauf der Laufbahn">
       <defs>
         <linearGradient id="kaKurveF" x1="0" y1="0" x2="0" y2="1">
@@ -72,6 +81,13 @@ function Verlaufskurve({ verlauf, defVon }) {
           <stop offset="100%" stopColor="var(--teal)" stopOpacity="0" />
         </linearGradient>
       </defs>
+      {/* Waagerechte Hilfslinien mit ihrem Wert — daran liest man die Stärke ab. */}
+      {linien.map((v) => (
+        <g key={v}>
+          <line x1={RAND.l} y1={y(v)} x2={B - RAND.r} y2={y(v)} stroke="currentColor" strokeOpacity=".12" />
+          <text x={RAND.l - 6} y={y(v) + 4} textAnchor="end" fill="var(--muted)" fontSize="10">{v}</text>
+        </g>
+      ))}
       <polygon points={flaeche} fill="url(#kaKurveF)" />
       <polyline points={punkte} fill="none" stroke="var(--teal)" strokeWidth="2"
         strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
@@ -85,9 +101,12 @@ function Verlaufskurve({ verlauf, defVon }) {
             {neuerVerein && z.key && (
               <image href={`/logos/club/${z.key}.png`} x={x(i) - 9} y={H - RAND.u + 4} width="18" height="18" />
             )}
-            {(i === 0 || i === verlauf.length - 1) && (
-              <text x={x(i)} y={RAND.o - 6} textAnchor={i === 0 ? "start" : "end"}
-                fill="var(--muted)" fontSize="11">{z.alter} J · {z.ovr}</text>
+            {/* Der Wert an jedem Punkt, nicht nur an den Enden: „wie hoch war es
+                wann" war vorher nur an Anfang und Ende zu sehen. Bei vielen Punkten
+                zeigt nur jeder zweite eine Zahl, sonst überlagern sie sich. */}
+            {(verlauf.length <= 8 || i % 2 === 0 || i === verlauf.length - 1) && (
+              <text x={x(i)} y={y(z.ovr) - 9} textAnchor="middle" fill="var(--kaText, #E8F3ED)"
+                fontSize="10" fontWeight="700">{z.ovr}</text>
             )}
           </g>
         );
@@ -111,13 +130,16 @@ function Bild({ pfad, klasse, alt = "" }) {
    60 auf 65, sondern läuft dorthin. Eine Zahl, die sich bewegt, wird gelesen; eine,
    die sich austauscht, wird übersehen.
 
-   Der Wert läuft weich aus, damit die Endzahl steht statt zu zucken. */
-function Zaehler({ wert, dauer = 900 }) {
+   Der Wert läuft weich aus, damit die Endzahl steht statt zu zucken. Wie lange er
+   dafür braucht, rechnet K.zaehlerDauer aus dem Sprung aus. */
+
+function Zaehler({ wert, dauer }) {
   const [zeige, setZeige] = useState(wert);
   const vonRef = useRef(wert);
   useEffect(() => {
     const von = vonRef.current;
     if (von === wert) { setZeige(wert); return; }
+    const lauf = dauer ?? K.zaehlerDauer(wert - von);
     /* IM VERSTECKTEN TAB LÄUFT KEIN EINZELBILD. requestAnimationFrame ruht, solange
        die Seite nicht sichtbar ist — der Zähler blieb dann für immer auf dem alten
        Wert stehen. Gemessen: Kopfzeile 50, Zeitleiste 64. Wer waehrend einer Saison
@@ -127,14 +149,14 @@ function Zaehler({ wert, dauer = 900 }) {
     let bild, start = 0;
     const schritt = (t) => {
       if (!start) start = t;
-      const anteil = Math.min(1, (t - start) / dauer);
+      const anteil = Math.min(1, (t - start) / lauf);
       const weich = 1 - Math.pow(1 - anteil, 3);
       setZeige(Math.round(von + (wert - von) * weich));
       if (anteil < 1) bild = requestAnimationFrame(schritt);
       else vonRef.current = wert;
     };
     bild = requestAnimationFrame(schritt);
-    const netz = setTimeout(() => { setZeige(wert); vonRef.current = wert; }, dauer + 300);
+    const netz = setTimeout(() => { setZeige(wert); vonRef.current = wert; }, lauf + 300);
     return () => { cancelAnimationFrame(bild); clearTimeout(netz); };
   }, [wert, dauer]);
   return <>{zeige}</>;
@@ -488,6 +510,15 @@ export default function Karriere({ onLeave }) {
       for (const t of K.saisonTitel(verein, zufall, modRef.current)) neueTitel.push(t);
       for (const t of K.einzelTitel(k2, l, zufall)) { neueTitel.push(t); if (k2.bdoAlter === undefined) k2.bdoAlter = k2.alter; }
       k2.saisonNr = (k2.saisonNr || 0) + 1;
+      /* Die Auswahl zählt auch ohne Turnier: Wer stark genug ist, spielt jede Saison
+         Länderspiele, und ohne sie stünde ein Weltmeistertitel ohne einen einzigen
+         Einsatz da. */
+      const nl = K.nationalLeistung(k2, zufall);
+      k2.national = {
+        spiele: (k2.national?.spiele || 0) + nl.spiele,
+        tore: (k2.national?.tore || 0) + nl.tore,
+        vorlagen: (k2.national?.vorlagen || 0) + nl.vorlagen,
+      };
       for (const t of K.nationalTitel(k2, verein, zufall, k2.saisonNr)) neueTitel.push(t);
       k2.alter += 1;
       const g = K.wachstumGanz(k2, verein.stufe, zufall);
@@ -736,7 +767,7 @@ export default function Karriere({ onLeave }) {
       }
       const def = defVon({ key: z.key, name: z.verein });
       out.push({
-        key: z.key, name: z.verein, label: def.label || z.key, c1: def.c1, c2: def.c2,
+        key: z.key, name: z.verein, label: def.label || z.key, c1: def.c1, c2: def.c2, pat: def.pat,
         spiele: z.spiele, tore: z.tore, vorlagen: z.vorlagen,
         titel: (z.titel || []).filter((x) => x !== "BDO"),
       });
@@ -766,7 +797,16 @@ export default function Karriere({ onLeave }) {
       {k.verein && <span className="kaWappen"><Emblem def={defVon(k.verein)} /></span>}
       <div className="kaWer">
         <b>#{k.nummer} {k.name}</b>
-        <small>{K.posDaten(k.pos).name} · {landName(k.land)} · {k.verein ? k.verein.name : "vereinslos"}</small>
+        <small>
+          {K.posDaten(k.pos).name} · {landName(k.land)} · {k.verein ? k.verein.name : "vereinslos"}
+          {k.national?.spiele
+            ? <em className="kaNational">
+                {landFlagge(k.land)} {k.national.spiele} {k.national.spiele === 1 ? "Länderspiel" : "Länderspiele"}
+                {" · "}{k.national.tore} {k.national.tore === 1 ? "Tor" : "Tore"}
+                {" · "}{k.national.vorlagen} {k.national.vorlagen === 1 ? "Vorlage" : "Vorlagen"}
+              </em>
+            : null}
+        </small>
       </div>
       <div className="kaWert"><b>{K.werteText(K.marktwert(k.ovr))}</b><small>Marktwert</small></div>
     </div>
@@ -969,9 +1009,9 @@ export default function Karriere({ onLeave }) {
                     als eine ordentliche Laufbahn.
                   </p>}
             </div>
-            {/* Die Urkunde: das Bild, das die Laufbahn überdauert. Sie zeichnet ohne
-                Wappen — ein SVG mit externen Bildern liesse sich nicht als PNG
-                speichern, und speichern ist ihr ganzer Zweck. */}
+            {/* Die Urkunde: das Bild, das die Laufbahn überdauert. Seit sie nicht mehr
+                als PNG gespeichert wird, darf sie laden, was sie will — also stehen
+                dort die echten Wappen. */}
             <UrkundeKarriere
               name={k.name}
               nummer={k.nummer}
@@ -983,6 +1023,7 @@ export default function Karriere({ onLeave }) {
               titel={TITEL_REIHE.filter((x) => k.titel[x]).map((x) => ({ key: x, name: TITEL_NAME[x], anzahl: k.titel[x] }))}
               auszeichnungen={karte.auszeichnungen}
               stationen={stationen}
+              national={k.national}
               datum={new Date().toLocaleDateString("de-DE")}
             />
 

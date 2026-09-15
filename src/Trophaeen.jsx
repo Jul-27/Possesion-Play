@@ -1,3 +1,4 @@
+import { useState } from "react";
 /* Gezeichnete Trophäen — eine eigene Form je Wettbewerb.
 
    ── WARUM ─────────────────────────────────────────────────────────────────────
@@ -6,11 +7,13 @@
    der Champions League dasselbe Bild wie beim DFB-Pokal. Ein Pokal, den man nicht
    erkennt, ist kein Pokal.
 
-   Das Vorbild löst das mit Fotos je Wettbewerb. Das geht hier nicht: Die Urkunde
-   wird als PNG exportiert, und ein SVG mit externen Bildern macht die Leinwand
-   unauslesbar — der Export bräche genau dann, wenn er gebraucht wird. Also
-   gezeichnet, in einer Datei, überall verwendbar: Feier, Vitrine, Zeitleiste,
-   Urkunde.
+   Das Vorbild löst das mit Fotos je Wettbewerb. Fotos der echten Pokale gibt es
+   dafür nicht: Wikidata und Commons führen zu keinem der vierzehn Wettbewerbe ein
+   freies Bild, und die Trophäen selbst sind geschützte Entwürfe. Also stehen unter
+   /bilder/trophaee/ eigene Aufnahmen — je Form ein Pokal, kein Nachbau einer
+   bestimmten Trophäe. Die gezeichneten Formen bleiben als Rückfall, damit nichts
+   von einer Datei abhängt; verwendet wird beides überall gleich: Feier, Vitrine,
+   Zeitleiste, Urkunde.
 
    ── DIE SIEBEN FORMEN ─────────────────────────────────────────────────────────
    schale   Meisterschaft — eine flache Schale mit Griffen, wie sie für eine über
@@ -24,8 +27,8 @@
    ball     Ballon d'Or — eine Kugel auf einer Säule, als einzige Auszeichnung für
             eine Person statt für eine Mannschaft.
 
-   Jede Form ist ein reiner Pfad ohne Verlauf mit Verlaufsdefinition — das hält sie
-   exportierbar und lässt sie in jeder Grösse gleich aussehen. */
+   Jede gezeichnete Form ist ein reiner Pfad ohne Verlauf — das lässt sie in jeder
+   Grösse gleich aussehen. */
 
 /* Welcher Titel trägt welche Form. Die Schlüssel sind dieselben wie überall. */
 export const FORM_VON_TITEL = {
@@ -130,12 +133,25 @@ const FORMEN = {
 
 /**
  * Eine Trophäe. `titel` ist der Titelschlüssel (CL, MBL, DFB …), `groesse` die
- * Kantenlänge in Pixeln. `silber` zeichnet sie in Metallgrau statt Gold — dafür gibt
- * es keinen Anlass im Spiel, aber die Vitrine der Nationalmannschaft soll sich vom
- * Vereinsteil unterscheiden lassen.
+ * Kantenlänge in Pixeln. `silber` zeichnet sie in Metallgrau statt Gold.
+ *
+ * ── ERST DAS BILD, DANN DIE ZEICHNUNG ───────────────────────────────────────
+ * Liegt unter /bilder/trophaee/<form>.png ein Bild, wird es genommen; fehlt es,
+ * bleibt die gezeichnete Form. Dieselbe Regel wie bei den Ereigniskarten: Jedes
+ * Bild ist eine Zugabe, keine Bedingung — ohne Datei sieht man die Zeichnung, und
+ * nichts bricht.
  */
 export default function Trophaee({ titel, groesse = 40, silber = false, titelText }) {
-  const form = FORMEN[FORM_VON_TITEL[titel] || "pokal"];
+  const formKey = FORM_VON_TITEL[titel] || "pokal";
+  const [fehlt, setFehlt] = useState(false);
+  if (!silber && !fehlt) {
+    return (
+      <img className="trophaee" src={`/bilder/trophaee/${formKey}.png`}
+        width={groesse} height={groesse} alt={titelText || titel} title={titelText}
+        loading="lazy" onError={() => setFehlt(true)} />
+    );
+  }
+  const form = FORMEN[formKey];
   const [h, d] = silber ? [SILBER, SILBER_TIEF] : [GOLD, GOLD_TIEF];
   return (
     <svg className="trophaee" viewBox="0 0 100 82" width={groesse} height={groesse * 0.82}

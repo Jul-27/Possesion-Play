@@ -411,6 +411,7 @@ export function neueKarriere({ name, land, nummer, pos, fuss = "rechts", tempo =
     alter: START_ALTER,
     ovr: OVR_START,
     rest: 0,                 // Restbetrag des Wachstums, siehe wachstumGanz
+    national: { spiele: 0, tore: 0, vorlagen: 0 },
     verein: null,
     leiheVon: null,
     /* „stamm" ist der richtige Anfang, nicht „kader": Ob jemand zu schwach für seinen
@@ -514,6 +515,32 @@ export const TURNIER_TAKT = 4;
 export function turnierIn(saisonNr) {
   const rest = saisonNr % TURNIER_TAKT;
   return rest === 0 ? "WM" : rest === 2 ? "EM" : null;
+}
+
+/* ── Die Auswahl zählt auch ohne Titel ─────────────────────────────────────────
+   VORHER GAB ES NUR TITEL. Man wurde Weltmeister, aber wie oft man überhaupt für
+   sein Land gespielt hatte, stand nirgends — und damit fehlte der Zusammenhang:
+   Ein Titel ohne Länderspiele wirkt wie ein Zufallsfund.
+
+   Berufen wird, wer NATIONALELF_AB erreicht. Die Zahl der Spiele hängt daran, wie
+   weit er darüber liegt — ein gerade Berufener kommt auf ein paar Einsätze, ein
+   Weltklassespieler ist gesetzt. Tore und Vorlagen folgen derselben Rechnung wie
+   im Verein, nur auf weniger Spiele. */
+export const LAENDERSPIELE_JE_SAISON = 10;
+
+export function nationalLeistung(k, zufall) {
+  if (k.ovr < NATIONALELF_AB) return { spiele: 0, tore: 0, vorlagen: 0 };
+  const p = posDaten(k.pos);
+  /* Von knapp der Hälfte der möglichen Spiele bei frischer Berufung bis fast allen
+     an der Spitze. */
+  const anteil = grenze(0.45 + (k.ovr - NATIONALELF_AB) / 40, 0.45, 0.95);
+  const spiele = Math.round(LAENDERSPIELE_JE_SAISON * anteil);
+  const guete = gueteVon(k.ovr);
+  return {
+    spiele,
+    tore: poisson(spiele * 0.42 * p.tore * guete, zufall),
+    vorlagen: poisson(spiele * 0.26 * p.vorlagen * guete, zufall),
+  };
 }
 
 export function nationalTitel(k, verein, zufall, saisonNr = 0) {
@@ -869,3 +896,13 @@ export const AUSZEICHNUNGEN = [
 export function erreichteAuszeichnungen(k) {
   return AUSZEICHNUNGEN.filter((a) => { try { return a.pruefe(k); } catch { return false; } });
 }
+
+/* ── Wie lange der Ratingzähler läuft ─────────────────────────────────────────
+   Vorher waren es immer 900 Millisekunden, egal ob zwei Punkte oder fünfzehn. Zwei
+   Punkte huschten damit vorbei, fünfzehn tickten im Zeitlupentempo durch.
+
+   Jetzt wächst die Dauer mit dem Sprung, aber LANGSAMER als er selbst: Bei zwei
+   Punkten bleibt eine Ziffer rund 190 Millisekunden stehen und man liest sie, bei
+   fünfzehn sind es 80 und die Zahl rollt sichtbar hoch. Genau der Eindruck, den das
+   Vorbild macht — kleine Änderung gemächlich, grosse rasant. */
+export const zaehlerDauer = (sprung) => Math.round(Math.min(1250, 300 + Math.abs(sprung) * 42));
