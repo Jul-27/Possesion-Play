@@ -27,9 +27,11 @@ const TITEL_NAME = {
   MSA: "Italienischer Meister", ML1: "Französischer Meister",
   DFB: "DFB-Pokal", FAC: "FA Cup", CDR: "Copa del Rey", CIT: "Coppa Italia",
   CL: "Champions League", EL: "Europa League",
-  WM: "Weltmeister", EM: "Europameister", BDO: "Ballon d'Or",
+  WM: "Weltmeister", EM: "Europameister", CA: "Copa América", BDO: "Ballon d'Or",
 };
-const TITEL_REIHE = ["BDO", "WM", "EM", "CL", "EL", "MBL", "MPL", "MLL", "MSA", "ML1", "DFB", "FAC", "CDR", "CIT"];
+/* CA gehört dazu, seit Südamerika seine eigene Kontinentalmeisterschaft spielt —
+   ohne den Eintrag stünde bei einem Brasilianer „CA" statt eines Titelnamens. */
+const TITEL_REIHE = ["BDO", "WM", "EM", "CA", "CL", "EL", "MBL", "MPL", "MLL", "MSA", "ML1", "DFB", "FAC", "CDR", "CIT"];
 
 /* Der Name eines Landes. Die sieben mit eigener Liga tragen unseren internen
    Schlüssel (GER, ENG, …), alle übrigen ihren ISO-Code — beide löst laender.js auf. */
@@ -131,9 +133,10 @@ function Bild({ pfad, klasse, alt = "" }) {
    die sich austauscht, wird übersehen.
 
    Der Wert läuft weich aus, damit die Endzahl steht statt zu zucken. Wie lange er
-   dafür braucht, rechnet K.zaehlerDauer aus dem Sprung aus. */
+   dafür braucht, rechnet K.zaehlerDauer aus dem Sprung aus; `warten` hält ihn
+   vorher an, damit die Tabelle rechts ihren Auftritt zuerst bekommt. */
 
-function Zaehler({ wert, dauer }) {
+function Zaehler({ wert, dauer, warten = 0 }) {
   const [zeige, setZeige] = useState(wert);
   const vonRef = useRef(wert);
   useEffect(() => {
@@ -155,10 +158,13 @@ function Zaehler({ wert, dauer }) {
       if (anteil < 1) bild = requestAnimationFrame(schritt);
       else vonRef.current = wert;
     };
-    bild = requestAnimationFrame(schritt);
-    const netz = setTimeout(() => { setZeige(wert); vonRef.current = wert; }, lauf + 300);
-    return () => { cancelAnimationFrame(bild); clearTimeout(netz); };
-  }, [wert, dauer]);
+    /* Während der Wartezeit steht der ALTE Wert — nicht der neue und auch kein
+       Zwischenwert. Sonst wäre die Pause nur ein verzögerter Sprung. */
+    setZeige(von);
+    const los = setTimeout(() => { bild = requestAnimationFrame(schritt); }, warten);
+    const netz = setTimeout(() => { setZeige(wert); vonRef.current = wert; }, warten + lauf + 300);
+    return () => { clearTimeout(los); cancelAnimationFrame(bild); clearTimeout(netz); };
+  }, [wert, dauer, warten]);
   return <>{zeige}</>;
 }
 
@@ -743,8 +749,10 @@ export default function Karriere({ onLeave }) {
       <table>
         <thead><tr><th>Alter</th><th>Verein</th><th>Stärke</th><th>Sp</th><th>To</th><th>Vo</th></tr></thead>
         <tbody>
+          {/* Die jüngste Zeile bekommt einen kurzen Auftritt: Sie ist der Grund,
+              warum der Ratingzähler daneben eine halbe Sekunde wartet. */}
           {k.verlauf.map((z, i) => (
-            <tr key={i}>
+            <tr key={i} className={i === k.verlauf.length - 1 ? "neu" : undefined}>
               <td>{z.alter}</td>
               <td><span className="kaZeilenWappen"><Emblem def={defVon({ key: z.key, name: z.verein })} /></span>{z.verein} <small>{z.lg}</small>{z.titel.length ? <em>{z.titel.map((t, n) => <Trophaee key={n} titel={t} groesse={18} titelText={TITEL_NAME[t] || t} />)}</em> : null}</td>
               <td><span className="kaRatingMarke">{z.ovr}</span></td>
@@ -799,7 +807,10 @@ export default function Karriere({ onLeave }) {
 
   const kopfzeile = (
     <div className="kaKopf">
-      <div className="kaOvr" data-rang={K.rangVon(k.ovr)}><small>RATING</small><b><Zaehler wert={k.ovr} /></b></div>
+      {/* Die Kachel wartet, bis die neue Zeile in der Zeitleiste steht. */}
+      <div className="kaOvr" data-rang={K.rangVon(k.ovr)}>
+        <small>RATING</small><b><Zaehler wert={k.ovr} warten={K.ZAEHLER_WARTEN} /></b>
+      </div>
       {k.verein && <span className="kaWappen"><Emblem def={defVon(k.verein)} /></span>}
       <div className="kaWer">
         <b>#{k.nummer} {k.name}</b>
@@ -998,6 +1009,11 @@ export default function Karriere({ onLeave }) {
               {k.gesamt.spiele} Spiele · {k.gesamt.tore} Tore · {k.gesamt.vorlagen} Vorlagen ·{" "}
               {k.vereine.length} Verein{k.vereine.length === 1 ? "" : "e"}
             </p>
+            {/* ERST JETZT WIRD DAS TALENT GENANNT. Es wird beim Anlegen verdeckt
+                gezogen und entscheidet, wie weit eine Laufbahn tragen kann — währenddessen
+                wäre es eine Vorhersage und keine Laufbahn mehr. Am Ende erklärt es,
+                warum es so gekommen ist: Nicht jeder wird Weltklasse. */}
+            <p className="kaTalent">Veranlagung: {K.talentName(k.talent)}</p>
             <h3>Auszeichnungen</h3>
             {/* Die Auszeichnungen sind absichtlich schwer. Ohne diesen Satz stünde bei
                 den meisten Laufbahnen eine leere Überschrift, und das sähe nach einem

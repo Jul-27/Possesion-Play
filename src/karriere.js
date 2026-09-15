@@ -107,6 +107,42 @@ export const ENTWICKLUNG = {
 };
 export const ENTWICKLUNG_NAMEN = { frueh: "Frühentwickler", normal: "normale Entwicklung", spaet: "Spätentwickler" };
 
+/* ── Talent: warum nicht jeder oben ankommt ────────────────────────────────────
+   GEMESSEN an 4000 Laufbahnen, die immer zum besten erreichbaren Verein wechseln:
+   Der Höchstwert lag im Median bei 87, und 48 % aller Spieler kamen über 88 — die
+   Schwelle, ab der der Ballon d'Or überhaupt vergeben wird. Damit war die Spitze
+   nicht die Ausnahme, sondern der Regelfall: Wer die Saisons durchklickte, wurde
+   Weltklasse, und ein Titel hing nur noch an der Geduld.
+
+   Der Grund lag in der Tabelle oben. Sie beschreibt, was ein Spieler je Saison
+   dazugewinnen KANN, und jeder bekam dieselbe Spanne. Ein Fußballer ist aber nicht
+   die Summe seiner Trainingsjahre — die meisten sind irgendwann fertig, und nur
+   wenige haben das, woraus Weltklasse wird.
+
+   DESHALB EINE ZWEITE, VERDECKTE ZIEHUNG. Beim Anlegen bekommt jede Laufbahn einen
+   Talentfaktor, der den Zuwachs (nicht den Abbau) streckt oder staucht. Die Kurve
+   ist absichtlich schief: Der Faktor läuft von 0,58 bis 1,12, aber die hohe Potenz
+   drückt die Masse nach unten, sodass die Spitze selten bleibt.
+
+   NACHGEMESSEN mit denselben 4000 Laufbahnen: Median 74, ein Viertel über 79, ein
+   Zehntel über 86; 12 % erreichen 85, 7 % die Ballon-d'Or-Schwelle 88, 1 % die 95.
+   Möglich ist damit alles — die Regel ist es nicht mehr. */
+export const TALENT_MIN = 0.58, TALENT_MAX = 1.12, TALENT_FORM = 3.4;
+
+export const zieheTalent = (zufall) =>
+  Math.round((TALENT_MIN + (TALENT_MAX - TALENT_MIN) * Math.pow(zufall(), TALENT_FORM)) * 1000) / 1000;
+
+/* Nur für den Rückblick am Ende der Laufbahn: Man erfährt erst dann, was man
+   gezogen hatte. Währenddessen wäre es eine Vorhersage und keine Laufbahn mehr. */
+/* Die Schwellen sind aus der Ziehung zurückgerechnet, nicht geraten: Sie teilen die
+   Laufbahnen in rund 4 / 8 / 14 / 24 / 50 Prozent. Ein Jahrhunderttalent soll eines
+   von fünfundzwanzig sein — sonst wäre das Wort gelogen. */
+export const TALENT_STUFEN = [
+  [1.05, "Jahrhunderttalent"], [0.93, "außergewöhnliches Talent"], [0.77, "großes Talent"],
+  [0.63, "solide veranlagt"], [0, "harter Arbeiter"],
+];
+export const talentName = (t) => (TALENT_STUFEN.find(([ab]) => (t ?? 1) >= ab) || TALENT_STUFEN.at(-1))[1];
+
 /** Der Typ wird gezogen: ein Zehntel früh, ein Zehntel spät, der Rest normal. */
 export function entwicklungstyp(zufall, pos) {
   if (pos === "TW") return "normal";   // Torhüter reifen zu gleichmäßig für Ausreißer
@@ -167,11 +203,12 @@ export const WENIG_EINSATZ = 0.34;
 
 export const deckeVon = (stufe) => STUFE_MINDEST_OVR[grenze(stufe, 0, 5)] + DECKE_UEBER_ANFORDERUNG;
 
-/** Zuwachs im Verein: Alter und Typ, gebremst vom Niveau und von der Einsatzzeit. */
+/** Zuwachs im Verein: Alter, Typ und Talent, gebremst vom Niveau und der Einsatzzeit. */
 export function wachstumImVerein(k, stufe, zufall) {
   const roh = wachstum(k.typ, k.alter, zufall);
-  if (roh <= 0) return roh;                       // den Abbau bremst niemand
-  const gebremst = k.ovr >= deckeVon(stufe) ? roh * UEBER_DER_DECKE : roh;
+  if (roh <= 0) return roh;                       // den Abbau bremst weder Talent noch Verein
+  const begabt = roh * (k.talent ?? 1);
+  const gebremst = k.ovr >= deckeVon(stufe) ? begabt * UEBER_DER_DECKE : begabt;
   return einsatzAnteil(k.ovr, stufe, k.rolle) < WENIG_EINSATZ ? gebremst * 0.5 : gebremst;
 }
 
@@ -408,6 +445,7 @@ export function neueKarriere({ name, land, nummer, pos, fuss = "rechts", tempo =
   return {
     name, land, nummer, pos, fuss, tempo, seed,
     typ: entwicklungstyp(zufall, pos),
+    talent: zieheTalent(zufall),
     alter: START_ALTER,
     ovr: OVR_START,
     rest: 0,                 // Restbetrag des Wachstums, siehe wachstumGanz
@@ -508,13 +546,71 @@ export function einzelTitel(k, leistung, zufall) {
    im Spiel wurde ein Spieler dadurch zweimal innerhalb von zwei Saisons Weltmeister.
    Eine WM gibt es alle vier Jahre, eine EM dazwischen. Der Fehler blähte nebenbei
    die Titelzahlen auf, an denen „Der Sammler" hängt. */
-export const NATIONALELF_AB = 76;
+/* BERUFEN WIRD FRÜHER ALS VORHER. Die Schwelle lag bei 76, und das passte zu einer
+   Welt, in der der Median einer Laufbahn bei 87 endete. Mit dem Talentwurf liegt er
+   bei 74 — mit der alten Schwelle hätte die Mehrheit nie ein Länderspiel gemacht,
+   und die Auswahl käme im Spiel schlicht nicht mehr vor. 72 heisst: Wer eine
+   ordentliche Laufbahn spielt, kommt zu ein paar Einsätzen; gesetzt ist deshalb
+   noch niemand. */
+export const NATIONALELF_AB = 72;
 export const TURNIER_TAKT = 4;
 
+/* ── Welche Auswahl gewinnt etwas? ─────────────────────────────────────────────
+   VORHER GAR KEINE FRAGE: Die Titelchance hing allein am Rating des Spielers und an
+   der Stufe seines Vereins. Das Land kam in der Rechnung nicht vor — ein starker
+   Österreicher wurde deshalb genauso oft Weltmeister wie ein starker Brasilianer,
+   und im Spiel passierte genau das: zweimal Weltmeister mit Österreich.
+
+   Eine Weltmeisterschaft gewinnt aber die Mannschaft, nicht der Spieler. Deshalb
+   trägt jedes Land jetzt einen Faktor, und der ist mit Absicht hart gestuft:
+
+     1,00  die neun, die eine WM realistisch gewinnen
+     0,25  Mannschaften, denen man ein Endspiel zutraut
+     0,07  Nationen mit Tradition, die dafür alles zusammenkommen muss
+     0,012 alle übrigen
+
+   Für einen Weltklassespieler heisst das rund 17 % je WM mit Brasilien, 4 % mit
+   Kroatien, 1 % mit Österreich und 0,2 % mit Malta. Möglich bleibt es überall — die
+   Ausnahme ist es überall ausser oben. */
+export const NATION_A = 1.0, NATION_B = 0.25, NATION_C = 0.07, NATION_REST = 0.012;
+
+const NATIONEN_A = ["BR", "AR", "FRA", "GER", "ESP", "ENG", "ITA", "PRT", "NED"];
+const NATIONEN_B = ["BE", "HR", "UY", "CO", "MX", "MA", "JP", "US", "DK", "CH"];
+const NATIONEN_C = ["RS", "SN", "KR", "PL", "SE", "TR", "AUT", "AT", "CZ", "UA", "NO", "EC", "PE",
+  "CL", "PY", "NG", "CM", "GH", "CI", "DZ", "EG", "TN", "AU", "IR", "GR", "RU", "HU", "RO",
+  "SCO", "WAL", "IE", "SK", "SI", "IS", "FI", "CA", "CR", "QA", "SA", "VE", "BO", "JM", "ZA"];
+
+const NATION_STAERKE = new Map([
+  ...NATIONEN_A.map((k) => [k, NATION_A]),
+  ...NATIONEN_B.map((k) => [k, NATION_B]),
+  ...NATIONEN_C.map((k) => [k, NATION_C]),
+]);
+
+export const nationStaerke = (land) => NATION_STAERKE.get(land) ?? NATION_REST;
+
+/* ── Und welches Turnier? ──────────────────────────────────────────────────────
+   Die Kontinentalmeisterschaft ist nicht überall dieselbe. Vorher gab es nur die
+   EM — ein Brasilianer wurde damit Europameister. Europa spielt die EM, Südamerika
+   die Copa América; für alle übrigen Verbände führt das Spiel keine Trophäe, sie
+   spielen also nur um die Weltmeisterschaft. Lieber eine Lücke als ein Titel, den
+   es für dieses Land nicht gibt. */
+const EUROPA = new Set(["GER", "ENG", "ESP", "ITA", "FRA", "PRT", "NED", "AUT",
+  "AL", "AD", "AM", "AT", "AZ", "BY", "BE", "BA", "BG", "HR", "CY", "CZ", "DK", "EE", "FO", "FI",
+  "GE", "GI", "GR", "HU", "IS", "IE", "IL", "IM", "GG", "JE", "XK", "LV", "LI", "LT", "LU", "MT",
+  "MD", "MC", "ME", "MK", "NO", "PL", "RO", "RU", "SM", "RS", "SK", "SI", "SE", "CH", "TR", "UA",
+  "VA", "SCO", "WAL"]);
+const SUEDAMERIKA = new Set(["BR", "AR", "UY", "CO", "CL", "PE", "EC", "PY", "BO", "VE"]);
+
+/** Die Kontinentalmeisterschaft dieses Landes — oder null, wo das Spiel keine führt. */
+export const kontinentTurnier = (land) =>
+  EUROPA.has(land) ? "EM" : SUEDAMERIKA.has(land) ? "CA" : null;
+
 /** Welches Turnier findet in dieser Saison statt — oder keines? */
-export function turnierIn(saisonNr) {
+export function turnierIn(saisonNr, land = null) {
   const rest = saisonNr % TURNIER_TAKT;
-  return rest === 0 ? "WM" : rest === 2 ? "EM" : null;
+  if (rest === 0) return "WM";
+  if (rest === 2) return land === null ? "EM" : kontinentTurnier(land);
+  return null;
 }
 
 /* ── Die Auswahl zählt auch ohne Titel ─────────────────────────────────────────
@@ -523,7 +619,7 @@ export function turnierIn(saisonNr) {
    Ein Titel ohne Länderspiele wirkt wie ein Zufallsfund.
 
    Berufen wird, wer NATIONALELF_AB erreicht. Die Zahl der Spiele hängt daran, wie
-   weit er darüber liegt — ein gerade Berufener kommt auf ein paar Einsätze, ein
+   weit er darüber liegt — ein gerade Berufener kommt auf zwei, drei Einsätze, ein
    Weltklassespieler ist gesetzt. Tore und Vorlagen folgen derselben Rechnung wie
    im Verein, nur auf weniger Spiele. */
 export const LAENDERSPIELE_JE_SAISON = 10;
@@ -533,7 +629,7 @@ export function nationalLeistung(k, zufall) {
   const p = posDaten(k.pos);
   /* Von knapp der Hälfte der möglichen Spiele bei frischer Berufung bis fast allen
      an der Spitze. */
-  const anteil = grenze(0.45 + (k.ovr - NATIONALELF_AB) / 40, 0.45, 0.95);
+  const anteil = grenze(0.25 + (k.ovr - NATIONALELF_AB) / 30, 0.25, 0.95);
   const spiele = Math.round(LAENDERSPIELE_JE_SAISON * anteil);
   const guete = gueteVon(k.ovr);
   return {
@@ -544,11 +640,17 @@ export function nationalLeistung(k, zufall) {
 }
 
 export function nationalTitel(k, verein, zufall, saisonNr = 0) {
-  const turnier = turnierIn(saisonNr);
+  const turnier = turnierIn(saisonNr, k.land ?? null);
   if (!turnier || k.ovr < NATIONALELF_AB) return [];
-  const guete = (k.ovr - NATIONALELF_AB) / 20 + verein.stufe * 0.03;
-  /* Die EM ist leichter zu gewinnen als die WM: weniger Mitbewerber. */
-  return zufall() < guete * (turnier === "WM" ? 0.22 : 0.30) ? [turnier] : [];
+  /* Der Spieler entscheidet ein Turnier nicht allein — aber wer Weltklasse ist,
+     steht meistens auch in einer Mannschaft, die gewinnen kann. Deshalb trägt seine
+     Klasse nur einen Teil, von einem Viertel bei frischer Berufung bis zum vollen
+     Wert an der Spitze. */
+  const klasse = 0.25 + 0.75 * grenze((k.ovr - 78) / 18, 0, 1);
+  /* Die Kontinentalmeisterschaft ist leichter zu gewinnen als die WM: weniger
+     Mitbewerber. */
+  const basis = turnier === "WM" ? 0.22 : 0.30;
+  return zufall() < basis * nationStaerke(k.land) * klasse ? [turnier] : [];
 }
 
 /* ── Entscheidungen ────────────────────────────────────────────────────────────
@@ -846,13 +948,19 @@ export const AUSZEICHNUNGEN = [
      gelingt in 23 von 1500 und ist damit immer noch eine der härtesten. */
   { key: "fuenf_ohren", name: "Die großen Ohren", text: "Dreimal die Champions League.",
     pruefe: (k) => zahl(k, "CL") >= 3 },
-  { key: "unvollendet", name: "Der Unvollendete", text: "Eine ganze Laufbahn ohne einen einzigen Mannschaftstitel.",
-    pruefe: (k) => Object.keys(k.titel).filter((t) => t !== "BDO").length === 0 },
-  /* GEMESSEN über 1200 Laufbahnen: vier verschiedene große Meisterschaften kamen in
-     0,3 % zusammen, alle fünf in keiner einzigen. Vier ist damit die härteste noch
-     erreichbare Stufe — und liegt gleichauf mit „Der Größte" und „Goldjunge". */
-  { key: "europas_erster", name: "Europas Erster", text: "Meister in vier der fünf großen Ligen.",
-    pruefe: (k) => alleLigaTitel(k) >= 4 },
+  /* NACHGEZOGEN mit dem Talentwurf: Ohne Titel zu bleiben war vorher die Ausnahme
+     und ist jetzt der Normalfall — 54 % der Laufbahnen. Eine Auszeichnung, die jede
+     zweite Laufbahn bekommt, sagt nichts. Verlangt wird deshalb die LANGE Laufbahn
+     ohne Titel: vierhundert Spiele, nichts gewonnen. Gemessen 44 % — knapp unter der
+     Hälfte, und damit weiterhin der Boden, auf dem die anderen vierzehn stehen. */
+  { key: "unvollendet", name: "Der Unvollendete", text: "Vierhundert Spiele und kein einziger Mannschaftstitel.",
+    pruefe: (k) => k.gesamt.spiele >= 400 && Object.keys(k.titel).filter((t) => t !== "BDO").length === 0 },
+  /* NACHGEZOGEN: Mit vier großen Meisterschaften war sie in 1500 Laufbahnen nicht
+     mehr zu holen — dafür muss man bei vier verschiedenen Spitzenvereinen stehen,
+     und dorthin kommt seit dem Talentwurf jeder Achte überhaupt. Drei trifft 0,2 %
+     und ist damit die härteste noch belegbare Stufe. */
+  { key: "europas_erster", name: "Europas Erster", text: "Meister in drei der fünf großen Ligen.",
+    pruefe: (k) => alleLigaTitel(k) >= 3 },
   { key: "vereinstreue", name: "Ein Leben, ein Verein", text: "Die ganze Laufbahn bei einem Verein — mit Meisterschaft, Pokal und Europapokal.",
     pruefe: (k) => k.vereine.length === 1 && alleLigaTitel(k) >= 1
       && Object.values(POKAL_TITEL).some((t) => zahl(k, t) > 0) && (zahl(k, "CL") + zahl(k, "EL")) > 0 },
@@ -868,29 +976,35 @@ export const AUSZEICHNUNGEN = [
     pruefe: (k) => k.vereine.length >= 10 },
   { key: "grenzgaenger", name: "Grenzgänger", text: "In allen sieben Ländern der Welt gespielt.",
     pruefe: (k) => k.laender.length >= 7 },
-  /* Gemessen über 1200 Laufbahnen: Median 78 Tore, oberes Zehntel 181, Bestwert 366.
-     Fünfhundert war unerreichbar; dreihundert liegt über dem oberen Zehntel und
-     unter dem Bestwert — also selten, aber möglich. */
-  { key: "torfabrik", name: "Torfabrik", text: "Dreihundert Tore in der Laufbahn.",
-    pruefe: (k) => k.gesamt.tore >= 300 },
+  /* NACHGEMESSEN nach dem Talentwurf: Median 87 Tore, oberes Zehntel 148, Bestwert
+     345. Dreihundert trifft nur noch 0,2 %; zweihundertfünfzig liegt weit über dem
+     oberen Zehntel und fällt in 0,5 %. */
+  { key: "torfabrik", name: "Torfabrik", text: "Zweihundertfünfzig Tore in der Laufbahn.",
+    pruefe: (k) => k.gesamt.tore >= 250 },
   /* GEMESSEN: „mit 38 noch im Kader" fiel in 100 % der Laufbahnen — jede erreicht
      dieses Alter, also war die Auszeichnung keine. Verlangt wird jetzt, mit 36 noch
      bei einem Spitzenverein zu stehen; das schafft nur, wer sein Niveau hält. */
   { key: "der_ewige", name: "Der Ewige", text: "Mit sechsunddreißig noch bei einem Spitzenverein.",
     pruefe: (k) => k.alter >= 36 && (k.verein?.stufe ?? 0) >= 4 },
-  /* Vor 23 ist mit der Entwicklungsdecke nicht mehr zu schaffen: Mit 22 steht man
-     typischerweise bei einem Verein der Stufe zwei oder drei. */
-  { key: "goldjunge", name: "Goldjunge", text: "Ballon d'Or vor dem fünfundzwanzigsten Geburtstag.",
-    pruefe: (k) => (k.bdoAlter ?? 99) < 25 },
-  /* Ebenfalls nachgezogen: „viermal CL und sechs Ballons d'Or" fiel in 3000 Läufen
-     nie. Die neue Schwelle trifft 7 von 1500 — selten genug, dass sie etwas heisst. */
-  { key: "der_groesste", name: "Der Größte", text: "Weltmeister, zweimal Champions League und drei Ballons d'Or.",
-    pruefe: (k) => zahl(k, "WM") >= 1 && zahl(k, "CL") >= 2 && zahl(k, "BDO") >= 3 },
+  /* NACHGEZOGEN: Der Ballon d'Or wird ab 85 vergeben, und den erreicht seit dem
+     Talentwurf nur, wer ein grosses Talent gezogen hat — der früheste gemessene
+     Gewinner war vierundzwanzig, und „vor 25" traf damit eine einzige Laufbahn von
+     1500. Vor siebenundzwanzig trifft 0,6 % und meint weiter dasselbe: jung. */
+  { key: "goldjunge", name: "Goldjunge", text: "Ballon d'Or vor dem siebenundzwanzigsten Geburtstag.",
+    pruefe: (k) => (k.bdoAlter ?? 99) < 27 },
+  /* Zum zweiten Mal nachgezogen, jetzt wegen des Talentwurfs: „Weltmeister, zweimal
+     Champions League und drei Ballons d'Or" fiel in 1500 Laufbahnen keine einzige
+     Mal mehr. Weltmeister UND Ballon d'Or verlangt weiterhin beides — die beste
+     Mannschaft der Welt und der beste Spieler der Welt — und trifft 0,5 %. */
+  { key: "der_groesste", name: "Der Größte", text: "Weltmeister und Ballon d'Or.",
+    pruefe: (k) => zahl(k, "WM") >= 1 && zahl(k, "BDO") >= 1 },
   { key: "doppelbuerger", name: "Doppelbürger", text: "Den Verband gewechselt und danach einen Titel mit der neuen Auswahl geholt.",
     pruefe: (k) => k.verbandGewechselt === true && (zahl(k, "WM") + zahl(k, "EM")) > 0 },
-  /* Und hier dasselbe: Der höchste in 1500 Läufen erreichte Stand ist 24. */
-  { key: "sammler", name: "Der Sammler", text: "Zwanzig Titel oder mehr.",
-    pruefe: (k) => Object.values(k.titel).reduce((a, b) => a + b, 0) >= 20 },
+  /* Nachgemessen: Der höchste Stand ist jetzt 23, aber zwanzig erreichen nur noch
+     0,3 %. Fünfzehn trifft 1,5 % und bleibt weit oberhalb dessen, was eine gute
+     Laufbahn zusammenträgt (oberes Zehntel: vier Titel). */
+  { key: "sammler", name: "Der Sammler", text: "Fünfzehn Titel oder mehr.",
+    pruefe: (k) => Object.values(k.titel).reduce((a, b) => a + b, 0) >= 15 },
 ];
 
 export function erreichteAuszeichnungen(k) {
@@ -902,7 +1016,19 @@ export function erreichteAuszeichnungen(k) {
    Punkte huschten damit vorbei, fünfzehn tickten im Zeitlupentempo durch.
 
    Jetzt wächst die Dauer mit dem Sprung, aber LANGSAMER als er selbst: Bei zwei
-   Punkten bleibt eine Ziffer rund 190 Millisekunden stehen und man liest sie, bei
-   fünfzehn sind es 80 und die Zahl rollt sichtbar hoch. Genau der Eindruck, den das
-   Vorbild macht — kleine Änderung gemächlich, grosse rasant. */
-export const zaehlerDauer = (sprung) => Math.round(Math.min(1250, 300 + Math.abs(sprung) * 42));
+   Punkten bleibt eine Ziffer rund 370 Millisekunden stehen und man liest sie, bei
+   fünfzehn sind es 110 und die Zahl rollt sichtbar hoch. Genau der Eindruck, den das
+   Vorbild macht — kleine Änderung gemächlich, grosse rasant.
+
+   NACHGEZOGEN: Die erste Fassung war insgesamt zu hastig — 300 Millisekunden Grund
+   und 42 je Punkt. Jetzt ist jeder Lauf gut doppelt so lang. */
+export const zaehlerDauer = (sprung) => Math.round(Math.min(2200, 600 + Math.abs(sprung) * 70));
+
+/* ── Und wann er losläuft ─────────────────────────────────────────────────────
+   Eine gespielte Saison setzt zwei Dinge auf einmal: die neue Zeile in der Tabelle
+   rechts und das neue Rating in der Kachel links. Liefen beide gleichzeitig, sah
+   man keines von beiden richtig — das Auge kann nur an einer Stelle sein.
+
+   Deshalb wartet die Kachel. Erst steht die Zeile mit Spielen, Toren und Vorlagen,
+   dann läuft die Zahl. */
+export const ZAEHLER_WARTEN = 620;
