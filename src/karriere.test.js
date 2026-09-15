@@ -332,11 +332,21 @@ test("man bekommt kein Angebot vom eigenen Verein", () => {
 
 // ── Auszeichnungen ───────────────────────────────────────────────────────────
 
-const leer = () => ({ ...K.neueKarriere({ name: "T", land: "XXX", nummer: 1, pos: "ST" }), vereine: ["A"], laender: ["XXX"] });
+/* Vierhundert Spiele, weil „Der Unvollendete" seit dem Talentwurf die lange
+   titellose Laufbahn meint und nicht mehr jede titellose. */
+const leer = () => ({ ...K.neueKarriere({ name: "T", land: "XXX", nummer: 1, pos: "ST" }),
+  vereine: ["A"], laender: ["XXX"], gesamt: { spiele: 420, tore: 0, vorlagen: 0 } });
 
 test("wer nichts gewonnen hat, bekommt genau eine Auszeichnung", () => {
   const a = K.erreichteAuszeichnungen(leer());
   assert.deepEqual(a.map((x) => x.key), ["unvollendet"]);
+});
+
+/* Wer nur kurz dabei war, hat nichts VERSÄUMT — der Titel der Auszeichnung wäre
+   sonst bei jedem Abbruch nach zwei Saisons zu haben. */
+test("eine kurze Laufbahn ohne Titel ist nicht die unvollendete", () => {
+  const kurz = { ...leer(), gesamt: { spiele: 120, tore: 4, vorlagen: 1 } };
+  assert.deepEqual(K.erreichteAuszeichnungen(kurz).map((x) => x.key), []);
 });
 
 test("ein einziger Titel nimmt dem Unvollendeten seinen Namen", () => {
@@ -352,10 +362,13 @@ test("die großen Auszeichnungen verlangen wirklich viel", () => {
   assert.ok(!K.erreichteAuszeichnungen(fast).some((a) => a.key === "fuenf_ohren"));
   const ganz = { ...leer(), titel: { CL: 3 } };
   assert.ok(K.erreichteAuszeichnungen(ganz).some((a) => a.key === "fuenf_ohren"));
-  const vier = { ...leer(), titel: { MBL: 1, MPL: 1, MLL: 1, MSA: 1 } };
-  assert.ok(K.erreichteAuszeichnungen(vier).some((a) => a.key === "europas_erster"));
   const drei = { ...leer(), titel: { MBL: 1, MPL: 1, MLL: 1 } };
-  assert.ok(!K.erreichteAuszeichnungen(drei).some((a) => a.key === "europas_erster"));
+  assert.ok(K.erreichteAuszeichnungen(drei).some((a) => a.key === "europas_erster"));
+  const zwei = { ...leer(), titel: { MBL: 1, MPL: 1 } };
+  assert.ok(!K.erreichteAuszeichnungen(zwei).some((a) => a.key === "europas_erster"));
+  /* Zweimal derselbe Titel ist EINE Liga, nicht zwei. */
+  const doppelt = { ...leer(), titel: { MBL: 3 } };
+  assert.ok(!K.erreichteAuszeichnungen(doppelt).some((a) => a.key === "europas_erster"));
 });
 
 /* EINE AUSZEICHNUNG, DIE NIEMAND ERREICHEN KANN, IST EIN GEBROCHENES VERSPRECHEN.
@@ -365,19 +378,19 @@ test("jede Auszeichnung ist erreichbar", () => {
   const beispiele = {
     fuenf_ohren:    { titel: { CL: 5 } },
     unvollendet:    {},
-    europas_erster: { titel: { MBL: 1, MPL: 1, MLL: 1, MSA: 1 } },
+    europas_erster: { titel: { MBL: 1, MPL: 1, MLL: 1 } },
     vereinstreue:   { vereine: ["A"], titel: { MBL: 1, DFB: 1, CL: 1 } },
     aus_der_zweiten:{ aufstiegMitMeister: true },
     riesentoeter:   { europaMitKleinem: true },
     das_triple:     { triple: true },
     wanderer:       { vereine: Array.from({ length: 10 }, (_, i) => "V" + i) },
     grenzgaenger:   { laender: ["GER", "ENG", "ESP", "ITA", "FRA", "POR", "NED"] },
-    torfabrik:      { gesamt: { spiele: 700, tore: 300, vorlagen: 100 } },
+    torfabrik:      { gesamt: { spiele: 700, tore: 250, vorlagen: 100 } },
     der_ewige:      { alter: 36, verein: { stufe: 5 } },
-    goldjunge:      { bdoAlter: 22, titel: { BDO: 1 } },
-    der_groesste:   { titel: { WM: 1, CL: 4, BDO: 6 } },
+    goldjunge:      { bdoAlter: 26, titel: { BDO: 1 } },
+    der_groesste:   { titel: { WM: 1, BDO: 1 } },
     doppelbuerger:  { verbandGewechselt: true, titel: { EM: 1 } },
-    sammler:        { titel: { MBL: 13, DFB: 12 } },
+    sammler:        { titel: { MBL: 8, DFB: 7 } },
   };
   for (const a of K.AUSZEICHNUNGEN) {
     const bsp = beispiele[a.key];
@@ -473,6 +486,36 @@ test("Turniere folgen dem Vierjahrestakt", () => {
   assert.deepEqual(takt, ["WM", null, "EM", null, "WM", null, "EM", null, "WM", null, "EM", null]);
 });
 
+/* DER FEHLER, DEN DAS FÄNGT: Es gab nur die EM, und die bekam jeder — ein
+   Brasilianer wurde Europameister. */
+test("die Kontinentalmeisterschaft richtet sich nach dem Erdteil", () => {
+  assert.equal(K.turnierIn(2, "GER"), "EM");
+  assert.equal(K.turnierIn(2, "AUT"), "EM");
+  assert.equal(K.turnierIn(2, "BR"), "CA", "Brasilien spielt die Copa América, nicht die EM");
+  assert.equal(K.turnierIn(2, "AR"), "CA");
+  assert.equal(K.turnierIn(2, "JP"), null, "für Asien führt das Spiel keine Trophäe");
+  assert.equal(K.turnierIn(0, "JP"), "WM", "an der WM nimmt jeder teil");
+  const zufall = K.rng(71);
+  for (let i = 0; i < 400; i++)
+    assert.deepEqual(K.nationalTitel({ ovr: 95, land: "BR" }, { stufe: 5 }, zufall, 2).filter((x) => x === "EM"), []);
+});
+
+/* DER FEHLER, DEN DAS FÄNGT: Das Land kam in der Titelrechnung nicht vor. Im Spiel
+   wurde ein Spieler zweimal Weltmeister mit Österreich. */
+test("eine kleine Auswahl gewinnt deutlich seltener als eine grosse", () => {
+  const zufall = K.rng(83);
+  const quote = (land) => {
+    let n = 0;
+    for (let i = 0; i < 20000; i++) n += K.nationalTitel({ ovr: 92, land }, { stufe: 5 }, zufall, 0).length;
+    return n / 20000;
+  };
+  const br = quote("BR"), at = quote("AUT"), mt = quote("MT");
+  assert.ok(br > 0.10 && br < 0.25, `Brasilien gewinnt ${(br * 100).toFixed(1)} % der Weltmeisterschaften`);
+  assert.ok(at < br / 8, `Österreich ${(at * 100).toFixed(2)} % gegen Brasilien ${(br * 100).toFixed(1)} %`);
+  assert.ok(mt < at, "Malta muss noch seltener gewinnen als Österreich");
+  assert.ok(mt > 0, "unmöglich soll es aber nirgends sein");
+});
+
 test("ohne Turnier gibt es keinen Länderpokal", () => {
   const zufall = K.rng(53);
   const k = { ovr: 95 };
@@ -509,10 +552,15 @@ test("wer zu schwach ist, spielt nicht in der Nationalelf", () => {
 
    SCHLÄGT SIE FEHL, ist nicht die Prüfung schuld, sondern die Auszeichnung oder
    eine Kurve: Dann liegt eine Schwelle außerhalb dessen, was das Spiel erzeugt. */
+/* DAS LAND IST NICHT MEHR EGAL. Solange die Titelchance der Auswahl nur am Rating
+   hing, war „XXX" ein brauchbarer Platzhalter. Jetzt trägt jedes Land einen Faktor,
+   und ein unbekanntes fällt in die schwächste Gruppe — mit „XXX" gäbe es in 1500
+   Laufbahnen praktisch keinen Länderpokal mehr, und „Der Größte" und „Doppelbürger"
+   wären tot, ohne dass an ihnen etwas falsch wäre. */
 function spieleDurch(seed, stil, welt) {
   const zufall = K.rng(seed * 7919 + 13);
-  let k = K.neueKarriere({ name: "P", land: "XXX", nummer: 9, pos: "ST", tempo: "normal", seed });
-  let verein = K.jugendAngebote(welt, "XXX", zufall)[0];
+  let k = K.neueKarriere({ name: "P", land: "GER", nummer: 9, pos: "ST", tempo: "normal", seed });
+  let verein = K.jugendAngebote(welt, "GER", zufall)[0];
   if (!verein) return null;
   let mod = { liga: 1, pokal: 1, europa: 1 };
   for (let schritt = 0; schritt < 11 && k.alter < 39; schritt++) {
@@ -686,13 +734,35 @@ test("das Rating bleibt über eine ganze Laufbahn ganzzahlig", () => {
   }
 });
 
+/* Fester Talentwert statt des gezogenen: `neueKarriere` zieht ohne Saatkorn aus der
+   Uhr, und mit einem krummen Faktor wie 0,731 unterscheiden sich die beiden Seiten
+   der Gleichung um ein Hundertstel — nicht weil der Rest verloren ginge, sondern
+   weil Gleitkommazahlen sich so verhalten. Die Prüfung soll den Übertrag zeigen,
+   nicht die Darstellung von Zahlen. */
 test("der Rest geht nicht verloren — zwei halbe Schritte ergeben einen ganzen", () => {
-  const halb = { ...K.neueKarriere({ name: "T", pos: "ZM", land: "GER", nummer: 9 }), rest: 0.5 };
+  const halb = { ...K.neueKarriere({ name: "T", pos: "ZM", land: "GER", nummer: 9, seed: 7 }), talent: 1, rest: 0.5 };
   const a = K.wachstumGanz({ ...halb, rest: 0 }, 0, () => 0);
   const b = K.wachstumGanz({ ...halb, rest: a.rest }, 0, () => 0);
   assert.equal(Math.round((a.zuwachs + a.rest + b.zuwachs + b.rest) * 100) / 100,
     Math.round((a.zuwachs + a.rest) * 100) / 100 + Math.round((b.zuwachs + b.rest) * 100) / 100);
   assert.ok(Number.isInteger(a.zuwachs) && Number.isInteger(b.zuwachs));
+});
+
+/* Und derselbe Übertrag mit einem krummen Talentfaktor: Über zwanzig Schritte darf
+   sich nichts ansammeln, was verloren geht. */
+test("auch mit krummem Talent summiert sich der Übertrag richtig", () => {
+  const k = { ...K.neueKarriere({ name: "T", pos: "ZM", land: "GER", nummer: 9, seed: 7 }), talent: 0.731, rest: 0, alter: 19 };
+  const zufall = K.rng(101);
+  let gewachsen = 0, roh = 0;
+  for (let i = 0; i < 20; i++) {
+    const vorher = k.rest;
+    const g = K.wachstumGanz(k, 2, zufall);
+    roh += g.zuwachs + g.rest - vorher;
+    gewachsen += g.zuwachs;
+    k.rest = g.rest;
+  }
+  assert.ok(Math.abs(gewachsen + k.rest - roh) < 0.05,
+    `in ganzen Schritten ${gewachsen} + Rest ${k.rest}, ungerundet ${roh.toFixed(2)}`);
 });
 
 test("beim Abbau bleibt der Rest negativ liegen, statt zu viel abzuziehen", () => {
@@ -774,7 +844,7 @@ test("ein Torwart trifft für sein Land so wenig wie im Verein", () => {
    Verwechslung fängt der zweite Test. */
 test("ein grösserer Sprung dauert insgesamt länger", () => {
   assert.ok(K.zaehlerDauer(15) > K.zaehlerDauer(2), "15 Punkte müssen länger laufen als 2");
-  assert.equal(K.zaehlerDauer(0), 300, "ohne Sprung bleibt die Grunddauer");
+  assert.equal(K.zaehlerDauer(0), 600, "ohne Sprung bleibt die Grunddauer");
   assert.equal(K.zaehlerDauer(-7), K.zaehlerDauer(7), "ein Absturz läuft wie ein Anstieg");
 });
 
@@ -782,10 +852,112 @@ test("je grösser der Sprung, desto schneller rollt eine Ziffer durch", () => {
   const jeZiffer = (s) => K.zaehlerDauer(s) / Math.abs(s);
   assert.ok(jeZiffer(2) > jeZiffer(5), "2 Punkte müssen gemächlicher ticken als 5");
   assert.ok(jeZiffer(5) > jeZiffer(15), "5 Punkte müssen gemächlicher ticken als 15");
-  assert.ok(jeZiffer(2) > 150, `bei 2 Punkten steht eine Ziffer nur ${jeZiffer(2).toFixed(0)} ms`);
-  assert.ok(jeZiffer(15) < 100, `bei 15 Punkten steht eine Ziffer noch ${jeZiffer(15).toFixed(0)} ms`);
+  assert.ok(jeZiffer(2) > 300, `bei 2 Punkten steht eine Ziffer nur ${jeZiffer(2).toFixed(0)} ms`);
+  assert.ok(jeZiffer(15) < 130, `bei 15 Punkten steht eine Ziffer noch ${jeZiffer(15).toFixed(0)} ms`);
 });
 
-test("auch ein unsinnig grosser Sprung bleibt unter anderthalb Sekunden", () => {
-  assert.equal(K.zaehlerDauer(999), 1250);
+test("auch ein unsinnig grosser Sprung bleibt unter zweieinhalb Sekunden", () => {
+  assert.equal(K.zaehlerDauer(999), 2200);
+});
+
+/* Erst die Zeile, dann die Zahl: Laufen beide gleichzeitig, sieht man keines von
+   beiden. Die Wartezeit muss deshalb lang genug sein, dass die Tabelle rechts ihren
+   Auftritt hat — und kurz genug, dass es nicht wie ein Hänger wirkt. */
+test("der Zähler wartet, bevor er losläuft", () => {
+  assert.ok(K.ZAEHLER_WARTEN >= 400 && K.ZAEHLER_WARTEN <= 900, `${K.ZAEHLER_WARTEN} ms`);
+});
+
+// ── Talent ───────────────────────────────────────────────────────────────────
+
+test("der Talentfaktor bleibt in seiner Spanne", () => {
+  const zufall = K.rng(17);
+  for (let i = 0; i < 5000; i++) {
+    const t = K.zieheTalent(zufall);
+    assert.ok(t >= K.TALENT_MIN && t <= K.TALENT_MAX, `${t} liegt ausserhalb`);
+  }
+});
+
+/* Die Schiefe ist der ganze Zweck: Wäre die Ziehung gleichverteilt, läge die Mitte
+   bei 0,85 und die Hälfte aller Spieler hätte grosses Talent. */
+test("die Talentziehung drückt die Masse nach unten", () => {
+  const zufall = K.rng(19);
+  const werte = Array.from({ length: 20000 }, () => K.zieheTalent(zufall)).sort((a, b) => a - b);
+  const mitte = (K.TALENT_MIN + K.TALENT_MAX) / 2;
+  const median = werte[10000];
+  assert.ok(median < mitte - 0.1, `Median ${median} liegt nicht deutlich unter der Mitte ${mitte}`);
+  const oben = werte.filter((v) => v >= 1.0).length / werte.length;
+  assert.ok(oben > 0.01 && oben < 0.12, `${(oben * 100).toFixed(1)} % über 1,0 — die Spitze ist keine Spitze mehr`);
+});
+
+/* Die Wörter müssen zu den Zahlen passen: „Jahrhunderttalent" bei jedem Dritten
+   wäre eine Lüge, bei einem von tausend eine Zeile, die niemand je liest. */
+test("die Veranlagungsstufen teilen die Laufbahnen sinnvoll auf", () => {
+  const zufall = K.rng(31);
+  const zahl = new Map(K.TALENT_STUFEN.map(([, n]) => [n, 0]));
+  const N = 20000;
+  for (let i = 0; i < N; i++) {
+    const n = K.talentName(K.zieheTalent(zufall));
+    zahl.set(n, zahl.get(n) + 1);
+  }
+  const anteil = (n) => zahl.get(n) / N;
+  assert.ok(anteil("Jahrhunderttalent") > 0.02 && anteil("Jahrhunderttalent") < 0.08,
+    `Jahrhunderttalent: ${(anteil("Jahrhunderttalent") * 100).toFixed(1)} %`);
+  assert.ok(anteil("harter Arbeiter") > 0.35 && anteil("harter Arbeiter") < 0.62,
+    `harter Arbeiter: ${(anteil("harter Arbeiter") * 100).toFixed(1)} %`);
+  for (const [, name] of K.TALENT_STUFEN) assert.ok(zahl.get(name) > 0, `${name} kommt nie vor`);
+});
+
+test("Talent streckt den Zuwachs, nicht den Abbau", () => {
+  const jung = (talent) => {
+    const zufall = K.rng(23);
+    let summe = 0;
+    for (let i = 0; i < 4000; i++) summe += K.wachstumImVerein({ typ: "normal", alter: 19, ovr: 60, rolle: "stamm", talent }, 2, zufall);
+    return summe / 4000;
+  };
+  assert.ok(jung(1.1) > jung(0.6) * 1.5, "ein grosses Talent muss deutlich schneller wachsen");
+  const alt = (talent) => {
+    const zufall = K.rng(29);
+    let summe = 0;
+    for (let i = 0; i < 4000; i++) summe += K.wachstumImVerein({ typ: "normal", alter: 36, ovr: 80, rolle: "stamm", talent }, 4, zufall);
+    return summe / 4000;
+  };
+  assert.ok(alt(1.1) < 0, "mit 36 geht es abwärts");
+  assert.ok(Math.abs(alt(1.1) - alt(0.6)) < 0.05, "der Abbau darf nicht am Talent hängen");
+});
+
+/* ── DIE PRÜFUNG, UM DIE ES GEHT ──────────────────────────────────────────────
+   Gemeldet wurde: „Es ist aktuell etwas zu einfach, eine Top-Karriere zu spielen."
+   Gemessen an 4000 Laufbahnen, die immer zum besten erreichbaren Verein wechseln,
+   lag der Höchstwert im Median bei 87 und 48 % kamen über die Ballon-d'Or-Schwelle
+   von 88. Diese Prüfung hält fest, dass die Spitze die Ausnahme bleibt — und dass
+   sie erreichbar bleibt, denn eine Laufbahn, in der nie etwas Grosses möglich ist,
+   wäre der entgegengesetzte Fehler. */
+test("die Spitze ist die Ausnahme — und bleibt möglich", () => {
+  const zufall = K.rng(20260915);
+  const besteStufe = (ovr) => {
+    let s = 0;
+    for (let i = 5; i >= 0; i--) if (ovr >= K.STUFE_MINDEST_OVR[i]) { s = i; break; }
+    return s;
+  };
+  const hoechstwerte = [];
+  for (let n = 0; n < 3000; n++) {
+    const k = { ...K.neueKarriere({ name: "T", land: "GER", nummer: 9, pos: "ST", seed: n }), talent: K.zieheTalent(zufall) };
+    let stufe = 0, hoechste = k.ovr;
+    for (let s = 0; k.alter < K.ALTERSGRENZE; s++) {
+      if (s % 2 === 0) stufe = besteStufe(k.ovr);        // immer der beste Verein, der ihn nimmt
+      k.alter += 1;
+      const g = K.wachstumGanz(k, stufe, zufall);
+      k.rest = g.rest;
+      k.ovr = K.grenze(k.ovr + g.zuwachs, K.OVR_MIN, K.OVR_MAX);
+      if (k.ovr > hoechste) hoechste = k.ovr;
+    }
+    hoechstwerte.push(hoechste);
+  }
+  hoechstwerte.sort((a, b) => a - b);
+  const median = hoechstwerte[1500];
+  const anteil = (g) => hoechstwerte.filter((v) => v >= g).length / hoechstwerte.length;
+  assert.ok(median >= 71 && median <= 78, `Median-Höchstwert ${median} — eine gewöhnliche Laufbahn soll gewöhnlich bleiben`);
+  assert.ok(anteil(88) < 0.15, `${(anteil(88) * 100).toFixed(1)} % erreichen die Ballon-d'Or-Schwelle — zu viele`);
+  assert.ok(anteil(88) > 0.02, `${(anteil(88) * 100).toFixed(1)} % erreichen 88 — zu wenige, die Spitze wäre tot`);
+  assert.ok(anteil(95) > 0.001, "auch die 95 muss vereinzelt fallen");
 });

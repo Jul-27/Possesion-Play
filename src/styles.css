@@ -1208,12 +1208,22 @@ body::after {
 .kaLeiste td:nth-child(n+3) { text-align: right; font-variant-numeric: tabular-nums; }
 .kaLeiste th:nth-child(n+3) { text-align: right; padding-right: 0; }
 .kaLeiste small { color: var(--muted); font-size: 10.5px; margin-left: 4px; }
+/* Die eben gespielte Saison hebt sich kurz hervor. Nur Farbe und Versatz, keine
+   Deckkraft — in einem verdeckten Tab läuft keine Zeitleiste, und eine Zeile, die
+   dann auf 0 stehen bliebe, wäre unsichtbar statt unauffällig. */
+.kaLeiste tbody tr.neu { animation: kaZeileNeu 1.5s ease-out; }
+@keyframes kaZeileNeu {
+  0% { background: rgba(245,179,1,.30); transform: translateX(10px); }
+  100% { background: transparent; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .kaLeiste tbody tr.neu { animation: none; } }
 .kaLeiste em { font-style: normal; color: var(--gold); font-size: 11.5px; }
 
 /* Karriereende */
 .kaEnde h2 { font-size: 21px; margin: 8px 0 4px; }
 .kaEnde h3 { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; }
 .kaBilanz { font-size: 13px; color: var(--muted); margin: 0; }
+.kaTalent { font-size: 13px; color: var(--gold); margin: 4px 0 0; }
 .kaAuszeichnungen { display: grid; gap: 8px; }
 .kaAuszeichnung {
   display: flex; flex-direction: column; gap: 3px; padding: 11px 13px; border-radius: 12px;
