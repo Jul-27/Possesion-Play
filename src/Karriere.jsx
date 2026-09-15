@@ -634,6 +634,12 @@ export default function Karriere({ onLeave }) {
     modRef.current = r.mod;
     verletztRef.current += r.verletzt;
     play(r.gelungen ? "ok" : "err");
+    /* DIE KACHEL BLIEB AUF DEM ALTEN WERT. Die Folge sagte „Stärke 70 → 73", die
+       Ratingkachel daneben zeigte weiter 70 — die Zahl sprang erst nach dem Klick
+       auf „Weiter zur Saison", zusammen mit dem Saisonwachstum, und damit war nicht
+       mehr zu sehen, was die Entscheidung gebracht hat. Jetzt läuft sie sofort hoch;
+       spieleSchritt bekommt denselben Stand weiterhin ausdrücklich übergeben. */
+    setK(r.karriere);
     setKarte({ art: "folge", ereignis: karte.ereignis, option, ergebnis: r, verein: karte.verein });
   }
 

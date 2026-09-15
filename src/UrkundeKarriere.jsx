@@ -39,6 +39,10 @@ export default function UrkundeKarriere({
 }) {
   const nationalTitel = titel.filter((t) => NATIONAL.has(t.key));
   const bdo = titel.find((t) => t.key === "BDO");
+  /* NICHT stationen.length: Wer zweimal bei PSV war, hat zwei Karten, aber einen
+     Verein. Die Bilanzzeile darüber zählt die Vereine — die beiden Zahlen standen
+     nebeneinander und widersprachen sich (7 gegen 8). */
+  const vereine = new Set(stationen.map((s) => s.key)).size;
 
   return (
     <div className="ukKarriere">
@@ -51,10 +55,12 @@ export default function UrkundeKarriere({
             <Zahl wert={gesamt.spiele ?? 0} name="Spiele" />
             <Zahl wert={gesamt.tore ?? 0} name="Tore" />
             <Zahl wert={gesamt.vorlagen ?? 0} name="Vorlagen" />
-            <Zahl wert={stationen.length} name="Vereine" />
+            <Zahl wert={vereine} name="Vereine" />
           </div>
           <div className="ukRating">
-            <small>Rating</small><b>{hoechste}</b>
+            {/* Der Höchstwert der Laufbahn, nicht der Wert beim Rücktritt — sonst steht
+                auf der Urkunde eine kleinere Zahl als in der Erinnerung. */}
+            <small>Bestwert</small><b>{hoechste}</b>
             {marktwert ? <em>{marktwert}</em> : null}
           </div>
         </section>
