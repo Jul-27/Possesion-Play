@@ -742,3 +742,50 @@ test("ein Aufsteiger rechnet gegen sein neues Feld, nicht gegen das alte", () =>
   assert.ok(nachher < vorher / 5, `vorher ${(vorher * 100).toFixed(1)} %, nachher ${(nachher * 100).toFixed(1)} %`);
   assert.ok(nachher < 0.01, `ein Aufsteiger kommt auf ${(nachher * 100).toFixed(2)} % — zu viel`);
 });
+
+/* ── Die Auswahl ────────────────────────────────────────────────────────────
+   Titel gab es schon, Länderspiele nicht — und ein Titel ohne Einsätze wirkt wie
+   ein Zufallsfund. */
+test("wer zu schwach ist, spielt nicht für sein Land", () => {
+  const k = { ...K.neueKarriere({ name: "T", pos: "ST", land: "GER", nummer: 9 }), ovr: K.NATIONALELF_AB - 1 };
+  assert.deepEqual(K.nationalLeistung(k, K.rng(1)), { spiele: 0, tore: 0, vorlagen: 0 });
+});
+
+test("die Zahl der Länderspiele wächst mit dem Wert", () => {
+  const mach = (ovr) => K.nationalLeistung(
+    { ...K.neueKarriere({ name: "T", pos: "ST", land: "GER", nummer: 9 }), ovr }, K.rng(7)).spiele;
+  const frisch = mach(K.NATIONALELF_AB), spitze = mach(96);
+  assert.ok(frisch > 0, "ein gerade Berufener spielt auch");
+  assert.ok(spitze > frisch, `Spitze ${spitze} muss über frisch ${frisch} liegen`);
+  assert.ok(spitze <= K.LAENDERSPIELE_JE_SAISON, "nie mehr als es Spiele gibt");
+});
+
+test("ein Torwart trifft für sein Land so wenig wie im Verein", () => {
+  const zufall = K.rng(3);
+  const tw = { ...K.neueKarriere({ name: "T", pos: "TW", land: "GER", nummer: 1 }), ovr: 90 };
+  let tore = 0;
+  for (let i = 0; i < 30; i++) tore += K.nationalLeistung(tw, zufall).tore;
+  assert.equal(tore, 0, "ein Torwart schiesst keine Länderspieltore");
+});
+
+/* ── Die Laufgeschwindigkeit des Ratingzählers ──────────────────────────────
+   Die Forderung war: kleine Änderung gemächlich, grosse rasant. Das ist eine
+   Aussage über die Zeit JE ZIFFER, nicht über die Gesamtdauer — und genau die
+   Verwechslung fängt der zweite Test. */
+test("ein grösserer Sprung dauert insgesamt länger", () => {
+  assert.ok(K.zaehlerDauer(15) > K.zaehlerDauer(2), "15 Punkte müssen länger laufen als 2");
+  assert.equal(K.zaehlerDauer(0), 300, "ohne Sprung bleibt die Grunddauer");
+  assert.equal(K.zaehlerDauer(-7), K.zaehlerDauer(7), "ein Absturz läuft wie ein Anstieg");
+});
+
+test("je grösser der Sprung, desto schneller rollt eine Ziffer durch", () => {
+  const jeZiffer = (s) => K.zaehlerDauer(s) / Math.abs(s);
+  assert.ok(jeZiffer(2) > jeZiffer(5), "2 Punkte müssen gemächlicher ticken als 5");
+  assert.ok(jeZiffer(5) > jeZiffer(15), "5 Punkte müssen gemächlicher ticken als 15");
+  assert.ok(jeZiffer(2) > 150, `bei 2 Punkten steht eine Ziffer nur ${jeZiffer(2).toFixed(0)} ms`);
+  assert.ok(jeZiffer(15) < 100, `bei 15 Punkten steht eine Ziffer noch ${jeZiffer(15).toFixed(0)} ms`);
+});
+
+test("auch ein unsinnig grosser Sprung bleibt unter anderthalb Sekunden", () => {
+  assert.equal(K.zaehlerDauer(999), 1250);
+});

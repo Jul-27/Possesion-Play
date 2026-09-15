@@ -1224,6 +1224,78 @@ body::after {
 .kaEndeKnoepfe { display: flex; gap: 10px; margin-top: 16px; }
 .kaEndeKnoepfe .btn { flex: 1; }
 
+/* ── Die Laufbahn-Zusammenfassung ───────────────────────────────────────────
+   War ein SVG mit fester Breite, ist jetzt gewöhnliches HTML — damit die echten
+   Wappen hineinpassen und nichts mehr verzerrt, wenn die Spalte schmaler wird. */
+.ukKarriere {
+  margin-top: 16px; padding: 18px; border-radius: 18px;
+  background: rgba(4,16,12,.55); border: 1px solid var(--kaRand, rgba(140,200,170,.16));
+}
+.ukKopf { display: grid; grid-template-columns: 1.7fr 1fr 1fr; gap: 12px; }
+.ukFeld {
+  position: relative; padding: 14px 15px; border-radius: 14px;
+  background: var(--kaKarte, rgba(18,40,32,.72)); border: 1px solid var(--kaRand, rgba(140,200,170,.16));
+}
+.ukFeld h4 {
+  margin: 0 0 8px; font-size: 10px; font-weight: 600; letter-spacing: .22em;
+  text-transform: uppercase; color: var(--kaLeise, #8CA89A);
+}
+/* Platz für die Rating-Kachel, die in der Ecke desselben Felds sitzt. */
+.ukPerson { padding-right: 118px; }
+/* Ballon d'Or und Auszeichnungsliste nebeneinander statt untereinander. */
+.ukEhren { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+.ukEhren h4 { width: 100%; }
+.ukName { display: block; font-size: 30px; line-height: 1.1; font-weight: 800; }
+.ukLand { display: block; font-size: 19px; font-weight: 700; }
+.ukUnter { margin: 4px 0 0; font-size: 12px; color: var(--kaLeise, #8CA89A); }
+.ukZahlen { display: flex; gap: 18px; margin-top: 14px; flex-wrap: wrap; }
+.ukZahl { display: flex; flex-direction: column; }
+.ukZahl b { font-family: 'Barlow Condensed', sans-serif; font-size: 25px; line-height: 1; }
+.ukZahl small {
+  font-size: 9px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--kaLeise, #8CA89A); margin-top: 2px;
+}
+/* Die Rating-Kachel sitzt in der Ecke des Personenfelds — dieselbe Geste wie im Spiel. */
+.ukRating {
+  position: absolute; top: 14px; right: 15px; width: 92px; padding: 9px 8px 8px;
+  border-radius: 14px; text-align: center; background: linear-gradient(150deg, #F5C542, #D08B0C);
+  color: #1A1205;
+}
+.ukRating small { display: block; font-size: 9px; letter-spacing: .18em; text-transform: uppercase; opacity: .78; }
+.ukRating b { font-family: 'Barlow Condensed', sans-serif; font-size: 38px; line-height: 1.05; }
+.ukRating em { display: block; font-style: normal; font-size: 11px; font-weight: 700; opacity: .8; }
+.ukPokale { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+.ukPokal { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 62px; }
+.ukPokal small { font-size: 9px; text-align: center; color: var(--kaLeise, #8CA89A); line-height: 1.25; }
+.ukListe { margin: 8px 0 0; padding-left: 16px; font-size: 12px; }
+.ukListe li { margin-bottom: 2px; }
+.ukLeer { font-size: 12px; color: var(--kaLeise, #8CA89A); }
+
+/* Eine Karte je Verein, in seiner Farbe. */
+.ukVereine {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 12px; margin-top: 12px;
+}
+.ukVerein {
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  padding: 14px 10px 12px; border-radius: 14px; text-align: center;
+  background: color-mix(in srgb, var(--ukFarbe) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ukFarbe) 55%, transparent);
+}
+.ukWappen .emblem { width: 52px; height: 52px; }
+.ukVereinName { font-size: 13.5px; line-height: 1.2; }
+.ukVerein .ukZahlen { gap: 14px; margin-top: 2px; justify-content: center; }
+.ukVerein .ukZahl { align-items: center; }
+.ukVerein .ukZahl b { font-size: 20px; }
+.ukVereinPokale { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; min-height: 26px; }
+.ukFuss { margin: 14px 0 0; text-align: right; font-size: 10px; color: var(--kaLeise, #8CA89A); }
+
+@media (max-width: 760px) {
+  .ukKopf { grid-template-columns: 1fr; }
+  .ukPerson { padding-right: 15px; }
+  .ukRating { position: static; margin-top: 12px; }
+}
+
 /* Wappen in der Karriere: in Kacheln neben dem Text, in der Zeitleiste klein
    vorangestellt. Die Kachel wechselt dafür von Spalte auf Zeile. */
 .kaOption.mitWappen { flex-direction: row; align-items: center; gap: 11px; }
@@ -1236,7 +1308,9 @@ body::after {
 
 /* Die Verlaufskurve über der Zeitleiste — Stärke über die Jahre, Wappen an den
    Wechseln, Goldpunkte, wo etwas gewonnen wurde. */
-.kaKurve { width: 100%; height: 150px; display: block; margin: 4px 0 14px; overflow: visible; }
+/* Die Höhe folgt jetzt dem Seitenverhältnis des viewBox (600x168) statt fest zu
+   stehen — mit fester Höhe UND ohne Verzerrung bliebe seitlich Luft. */
+.kaKurve { width: 100%; height: auto; display: block; margin: 4px 0 14px; overflow: visible; }
 
 /* ── Karriere: die Anlage ────────────────────────────────────────────────────
    Drei Spalten nach dem Vorbild: wer du bist, woher du kommst, wo du spielst.
@@ -1726,7 +1800,7 @@ body::after {
 /* ── Trophäen ───────────────────────────────────────────────────────────────
    Gezeichnet statt fotografiert, eine Form je Wettbewerb (src/Trophaeen.jsx).
    Vorher trug jeder Titel dasselbe Wappenzeichen in anderer Farbe. */
-.trophaee { display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,.45)); }
+.trophaee { display: block; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,.45)); }
 .ppRoot.karriere .kaVitrine { gap: 10px; align-items: flex-end; }
 .ppRoot.karriere .kaTitel {
   display: flex; flex-direction: column; align-items: center; gap: 3px;
@@ -1740,4 +1814,11 @@ body::after {
 @media (min-width: 1000px) {
   .ppRoot.karriere .kaBuehne.einspaltig { grid-template-columns: minmax(0, 1fr); }
   .ppRoot.karriere .kaBuehne.einspaltig .kaLaufbahn { position: static; max-height: none; }
+}
+
+/* Die Länderspielbilanz in der Kopfzeile — sie stand nirgends, obwohl Titel mit der
+   Auswahl vergeben werden. */
+.ppRoot.karriere .kaNational {
+  display: block; font-style: normal; margin-top: 3px;
+  font-size: 11.5px; color: var(--kaAkzent);
 }
