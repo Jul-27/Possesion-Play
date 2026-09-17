@@ -42,6 +42,13 @@ export const LAND = {
   GER: ["Germany"], ENG: ["England", "Wales"], ESP: ["Spain", "Andorra"], ITA: ["Italy"],
   FRA: ["France", "Monaco"], PRT: ["Portugal"], NED: ["Netherlands", "The Netherlands"],
   AUT: ["Austria"],
+  /* Die vier Ligen ausserhalb Europas, nachgetragen am 16.09.2026. Ohne Eintrag
+     scheiterte jeder Treffer an der Länderprüfung, und alle 97 neuen Vereine
+     blieben ohne Wappen — nicht weil die Quelle sie nicht kennt, sondern weil wir
+     ihr Land nicht kannten. Kanada steht bei USA, weil Toronto, Montreal und
+     Vancouver in der MLS spielen. */
+  BRA: ["Brazil"], USA: ["USA", "United States", "Canada"],
+  SAU: ["Saudi Arabia"], JPN: ["Japan"],
 };
 /* Andorra steht bei ESP, Monaco bei FRA und Wales bei ENG: Diese Vereine spielen in
    der Liga des Nachbarlandes, und die Quelle führt sie unter ihrem eigenen Land.
@@ -77,6 +84,19 @@ export const EXONYME = {
   "Nacional Funchal": "Clube Desportivo Nacional",
   "Real SC Queluz": "Real SC",
   "SC União Torreense": "Torreense",
+
+  /* Dritter Nachtrag (17.09.2026): die Ligen ausserhalb Europas. Wieder jeder Begriff
+     einzeln gegen die Quelle probiert und der Treffer angesehen — „Al Hilal" allein
+     liefert Al Hilal Wau aus dem Südsudan, „Al Ahli" den Verein aus Amman, „Al
+     Wahda" den aus Abu Dhabi. Al-Shabab, al-Shoulla und Najran SC waren mit keinem
+     Begriff zu finden; sie behalten den gezeichneten Farbkreis. */
+  "Sport Club Internacional": "Internacional",
+  "al-Hilal": "Al Hilal Saudi",
+  "Al-Nasr": "Al Nassr",
+  "Al-Ittihad": "Al Ittihad Club",
+  "Al-Ahli": "Al Ahli Saudi",
+  "Al-Tai FC": "Al Taee",
+  "Al-Wahda": "Al Wehda",
 };
 
 /* NICHT ERREICHBAR, und zwar belegt: Nottingham Forest führt die Quelle nur als

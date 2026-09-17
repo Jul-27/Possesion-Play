@@ -25,6 +25,7 @@
    Rufstufe in die Rechnung ein. Die Stufe wird einmal aus der Mannschaftsstärke
    abgeleitet, danach ist die alte Skala nicht mehr im Spiel. */
 import { WELT_LIGEN, WELT_VEREINE } from "./careerWorld.js";
+import { namenVon, EIGENE } from "./laender.js";
 
 export const START_ALTER = 16;
 export const OVR_START = 50;
@@ -341,9 +342,12 @@ export function baueWelt(staerkeVon, vereine = WELT_VEREINE, ligen = WELT_LIGEN)
   /* Das Europafeld ist EINE Summe über alle Erstligisten — es hängt trotzdem an der
      Liga, damit ein Auf- oder Absteiger automatisch hinein- oder herausfällt. Eine
      zweite Liga trägt null und kann den Europapokal damit nicht gewinnen. */
+  /* UND NUR EUROPA. Mit den vier Ligen ausserhalb Europas stand plötzlich auch
+     Flamengo im Feld der Champions League — die Summe kannte nur die Spielklasse,
+     nicht den Erdteil. Ein brasilianischer Meister gewinnt keinen Europapokal. */
   let clSumme = 0, elSumme = 0;
   for (const v of out) {
-    if (v.liga.stufe !== 1) continue;
+    if (v.liga.stufe !== 1 || !EUROPA.has(v.liga.land)) continue;
     clSumme += CL_GEWICHT[v.stufe];
     elSumme += EL_GEWICHT[v.stufe];
   }
@@ -351,8 +355,8 @@ export function baueWelt(staerkeVon, vereine = WELT_VEREINE, ligen = WELT_LIGEN)
     ...l,
     feld: {
       ...(summen.get(l.key) || { liga: 0, pokal: 0 }),
-      cl: l.stufe === 1 ? clSumme : 0,
-      el: l.stufe === 1 ? elSumme : 0,
+      cl: l.stufe === 1 && EUROPA.has(l.land) ? clSumme : 0,
+      el: l.stufe === 1 && EUROPA.has(l.land) ? elSumme : 0,
     },
   }));
   const neuVon = new Map(mitFeld.map((l) => [l.key, l]));
@@ -462,7 +466,7 @@ export function neueKarriere({ name, land, nummer, pos, fuss = "rechts", tempo =
     titel: {},               // Honour-Key -> Anzahl
     vereine: [],             // alle Vereine der Laufbahn, für Auszeichnungen
     laender: [],
-    gesamt: { spiele: 0, tore: 0, vorlagen: 0 },
+    gesamt: { spiele: 0, tore: 0, vorlagen: 0, gegentore: 0, westen: 0 },
     beendet: false,
   };
 }
@@ -494,7 +498,38 @@ export function einsatzAnteil(ovr, stufe, rolle = "stamm") {
    in der zweiten Liga trifft auch. */
 export const gueteVon = (ovr) => 0.28 + Math.pow(grenze(ovr - 45, 0, 55) / 50, 2);
 
-/** Tore und Vorlagen einer Saison. */
+/* ── Der Torwart hatte keine Statistik ────────────────────────────────────────
+   Die Zeitleiste führt Spiele, Tore und Vorlagen. Ein Torwart kam über eine ganze
+   Laufbahn auf NULL Tore und eine Handvoll Vorlagen — gemessen bei Rating 80 und
+   26 Spielen je Saison: 0,0 Tore, 0,1 Vorlagen. Eine von zwölf wählbaren Positionen
+   hatte damit zwei Spalten Nullen und nichts, woran man eine gute Saison erkennt.
+
+   Er bekommt deshalb zwei eigene Zahlen. Gegentore und weisse Westen sind die
+   beiden, die im Fussball wirklich über Torhüter geführt werden.
+
+   DIE RECHNUNG. Grundlage ist ein Gegentorschnitt, der am Niveau der Mannschaft
+   hängt (ein Spitzenverein lässt weniger zu) und an der Klasse des Torhüters. Aus
+   demselben Schnitt folgt die Wahrscheinlichkeit einer weissen Weste: Bei einem
+   Erwartungswert von λ Toren je Spiel bleibt ein Spiel mit e^−λ zu null — die
+   Poissonverteilung liefert sie frei Haus, und die Zahlen treffen die Wirklichkeit
+   gut (bei 1,0 Gegentoren je Spiel rund 37 % weisse Westen). */
+export const GEGENTORE_GRUND = 1.85;
+
+export function torwartSaison(k, stufe, spiele, zufall) {
+  /* Je stärker das Umfeld und je besser der Mann, desto weniger fällt. Die Spanne
+     läuft von rund 1,6 Gegentoren je Spiel bei einem schwachen Torwart in einem
+     schwachen Verein bis rund 0,8 an der Spitze. */
+  const schnitt = grenze(
+    GEGENTORE_GRUND - stufe * 0.09 - (grenze(k.ovr, 40, 99) - 55) * 0.012,
+    0.6, 2.2);
+  const gegentore = poisson(spiele * schnitt, zufall);
+  let westen = 0;
+  const zuNull = Math.exp(-schnitt);
+  for (let i = 0; i < spiele; i++) if (zufall() < zuNull) westen++;
+  return { gegentore, westen };
+}
+
+/** Tore und Vorlagen einer Saison — beim Torwart zusätzlich Gegentore und Westen. */
 export function saisonLeistung(k, stufe, zufall) {
   const p = posDaten(k.pos);
   const spiele = Math.round(SPIELE_JE_SAISON * einsatzAnteil(k.ovr, stufe, k.rolle));
@@ -502,16 +537,92 @@ export function saisonLeistung(k, stufe, zufall) {
   const umfeld = 0.75 + stufe * 0.11;
   const tore = poisson(spiele * 0.42 * p.tore * guete * umfeld, zufall);
   const vorlagen = poisson(spiele * 0.26 * p.vorlagen * guete * umfeld, zufall);
-  return { spiele, tore, vorlagen };
+  if (p.gruppe !== "TOR") return { spiele, tore, vorlagen };
+  return { spiele, tore, vorlagen, ...torwartSaison(k, stufe, spiele, zufall) };
 }
+
+/** Führt dieser Spieler Torwartzahlen? Entscheidet über die Spalten der Tabelle. */
+export const istTorwart = (pos) => posDaten(pos).gruppe === "TOR";
+
+/* ── Alle Titel des Modus ──────────────────────────────────────────────────────
+   Name, Trophäenform und die Lichtfarbe der Feier stehen hier — an EINER Stelle.
+
+   WARUM NICHT HONOURS AUS gameData.js, wo dreizehn davon schon stehen: Jene Liste
+   speist auch Hexbretter, „Wer passt nicht?" und die Fußball-Kette. Dort ist ein
+   Titel eine Rätselkachel, und eine Kachel braucht Spieler, die den Titel laut
+   Datenbestand gewonnen haben. Für die Taça de Portugal führen wir keine — ein
+   Eintrag dort ergäbe ein unlösbares Feld in einem anderen Modus. Der Karrieremodus
+   erfindet seine Titel selbst und braucht dafür keine Spielerdaten, also bekommt er
+   seine eigene Liste. */
+export const TITEL_DATEN = {
+  /* Meisterschaften — eine Schale, die man über eine ganze Saison erspielt. */
+  MBL: { name: "Deutscher Meister",       form: "schale", c1: "#D3010C" },
+  MPL: { name: "Englischer Meister",      form: "schale", c1: "#3D195B" },
+  MLL: { name: "Spanischer Meister",      form: "schale", c1: "#E03A3E" },
+  MSA: { name: "Italienischer Meister",   form: "schale", c1: "#0A66B0" },
+  ML1: { name: "Französischer Meister",   form: "schale", c1: "#091C3E" },
+  MPT: { name: "Portugiesischer Meister", form: "schale", c1: "#046A38" },
+  MNL: { name: "Niederländischer Meister", form: "schale", c1: "#F36C21" },
+  MAT: { name: "Österreichischer Meister", form: "schale", c1: "#C8102E" },
+  MBR: { name: "Brasilianischer Meister", form: "schale", c1: "#009B3A" },
+  MML: { name: "MLS Cup",                 form: "schale", c1: "#1B3A6B" },
+  MSP: { name: "Saudi-arabischer Meister", form: "schale", c1: "#006C35" },
+  MJP: { name: "Japanischer Meister",     form: "schale", c1: "#BC002D" },
+  /* Landespokale — Henkelpokal mit Deckel. */
+  DFB: { name: "DFB-Pokal",        form: "pokal", c1: "#D3010C" },
+  FAC: { name: "FA Cup",           form: "pokal", c1: "#3D195B" },
+  CDR: { name: "Copa del Rey",     form: "pokal", c1: "#E03A3E" },
+  CIT: { name: "Coppa Italia",     form: "pokal", c1: "#0A66B0" },
+  CDF: { name: "Coupe de France",  form: "pokal", c1: "#091C3E" },
+  TDP: { name: "Taça de Portugal", form: "pokal", c1: "#046A38" },
+  KNV: { name: "KNVB-Pokal",       form: "pokal", c1: "#F36C21" },
+  OFB: { name: "ÖFB-Pokal",        form: "pokal", c1: "#C8102E" },
+  /* Europa, Auswahl, Einzelauszeichnung. */
+  CL:  { name: "Champions League", form: "ohren",   c1: "#1B2A6B" },
+  EL:  { name: "Europa League",    form: "amphore", c1: "#F26F21" },
+  WM:  { name: "Weltmeister",      form: "globus",  c1: "#C9A227" },
+  EM:  { name: "Europameister",    form: "kelch",   c1: "#123B8F" },
+  CA:  { name: "Copa América",     form: "kelch",   c1: "#2DD4BF" },
+  BDO: { name: "Ballon d'Or",      form: "ball",    c1: "#C9A227" },
+};
+
+/* Die Reihenfolge in Vitrine und Urkunde: das Seltenste zuerst. */
+export const TITEL_REIHE = [
+  "BDO", "WM", "EM", "CA", "CL", "EL",
+  "MBL", "MPL", "MLL", "MSA", "ML1", "MPT", "MNL", "MAT", "MBR", "MML", "MSP", "MJP",
+  "DFB", "FAC", "CDR", "CIT", "CDF", "TDP", "KNV", "OFB",
+];
+
+export const titelName = (key) => TITEL_DATEN[key]?.name || key;
+export const titelForm = (key) => TITEL_DATEN[key]?.form || "pokal";
 
 /* ── Titel ─────────────────────────────────────────────────────────────────────
    Je Saison wird für Liga, Pokal und Europapokal getrennt gewürfelt. Modifikatoren
    aus Entscheidungen (etwa „Priorität Liga") wirken als Faktor.
 
-   Ein Zweitligist kann keinen Meistertitel gewinnen — dort steht kein Schlüssel. */
-export const LIGA_TITEL = { BL: "MBL", PL: "MPL", LL: "MLL", SA: "MSA", L1: "ML1" };
-export const POKAL_TITEL = { BL: "DFB", PL: "FAC", LL: "CDR", SA: "CIT" };
+   Ein Zweitligist kann keinen Meistertitel gewinnen — dort steht kein Schlüssel.
+
+   NACHGETRAGEN: Portugal, die Niederlande und Österreich hatten keinen Meister und
+   Frankreich keinen Pokal. Das waren 52 beziehungsweise 70 Vereine, bei denen die
+   halbe Titelmechanik abgeschaltet war, ohne dass es irgendwo stand — wer sich für
+   Benfica oder Ajax entschied, konnte national nichts gewinnen. Die vier neuen
+   Ligen ausserhalb Europas haben aus demselben Grund von Anfang an eine
+   Meisterschaft; einen Pokal führen wir dort nicht, weil er auch im Fussball
+   ausserhalb Europas seltener eine bekannte Trophäe ist. */
+export const LIGA_TITEL = {
+  BL: "MBL", PL: "MPL", LL: "MLL", SA: "MSA", L1: "ML1",
+  PT: "MPT", NL: "MNL", AT: "MAT",
+  BRA: "MBR", MLS: "MML", SAU: "MSP", JPN: "MJP",
+};
+export const POKAL_TITEL = {
+  BL: "DFB", PL: "FAC", LL: "CDR", SA: "CIT", L1: "CDF",
+  PT: "TDP", NL: "KNV", AT: "OFB",
+};
+
+/* Die fünf, die „Europas Erster" meint. Sie stehen ausdrücklich hier und werden
+   NICHT aus LIGA_TITEL abgeleitet: Sonst hätte das Nachtragen der acht weiteren
+   Meisterschaften die Auszeichnung still verwässert. */
+export const GROSSE_LIGEN = ["MBL", "MPL", "MLL", "MSA", "ML1"];
 
 export function saisonTitel(verein, zufall, mod = {}) {
   const out = [];
@@ -555,6 +666,14 @@ export function einzelTitel(k, leistung, zufall) {
 export const NATIONALELF_AB = 72;
 export const TURNIER_TAKT = 4;
 
+/* WER DEN VERBAND WECHSELT, IST DORT GESETZT. Genau das verspricht die Karte („Du
+   wärest dort sofort gesetzt") — und genau das löste sie vorher nicht ein: Sie setzte
+   ein Merkmal und sonst nichts. Der Wechsel senkt jetzt die Berufungsschwelle um
+   sechs Punkte, und weil das Land in der Titelrechnung steht, ändert er auch die
+   Aussichten auf einen Länderpokal. Ein Tausch mit zwei Seiten, keine Zierde. */
+export const VERBAND_BONUS = 6;
+export const berufungAb = (k) => NATIONALELF_AB - (k.verbandGewechselt ? VERBAND_BONUS : 0);
+
 /* ── Welche Auswahl gewinnt etwas? ─────────────────────────────────────────────
    VORHER GAR KEINE FRAGE: Die Titelchance hing allein am Rating des Spielers und an
    der Stufe seines Vereins. Das Land kam in der Rechnung nicht vor — ein starker
@@ -588,6 +707,10 @@ const NATION_STAERKE = new Map([
 
 export const nationStaerke = (land) => NATION_STAERKE.get(land) ?? NATION_REST;
 
+/* Der Name eines Landes. Die acht mit eigener Liga tragen unseren internen
+   Schlüssel (GER, ENG, …), alle übrigen ihren ISO-Code — laender.js löst beide auf. */
+export const landName = (code) => namenVon(EIGENE[code] || code) || code;
+
 /* ── Und welches Turnier? ──────────────────────────────────────────────────────
    Die Kontinentalmeisterschaft ist nicht überall dieselbe. Vorher gab es nur die
    EM — ein Brasilianer wurde damit Europameister. Europa spielt die EM, Südamerika
@@ -604,6 +727,26 @@ const SUEDAMERIKA = new Set(["BR", "AR", "UY", "CO", "CL", "PE", "EC", "PY", "BO
 /** Die Kontinentalmeisterschaft dieses Landes — oder null, wo das Spiel keine führt. */
 export const kontinentTurnier = (land) =>
   EUROPA.has(land) ? "EM" : SUEDAMERIKA.has(land) ? "CA" : null;
+
+/* Der Erdteil — gröber als das Turnier und aus einem anderen Grund: Er entscheidet,
+   welcher Verband einen Großvater ins Spiel bringen darf. Ohne ihn wären Europa und
+   Südamerika sauber getrennt, aber alle übrigen Länder lägen in EINEM Topf, und ein
+   Japaner bekäme ein Angebot aus Kamerun. */
+const AFRIKA = new Set(["MA", "SN", "NG", "CM", "GH", "CI", "DZ", "EG", "TN", "ZA", "ML", "BF",
+  "CD", "CG", "GA", "GN", "AO", "ZM", "ZW", "UG", "KE", "ET", "MZ", "MG", "SD", "LY", "MR", "TG", "BJ", "NE", "CV"]);
+const ASIEN = new Set(["JP", "KR", "IR", "SA", "QA", "AU", "CN", "IQ", "AE", "UZ", "TH", "VN", "ID",
+  "IN", "MY", "SY", "JO", "OM", "KW", "BH", "LB", "PS", "KP", "TJ", "TM", "KG", "KZ", "PH", "SG", "NP", "MM", "KH", "LA", "BD", "LK", "YE", "AF", "MN", "HK", "TW", "MO", "BT", "MV", "TL", "BN"]);
+const NORDAMERIKA = new Set(["US", "MX", "CA", "CR", "JM", "HN", "PA", "SV", "GT", "TT", "HT", "DO",
+  "CU", "NI", "BZ", "CW", "SX", "AW", "BB", "BS", "GD", "LC", "VC", "AG", "KN", "DM", "PR", "VI", "VG", "KY", "BM", "TC", "AI", "MS"]);
+
+export function erdteil(land) {
+  if (EUROPA.has(land)) return "EU";
+  if (SUEDAMERIKA.has(land)) return "SA";
+  if (AFRIKA.has(land)) return "AF";
+  if (ASIEN.has(land)) return "AS";
+  if (NORDAMERIKA.has(land)) return "NA";
+  return null;
+}
 
 /** Welches Turnier findet in dieser Saison statt — oder keines? */
 export function turnierIn(saisonNr, land = null) {
@@ -625,11 +768,12 @@ export function turnierIn(saisonNr, land = null) {
 export const LAENDERSPIELE_JE_SAISON = 10;
 
 export function nationalLeistung(k, zufall) {
-  if (k.ovr < NATIONALELF_AB) return { spiele: 0, tore: 0, vorlagen: 0 };
+  const ab = berufungAb(k);
+  if (k.ovr < ab) return { spiele: 0, tore: 0, vorlagen: 0 };
   const p = posDaten(k.pos);
-  /* Von knapp der Hälfte der möglichen Spiele bei frischer Berufung bis fast allen
+  /* Von einem Viertel der möglichen Spiele bei frischer Berufung bis fast allen
      an der Spitze. */
-  const anteil = grenze(0.25 + (k.ovr - NATIONALELF_AB) / 30, 0.25, 0.95);
+  const anteil = grenze(0.25 + (k.ovr - ab) / 30, 0.25, 0.95);
   const spiele = Math.round(LAENDERSPIELE_JE_SAISON * anteil);
   const guete = gueteVon(k.ovr);
   return {
@@ -641,7 +785,7 @@ export function nationalLeistung(k, zufall) {
 
 export function nationalTitel(k, verein, zufall, saisonNr = 0) {
   const turnier = turnierIn(saisonNr, k.land ?? null);
-  if (!turnier || k.ovr < NATIONALELF_AB) return [];
+  if (!turnier || k.ovr < berufungAb(k)) return [];
   /* Der Spieler entscheidet ein Turnier nicht allein — aber wer Weltklasse ist,
      steht meistens auch in einer Mannschaft, die gewinnen kann. Deshalb trägt seine
      Klasse nur einen Teil, von einem Viertel bei frischer Berufung bis zum vollen
@@ -653,6 +797,34 @@ export function nationalTitel(k, verein, zufall, saisonNr = 0) {
   return zufall() < basis * nationStaerke(k.land) * klasse ? [turnier] : [];
 }
 
+/* ── Welcher Verband würde ihn nehmen? ────────────────────────────────────────
+   Die Karte „Ein Großvater aus dem Ausland" nannte kein Land. Sie konnte auch
+   keines nennen, denn sie änderte keines — jetzt nennt sie eines, und der Spieler
+   sieht vor der Entscheidung, worauf er sich einlässt.
+
+   Angeboten wird ein Land desselben Erdteils — sonst würde man über einen Großvater
+   vom Europameister zum Südamerikameister, und ein Japaner bekäme ein Angebot aus
+   Kamerun. Und es ist eines der SCHWÄCHEREN, wenn man aus einer
+   starken Nation kommt, sonst eines der stärkeren: So ist der Tausch immer
+   ein echter — Einsätze gegen Titelaussicht oder umgekehrt. */
+const VERBAND_KANDIDATEN = [
+  ...NATIONEN_A, ...NATIONEN_B, ...NATIONEN_C,
+].filter((l) => l !== "AT");   // AT und AUT sind dasselbe Land, nur zwei Schreibweisen
+
+export function verbandsAngebot(k, zufall) {
+  const eigen = nationStaerke(k.land);
+  const heimat = erdteil(k.land);
+  if (!heimat) return null;
+  const schwaecher = eigen >= NATION_B;
+  const infrage = VERBAND_KANDIDATEN.filter((l) => {
+    if (l === k.land || erdteil(l) !== heimat) return false;
+    const s = nationStaerke(l);
+    return schwaecher ? s < eigen : s > eigen;
+  });
+  if (!infrage.length) return null;
+  return infrage[Math.floor(zufall() * infrage.length)];
+}
+
 /* ── Entscheidungen ────────────────────────────────────────────────────────────
    Jede Karte nennt ihre Wirkung UND ihre Wahrscheinlichkeit. `wirkung` ist das, was
    bei Erfolg passiert, `sonst` das Gegenteil; fehlt `chance`, tritt `wirkung`
@@ -661,6 +833,17 @@ export function nationalTitel(k, verein, zufall, saisonNr = 0) {
    Die Felder von `wirkung`: ovr (sofortiger Zuwachs), rolle (neue Rolle im Team),
    liga/pokal/europa (Faktor auf die Titelchance dieser Saison), verletzt (Saisons
    ohne Spiel). */
+/* Helfer für die Bedingungen unten. Sie lesen aus dem Verlauf, was gerade passiert
+   ist — der Schritt davor ist die „letzte Saison", auch wenn er zwei umfasst. */
+export const letzteSaison = (k) => (k.verlauf && k.verlauf.length ? k.verlauf[k.verlauf.length - 1] : null);
+export const letzteTitel = (k) => letzteSaison(k)?.titel || [];
+/* Tore plus Vorlagen je Spiel — der einfachste Maßstab dafür, ob etwas ankam. */
+export function torBeitrag(k) {
+  const s = letzteSaison(k);
+  if (!s || !s.spiele) return 0;
+  return (s.tore + s.vorlagen) / s.spiele;
+}
+
 export const EREIGNISSE = [
   { key: "ernaehrung", titel: "Ernährungsplan", text: "Ein Ernährungsberater will deine Kost umstellen. Das kann anschlagen oder nach hinten losgehen.",
     optionen: [
@@ -713,6 +896,7 @@ export const EREIGNISSE = [
       { label: "Auf die Zähne beißen", chance: 0.35, wirkung: {}, sonst: { verletzt: 1, ovr: -3 } },
     ] },
   { key: "endspiel", titel: "Verletzt vor dem Endspiel", text: "Kurz vor dem wichtigsten Spiel deiner Saison zwickt es.",
+    wenn: (k) => (k.verein?.stufe ?? 0) >= 3,
     optionen: [
       { label: "Spielen", chance: 0.8, wirkung: { liga: 1.6, europa: 1.6, pokal: 1.6 }, sonst: { ovr: -2 } },
       { label: "Aussetzen", wirkung: { liga: 0.6, europa: 0.6, pokal: 0.6 } },
@@ -723,19 +907,201 @@ export const EREIGNISSE = [
       { label: "Einem anderen überlassen", wirkung: {} },
     ] },
   { key: "schule", titel: "Abschluss nachholen", text: "Du könntest neben dem Fußball die Schule zu Ende bringen.",
+    wenn: (k) => k.alter <= 20 && !k.abschluss,
     optionen: [
       { label: "Durchziehen", wirkung: { ovr: -1, abschluss: true } },
       { label: "Ganz auf Fußball setzen", chance: 0.5, wirkung: { ovr: 2 }, sonst: {} },
     ] },
+  /* Die Optionen dieser Karte werden in ziehEreignis ersetzt — erst dort steht
+     fest, welches Land anklopft. Was hier steht, ist der Rückfall. */
   { key: "grossvater", titel: "Ein Großvater aus dem Ausland", text: "Ein anderer Verband hätte dich gern. Du wärest dort sofort gesetzt.",
+    wenn: (k) => k.alter <= 26 && !k.verbandGewechselt && !!k.land,
     optionen: [
       { label: "Verband wechseln", wirkung: { verbandswechsel: true } },
       { label: "Beim eigenen Land bleiben", wirkung: {} },
     ] },
   { key: "steuer", titel: "Post vom Finanzamt", text: "Deine Berater haben etwas übersehen. Es wird öffentlich.",
+    wenn: (k) => k.alter >= 22,
     optionen: [
       { label: "Alles nachzahlen", wirkung: { ovr: -1 } },
       { label: "Anwälte kämpfen lassen", chance: 0.45, wirkung: {}, sonst: { ovr: -3, rolle: "rotation" } },
+    ] },
+
+  /* ── Karten, die an die Lage gebunden sind ──────────────────────────────────
+     Jede hier unten kommt nur, wenn ihre Bedingung zutrifft. Das ist der ganze
+     Unterschied zwischen einer Geschichte und einem Los: Die Binde bekommt man
+     nicht mit neunzehn, das Knie meldet sich nicht mit zwanzig, und der Patzer
+     beim Abschlag trifft nur Torhüter. */
+
+  /* Jung. */
+  { key: "internat", titel: "Ein Platz im Internat", text: "Der Verein bietet dir einen Platz im Nachwuchsinternat — näher am Training, weiter weg von zu Hause.",
+    wenn: (k) => k.alter <= 18,
+    optionen: [
+      { label: "Hingehen", chance: 0.7, wirkung: { ovr: 3 }, sonst: { ovr: -1 } },
+      { label: "Zu Hause bleiben", wirkung: {} },
+    ] },
+  { key: "debuet", titel: "Der Trainer ruft dich", text: "Zwei Ausfälle, und plötzlich stehst du im Kader der Profis. Eine Halbzeit, mehr wird es nicht.",
+    wenn: (k) => k.alter <= 21 && k.rolle !== "stamm",
+    optionen: [
+      { label: "Alles riskieren", chance: 0.45, wirkung: { ovr: 4, rolle: "rotation" }, sonst: { ovr: -1 } },
+      { label: "Kein Risiko eingehen", chance: 0.75, wirkung: { ovr: 1 }, sonst: {} },
+    ] },
+  { key: "berater", titel: "Ein Berater umwirbt dich", text: "Er verspricht dir die großen Vereine. Sein Anteil ist happig, seine Verbindungen sind es auch.",
+    wenn: (k) => k.alter <= 23,
+    optionen: [
+      { label: "Unterschreiben", chance: 0.6, wirkung: { ovr: 2 }, sonst: { ovr: -2 } },
+      { label: "Beim Familienberater bleiben", wirkung: {} },
+    ] },
+
+  /* Rolle und Stellung im Verein. */
+  { key: "bank", titel: "Die Bank wird eng", text: "Seit Wochen kommst du nicht mehr rein. Der Trainer redet nicht mit dir darüber.",
+    wenn: (k) => k.rolle === "kader",
+    optionen: [
+      { label: "Ihn zur Rede stellen", chance: 0.5, wirkung: { rolle: "rotation" }, sonst: { ovr: -2 } },
+      { label: "Im Training antworten", chance: 0.4, wirkung: { rolle: "rotation", ovr: 2 }, sonst: {} },
+    ] },
+  { key: "binde", titel: "Die Binde", text: "Der Kapitän hat aufgehört. Die Mannschaft sieht dich an.",
+    wenn: (k) => k.alter >= 27 && k.rolle === "stamm" && (k.verein?.stufe ?? 0) >= 2,
+    optionen: [
+      { label: "Übernehmen", chance: 0.65, wirkung: { ovr: 2, liga: 1.3, pokal: 1.3 }, sonst: { ovr: -1 } },
+      { label: "Einem anderen lassen", wirkung: {} },
+    ] },
+  { key: "trainerwechsel", titel: "Neuer Trainer", text: "Der Verein entlässt den Trainer. Der Neue bringt eigene Vorstellungen mit — und eigene Spieler.",
+    wenn: (k) => k.alter >= 20,
+    optionen: [
+      { label: "Sich anbieten", chance: 0.55, wirkung: { rolle: "stamm", ovr: 1 }, sonst: { rolle: "rotation" } },
+      { label: "Abwarten", chance: 0.5, wirkung: {}, sonst: { rolle: "rotation" } },
+    ] },
+
+  /* Spitzenverein. */
+  { key: "ausruester", titel: "Ein Ausrüster klopft an", text: "Werbetermine, Fototage, eigener Schuh. Es zahlt sich aus und kostet Trainingszeit.",
+    wenn: (k) => k.ovr >= 80,
+    optionen: [
+      { label: "Unterschreiben", chance: 0.5, wirkung: { ovr: 1 }, sonst: { ovr: -2 } },
+      { label: "Absagen", wirkung: { ovr: 1 } },
+    ] },
+  { key: "dreifach", titel: "Drei Wettbewerbe", text: "Liga, Pokal, Europa — und dazwischen kaum ein freier Mittwoch.",
+    wenn: (k) => (k.verein?.stufe ?? 0) >= 4,
+    optionen: [
+      { label: "Alles spielen", chance: 0.5, wirkung: { liga: 1.4, pokal: 1.4, europa: 1.4 }, sonst: { verletzt: 1 } },
+      { label: "Im Pokal schonen", wirkung: { pokal: 0.4, liga: 1.2, europa: 1.2 } },
+    ] },
+  { key: "medien", titel: "Das große Interview", text: "Eine Zeitung will ein langes Gespräch. Offen reden bringt Sympathien und Ärger.",
+    wenn: (k) => k.ovr >= 78,
+    optionen: [
+      { label: "Klartext reden", chance: 0.45, wirkung: { ovr: 2 }, sonst: { rolle: "rotation" } },
+      { label: "Nichts sagen", wirkung: {} },
+    ] },
+
+  /* Nach einem Titel. */
+  { key: "titelverteidigung", titel: "Alle erwarten die Wiederholung", text: "Ihr habt geliefert. Jetzt ist genau das die Erwartung, nicht mehr die Hoffnung.",
+    wenn: (k) => letzteTitel(k).length > 0,
+    optionen: [
+      { label: "Den Druck annehmen", chance: 0.5, wirkung: { liga: 1.5, pokal: 1.3 }, sonst: { ovr: -2 } },
+      { label: "Ruhe bewahren", wirkung: { ovr: 1 } },
+    ] },
+  { key: "feier", titel: "Die Feier läuft aus dem Ruder", text: "Ein Bild von der Nacht nach dem Titel geht herum. Der Verein ist not amused.",
+    wenn: (k) => letzteTitel(k).length > 0,
+    optionen: [
+      { label: "Dazu stehen", chance: 0.55, wirkung: {}, sonst: { ovr: -2, rolle: "rotation" } },
+      { label: "Sich entschuldigen und zahlen", wirkung: { ovr: -1 } },
+    ] },
+
+  /* Nach einer schlechten Saison. */
+  { key: "formtief", titel: "Kein Treffer seit Monaten", text: "Die Zahlen der letzten Saison sprechen gegen dich, und du weißt es.",
+    wenn: (k) => k.alter >= 22 && letzteSaison(k) && letzteSaison(k).spiele >= 15
+      && torBeitrag(k) < 0.14 && posDaten(k.pos).gruppe !== "TOR" && posDaten(k.pos).gruppe !== "ABW",
+    optionen: [
+      { label: "Zum Sportpsychologen", chance: 0.65, wirkung: { ovr: 3 }, sonst: { ovr: -1 } },
+      { label: "Da muss man durch", chance: 0.4, wirkung: { ovr: 2 }, sonst: { ovr: -3 } },
+    ] },
+  { key: "abstiegskampf", titel: "Der Abstiegskampf", text: "Neun Spiele, sechs Punkte Rückstand. Es geht um die Liga.",
+    wenn: (k) => (k.verein?.stufe ?? 9) <= 2 && (k.verein?.liga?.stufe ?? 2) === 1,
+    optionen: [
+      { label: "Vorangehen", chance: 0.5, wirkung: { ovr: 3 }, sonst: { ovr: -2, verletzt: 1 } },
+      { label: "Die Saison abhaken", wirkung: { ovr: -1 } },
+    ] },
+  { key: "aufstiegsrennen", titel: "Das Aufstiegsrennen", text: "Zweite Liga, dritter Platz, fünf Spieltage. Jetzt entscheidet sich das Jahr.",
+    wenn: (k) => (k.verein?.liga?.stufe ?? 1) === 2,
+    optionen: [
+      { label: "Alles auf diese Saison", chance: 0.55, wirkung: { ovr: 3, liga: 1.5 }, sonst: { ovr: -1 } },
+      { label: "Auf die eigene Entwicklung schauen", wirkung: { ovr: 1 } },
+    ] },
+
+  /* Torwart. */
+  { key: "patzer", titel: "Der Patzer", text: "Ein Abschlag genau vor die Füße des Gegners. Das Bild läuft eine Woche lang.",
+    wenn: (k) => posDaten(k.pos).gruppe === "TOR",
+    optionen: [
+      { label: "Im nächsten Spiel antworten", chance: 0.55, wirkung: { ovr: 3 }, sonst: { ovr: -3, rolle: "rotation" } },
+      { label: "Um eine Pause bitten", wirkung: { rolle: "rotation" } },
+    ] },
+  { key: "elfmeterschiessen", titel: "Elfmeterschießen", text: "Pokalhalbfinale, es steht unentschieden nach Verlängerung. Jetzt bist du dran.",
+    wenn: (k) => posDaten(k.pos).gruppe === "TOR" && (k.verein?.stufe ?? 0) >= 2,
+    optionen: [
+      { label: "Auf die Ecke gehen", chance: 0.45, wirkung: { ovr: 3, pokal: 1.8 }, sonst: { ovr: -1 } },
+      { label: "Stehen bleiben und reagieren", chance: 0.6, wirkung: { ovr: 1, pokal: 1.3 }, sonst: {} },
+    ] },
+
+  /* Auswahl. */
+  { key: "erste_berufung", titel: "Die erste Berufung", text: "Ein Brief vom Verband. Du stehst im vorläufigen Kader — zum ersten Mal.",
+    wenn: (k) => k.ovr >= berufungAb(k) && (k.national?.spiele ?? 0) === 0,
+    optionen: [
+      { label: "Alles darauf ausrichten", chance: 0.6, wirkung: { ovr: 2 }, sonst: { ovr: -1 } },
+      { label: "Den Verein nicht vernachlässigen", wirkung: { liga: 1.2 } },
+    ] },
+  { key: "turnierpause", titel: "Turnier statt Urlaub", text: "Ein ganzer Sommer mit der Auswahl. Erholung gibt es dann eben nicht.",
+    wenn: (k) => k.ovr >= berufungAb(k) + 4,
+    optionen: [
+      { label: "Hinfahren", chance: 0.5, wirkung: { ovr: 2 }, sonst: { ovr: -1, verletzt: 1 } },
+      { label: "Absagen und regenerieren", wirkung: { ovr: 1, liga: 1.2 } },
+    ] },
+
+  /* Im Ausland. */
+  { key: "sprache", titel: "Die Sprache", text: "In der Kabine verstehst du die Hälfte. Beim Trainer ist es dieselbe Hälfte.",
+    wenn: (k) => !!k.verein && !!k.land && k.verein.liga.land !== k.land,
+    optionen: [
+      { label: "Jeden Morgen Unterricht", chance: 0.75, wirkung: { ovr: 2 }, sonst: {} },
+      { label: "Das regelt der Platz", chance: 0.35, wirkung: { ovr: 1 }, sonst: { rolle: "rotation" } },
+    ] },
+  { key: "heimweh", titel: "Heimweh", text: "Es läuft sportlich, aber es ist weit weg. Die Familie fragt, wann du zurückkommst.",
+    wenn: (k) => !!k.verein && !!k.land && k.verein.liga.land !== k.land && k.alter <= 25,
+    optionen: [
+      { label: "Die Familie nachholen", chance: 0.7, wirkung: { ovr: 2 }, sonst: { ovr: -1 } },
+      { label: "Durchhalten", chance: 0.45, wirkung: { ovr: 1 }, sonst: { ovr: -2 } },
+    ] },
+
+  /* Spät. */
+  { key: "knie", titel: "Das Knie meldet sich", text: "Nicht schlimm, sagt der Arzt. Aber es meldet sich jetzt jeden Montag.",
+    wenn: (k) => k.alter >= 30,
+    optionen: [
+      { label: "Operieren lassen", wirkung: { verletzt: 1, ovr: 2 } },
+      { label: "Mit Spritzen durch die Saison", chance: 0.5, wirkung: {}, sonst: { ovr: -4 } },
+    ] },
+  { key: "trainerschein", titel: "Der Trainerschein", text: "Die Lehrgänge laufen parallel zur Saison. Danach hättest du etwas in der Hand.",
+    wenn: (k) => k.alter >= 32,
+    optionen: [
+      { label: "Nebenher machen", wirkung: { ovr: -1, abschluss: true } },
+      { label: "Später, erst spielen", wirkung: {} },
+    ] },
+  { key: "abschiedsspiel", titel: "Ein Verein von früher fragt an", text: "Dein Jugendverein will dich zurück — als Aushängeschild, nicht als Verstärkung.",
+    wenn: (k) => k.alter >= 33 && k.vereine.length >= 3,
+    optionen: [
+      { label: "Zusagen", wirkung: { ovr: -1, liga: 1.2, pokal: 1.2 } },
+      { label: "Noch nicht", wirkung: {} },
+    ] },
+
+  /* Umfeld. */
+  { key: "wetten", titel: "Ein Anruf, den man nicht annimmt", text: "Jemand bietet viel Geld für eine gelbe Karte zur richtigen Minute.",
+    wenn: (k) => k.alter >= 21,
+    optionen: [
+      { label: "Auflegen und melden", wirkung: { ovr: 1 } },
+      { label: "Zuhören", chance: 0.5, wirkung: { ovr: 2 }, sonst: { ovr: -6, rolle: "kader" } },
+    ] },
+  { key: "stiftung", titel: "Eine Kinderstation fragt an", text: "Einmal im Monat vorbeikommen, ohne Kameras. Es kostet freie Tage.",
+    wenn: (k) => k.alter >= 24,
+    optionen: [
+      { label: "Zusagen", chance: 0.8, wirkung: { ovr: 1 }, sonst: {} },
+      { label: "Die Saison ist zu eng", wirkung: {} },
     ] },
 ];
 
@@ -758,15 +1124,54 @@ export function ereignisFaellig({ gespielt = 0, seitLetztem = Infinity }, zufall
 }
 
 /** Zieht ein Ereignis, das gerade passt. */
+/* ── Welche Karte passt zur Lage? ─────────────────────────────────────────────
+   Vorher standen drei Bedingungen als Sonderfälle hier unten im Filter, und alle
+   übrigen Karten konnten immer kommen. Bei fünfzehn Karten und sechs je Laufbahn
+   hiess das: Ab der dritten Laufbahn kennt man alle, und keine hat etwas mit dem
+   zu tun, was gerade passiert.
+
+   Jetzt trägt jede Karte ihre eigene Bedingung (`wenn`), und die meisten neuen sind
+   an die Lage gebunden — an das Alter, die Position, die Spielklasse, den letzten
+   Titel, die letzte Saison. Eine Karte, die zur eigenen Lage passt, liest sich wie
+   eine Geschichte; eine zufällige wie ein Los. */
 export function ziehEreignis(k, zufall, zuletzt = []) {
   const moeglich = EREIGNISSE.filter((e) => {
     if (zuletzt.includes(e.key)) return false;
-    if (e.key === "schule" && k.alter > 20) return false;
-    if (e.key === "grossvater" && (k.alter > 26 || k.verbandGewechselt)) return false;
-    if (e.key === "endspiel" && (!k.verein || k.verein.stufe < 3)) return false;
-    return true;
+    return e.wenn ? e.wenn(k) : true;
   });
-  return moeglich[Math.floor(zufall() * moeglich.length)] || EREIGNISSE[0];
+  /* Passt nichts (etwa weil die letzten Karten die wenigen offenen weggenommen
+     haben), fällt die Wahl auf die Karten ohne Bedingung — eine davon gibt es
+     immer. */
+  const topf = moeglich.length ? moeglich : EREIGNISSE.filter((e) => !e.wenn);
+  const e = topf[Math.floor(zufall() * topf.length)] || EREIGNISSE[0];
+  return e.key === "grossvater" ? mitVerband(e, k, zufall) : e;
+}
+
+/* Setzt das anklopfende Land in Text und Optionen ein. Findet sich keines — etwa
+   weil der Spieler schon aus der schwächsten Gruppe kommt und der Erdteil keine
+   stärkere hergibt —, bleibt die Karte, wie sie ist; der Filter oben nimmt sie
+   dann beim nächsten Mal ohnehin heraus. */
+function mitVerband(e, k, zufall) {
+  const ziel = verbandsAngebot(k, zufall);
+  if (!ziel) return e;
+  const name = landName(ziel);
+  const staerker = nationStaerke(ziel) > nationStaerke(k.land);
+  /* DIE DOPPELPUNKT-FORM IST ABSICHT. „Für Slowakei spielen" ist falsches Deutsch —
+     es hiesse „für die Slowakei". Etliche Ländernamen tragen einen Artikel (die
+     Schweiz, die Türkei, die Niederlande, die Vereinigten Staaten, der Iran), und
+     ihn je Land und Fall zu beugen wäre eine Grammatiktabelle für eine Zeile Text.
+     Nach einem Doppelpunkt steht der blosse Name richtig — in jedem Fall. */
+  return {
+    ...e,
+    ziel,
+    text: `Ein anderer Verband klopft an: ${name}. Ein Großvater macht dich spielberechtigt, `
+      + `und gesetzt wärst du dort sofort`
+      + `${staerker ? " — die Auswahl spielt um Titel mit." : ", auch wenn die Auswahl kleiner ist."}`,
+    optionen: [
+      { label: `Verband wechseln: ${name}`, wirkung: { verbandswechsel: ziel } },
+      { label: `Bei der eigenen Auswahl bleiben`, wirkung: {} },
+    ],
+  };
 }
 
 export const ROLLEN_NAME = { stamm: "Stammspieler", rotation: "Rotation", kader: "nur im Kader" };
@@ -798,7 +1203,15 @@ export function folgen(vorher, nachher, w, verletzt) {
       art: f > 1 ? "gut" : "schlecht",
     });
   }
-  if (w.verbandswechsel) liste.push({ text: "Du spielst künftig für den anderen Verband", art: "neutral" });
+  if (w.verbandswechsel) {
+    liste.push({
+      text: nachher.land !== vorher.land
+        ? `Verband: ${landName(vorher.land)} → ${landName(nachher.land)}`
+        : "Du spielst künftig für den anderen Verband",
+      art: "neutral",
+    });
+    liste.push({ text: `In der Auswahl bist du gesetzt (berufen ab ${berufungAb(nachher)} statt ${NATIONALELF_AB})`, art: "gut" });
+  }
   if (w.abschluss) liste.push({ text: "Der Schulabschluss ist in der Tasche", art: "gut" });
   if (!liste.length) liste.push({ text: "Es bleibt alles, wie es war", art: "neutral" });
   return liste;
@@ -814,7 +1227,12 @@ export function entscheide(k, option, zufall) {
   const naechster = { ...k };
   if (w.ovr) naechster.ovr = grenze(k.ovr + w.ovr, OVR_MIN, OVR_MAX);
   if (w.rolle) naechster.rolle = w.rolle;
-  if (w.verbandswechsel) naechster.verbandGewechselt = true;
+  /* DER WECHSEL WECHSELT JETZT WIRKLICH. Vorher stand hier nur das Merkmal, und
+     `k.land` blieb — Flagge, Auswahl und Titelchance änderten sich nicht. */
+  if (w.verbandswechsel) {
+    naechster.verbandGewechselt = true;
+    if (typeof w.verbandswechsel === "string") naechster.land = w.verbandswechsel;
+  }
   if (w.abschluss) naechster.abschluss = true;
   const verletzt = w.verletzt ?? 0;
   return {
@@ -862,15 +1280,29 @@ export function ruecktrittFaellig(k, zufall) {
    fuer einen Spieler mit Stufe 0 immer noch einer findet. */
 export const ALTERSGRENZE = 38;
 
+/* ── Ligaland und Spielerland sind nicht dasselbe Wort ────────────────────────
+   Die Ligen der vier neuen Länder tragen BRA, USA, SAU und JPN; die Spieler tragen
+   ihren ISO-Code BR, US, SA und JP. Ohne diese Brücke fände ein Brasilianer keinen
+   Jugendverein in Brasilien — und bekäme statt dessen den Rückfall auf beliebige
+   kleine Vereine irgendwo in Europa. Die acht europäischen Länder brauchen sie
+   nicht: Dort heissen Liga und Spieler schon gleich (GER, ENG, …). */
+export const LIGALAND_VON_SPIELERLAND = { BR: "BRA", US: "USA", SA: "SAU", JP: "JPN" };
+export const ligaLand = (spielerLand) => LIGALAND_VON_SPIELERLAND[spielerLand] || spielerLand;
+
 export function jugendAngebote(welt, land, zufall) {
-  const heimisch = (stufe) => welt.vereine.filter((v) => v.liga.land === land && v.liga.stufe === stufe && v.stufe <= 3);
+  const heimat = ligaLand(land);
+  const heimisch = (stufe) => welt.vereine.filter((v) => v.liga.land === heimat && v.liga.stufe === stufe && v.stufe <= 3);
   const zieh = (liste, n) => {
     const kopie = [...liste];
     const out = [];
     while (out.length < n && kopie.length) out.push(...kopie.splice(Math.floor(zufall() * kopie.length), 1));
     return out;
   };
-  const angebote = [...zieh(heimisch(2), 2), ...zieh(heimisch(1), 1)];
+  /* Zwei aus der zweiten Spielklasse, einer aus der ersten. Die vier Ligen
+     ausserhalb Europas haben keine zweite — dort kommen alle drei aus der einen. */
+  const angebote = heimisch(2).length
+    ? [...zieh(heimisch(2), 2), ...zieh(heimisch(1), 1)]
+    : zieh(heimisch(1), 3);
   return angebote.length ? angebote : zieh(welt.vereine.filter((v) => v.stufe <= 2), 3);
 }
 
@@ -895,10 +1327,12 @@ export function angebote(welt, k, zufall) {
   const min = Math.max(0, eigene - BAND_UNTEN);
   const max = Math.min(5, eigene + BAND_OBEN);
   let infrage = passendeVereine(welt, k.ovr, { ausser: k.verein ? [k.verein.key] : [] })
-    .filter((v) => v.stufe >= min && v.stufe <= max);
+    .filter((v) => v.stufe >= min && v.stufe <= max)
+    .filter((v) => ausseneuropaOffen(k, v));
   /* Findet sich im Band nichts, wird nach unten geöffnet — ohne das stünde ein
      Spieler ohne Angebot da, obwohl es Vereine für ihn gäbe. */
-  if (!infrage.length) infrage = passendeVereine(welt, k.ovr, { ausser: k.verein ? [k.verein.key] : [] });
+  if (!infrage.length) infrage = passendeVereine(welt, k.ovr, { ausser: k.verein ? [k.verein.key] : [] })
+    .filter((v) => ausseneuropaOffen(k, v));
   /* GEWICHTET, NICHT GLEICHVERTEILT. Vorher wurde im Band blind gezogen — und weil
      es 27 Vereine der Stufe 4 gibt, aber nur 10 der Stufe 5, kamen bei Rating 88 von
      18 Angeboten 13 von Stufe 4 und nur 5 von der Spitze. Wer Weltklasse ist, soll
@@ -913,6 +1347,21 @@ export function angebote(welt, k, zufall) {
     out.push(...kopie.splice(i, 1));
   }
   return out;
+}
+
+/* ── Wann Übersee in Frage kommt ──────────────────────────────────────────────
+   Brasilien, die MLS, Saudi-Arabien und Japan sind Ziele für die späte Laufbahn —
+   und die Heimat derer, die von dort kommen. Was es NICHT sein soll: der Verein,
+   zu dem ein Zweiundzwanzigjähriger aus Europa wechselt, weil die Rufstufe gerade
+   passt. Ein Angebot von dort bekommt deshalb nur, wer alt genug ist oder aus dem
+   Land kommt. Die eigene Jugend ist davon ohnehin nicht betroffen: jugendAngebote
+   sucht nach dem Land des Spielers. */
+export const UEBERSEE_AB = 29;
+
+export function ausseneuropaOffen(k, verein) {
+  const land = verein.liga?.land;
+  if (!land || EUROPA.has(land)) return true;
+  return k.alter >= UEBERSEE_AB || ligaLand(k.land) === land;
 }
 
 /** Die höchste Stufe, deren Anforderung der Wert erfüllt — das eigene Niveau. */
@@ -937,7 +1386,7 @@ export function hoechsteErreichbareStufe(ovr) {
    Südamerika zu holen. Eine Auszeichnung, die niemand erreichen kann, ist ein
    Versprechen, das das Spiel nicht hält. */
 const zahl = (k, key) => k.titel[key] || 0;
-const alleLigaTitel = (k) => Object.values(LIGA_TITEL).filter((t) => zahl(k, t) > 0).length;
+const alleLigaTitel = (k) => GROSSE_LIGEN.filter((t) => zahl(k, t) > 0).length;
 
 export const AUSZEICHNUNGEN = [
   /* NACHGEZOGEN, nachdem der Europapokal im Feld ausgespielt wird. Vorher gewann ein
@@ -974,7 +1423,11 @@ export const AUSZEICHNUNGEN = [
      war unerfüllbar. Gemessen: Median 6, oberes Zehntel 11. */
   { key: "wanderer", name: "Der Wanderer", text: "Für zehn verschiedene Vereine gespielt.",
     pruefe: (k) => k.vereine.length >= 10 },
-  { key: "grenzgaenger", name: "Grenzgänger", text: "In allen sieben Ländern der Welt gespielt.",
+  /* „In ALLEN sieben Ländern der Welt" stimmte, als die Welt sieben Länder hatte.
+     Dann kam Österreich dazu, jetzt Brasilien, die USA, Saudi-Arabien und Japan —
+     zwölf. Der Text behauptete eine Vollständigkeit, die die Prüfung nie verlangt
+     hat; jetzt sagen beide dasselbe. */
+  { key: "grenzgaenger", name: "Grenzgänger", text: "In sieben verschiedenen Ländern gespielt.",
     pruefe: (k) => k.laender.length >= 7 },
   /* NACHGEMESSEN nach dem Talentwurf: Median 87 Tore, oberes Zehntel 148, Bestwert
      345. Dreihundert trifft nur noch 0,2 %; zweihundertfünfzig liegt weit über dem

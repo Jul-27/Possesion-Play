@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as K from "./karriere.js";
+import { WELT_LIGEN } from "./careerWorld.js";
 
 /* Eine kleine Welt mit bekannten Stärken: zwei Länder, je zwei Spielklassen. */
 const LIGEN = [
@@ -960,4 +961,221 @@ test("die Spitze ist die Ausnahme — und bleibt möglich", () => {
   assert.ok(anteil(88) < 0.15, `${(anteil(88) * 100).toFixed(1)} % erreichen die Ballon-d'Or-Schwelle — zu viele`);
   assert.ok(anteil(88) > 0.02, `${(anteil(88) * 100).toFixed(1)} % erreichen 88 — zu wenige, die Spitze wäre tot`);
   assert.ok(anteil(95) > 0.001, "auch die 95 muss vereinzelt fallen");
+});
+
+// ── Titel ────────────────────────────────────────────────────────────────────
+
+/* DER FEHLER, DEN DAS FÄNGT: Portugal, die Niederlande und Österreich hatten
+   keinen Meistertitel und Frankreich keinen Pokal — 52 beziehungsweise 70 Vereine,
+   bei denen die halbe Titelmechanik abgeschaltet war, ohne dass es irgendwo stand. */
+test("jede erste Liga vergibt eine Meisterschaft", () => {
+  const ohne = WELT_LIGEN.filter((l) => l.stufe === 1 && !K.LIGA_TITEL[l.key]);
+  assert.deepEqual(ohne.map((l) => l.name), [], "erste Liga ohne Meistertitel");
+});
+
+test("keine zweite Liga vergibt eine Meisterschaft", () => {
+  const falsch = WELT_LIGEN.filter((l) => l.stufe === 2 && (K.LIGA_TITEL[l.key] || K.POKAL_TITEL[l.key]));
+  assert.deepEqual(falsch.map((l) => l.name), [], "aus der zweiten Liga gewinnt man keinen Titel");
+});
+
+test("jede europäische erste Liga vergibt einen Pokal", () => {
+  const europa = WELT_LIGEN.filter((l) => l.stufe === 1 && ["GER","ENG","ESP","ITA","FRA","PRT","NED","AUT"].includes(l.land));
+  const ohne = europa.filter((l) => !K.POKAL_TITEL[l.key]);
+  assert.deepEqual(ohne.map((l) => l.name), [], "europäische erste Liga ohne Pokal");
+});
+
+test("alle vergebenen Titel sind auch beschrieben", () => {
+  const vergeben = new Set([...Object.values(K.LIGA_TITEL), ...Object.values(K.POKAL_TITEL),
+    "CL", "EL", "WM", "EM", "CA", "BDO"]);
+  for (const key of vergeben) {
+    assert.ok(K.TITEL_DATEN[key], `${key} wird vergeben, hat aber keinen Eintrag`);
+    assert.ok(K.TITEL_DATEN[key].name, `${key} hat keinen Namen`);
+    assert.ok(K.TITEL_REIHE.includes(key), `${key} fehlt in der Reihenfolge`);
+  }
+  /* Und umgekehrt: kein Eintrag, den niemand gewinnen kann. */
+  for (const key of Object.keys(K.TITEL_DATEN))
+    assert.ok(vergeben.has(key), `${key} ist beschrieben, wird aber nie vergeben`);
+});
+
+test("jeder Titel trägt eine der sieben Trophäenformen", () => {
+  const formen = new Set(["schale", "pokal", "ohren", "amphore", "globus", "kelch", "ball"]);
+  for (const [key, d] of Object.entries(K.TITEL_DATEN))
+    assert.ok(formen.has(d.form), `${key}: unbekannte Form ${d.form}`);
+});
+
+/* „Europas Erster" meint die fünf großen Ligen. Würde es aus LIGA_TITEL abgeleitet,
+   hätten die acht neuen Meisterschaften die Auszeichnung still verwässert. */
+test("Europas Erster zählt nur die fünf großen Ligen", () => {
+  const leer5 = () => ({ ...K.neueKarriere({ name: "T", land: "GER", nummer: 1, pos: "ST" }),
+    vereine: ["A"], laender: ["GER"], gesamt: { spiele: 420, tore: 0, vorlagen: 0 } });
+  const klein = { ...leer5(), titel: { MPT: 1, MNL: 1, MAT: 1, MBR: 1 } };
+  assert.ok(!K.erreichteAuszeichnungen(klein).some((a) => a.key === "europas_erster"));
+  const gross = { ...leer5(), titel: { MBL: 1, MPL: 1, MLL: 1 } };
+  assert.ok(K.erreichteAuszeichnungen(gross).some((a) => a.key === "europas_erster"));
+});
+
+// ── Torwart ──────────────────────────────────────────────────────────────────
+
+/* DER FEHLER, DEN DAS FÄNGT: Eine ganze Torwartlaufbahn zeigte Spiele, 0 Tore und
+   0 Vorlagen — zwei Spalten Nullen und nichts, woran man eine gute Saison erkennt. */
+test("ein Torwart bekommt eigene Zahlen, ein Feldspieler nicht", () => {
+  const zufall = K.rng(101);
+  const tw = K.saisonLeistung({ pos: "TW", ovr: 80, rolle: "stamm" }, 4, zufall);
+  assert.ok(Number.isInteger(tw.gegentore) && tw.gegentore > 0, "ein Torwart kassiert Gegentore");
+  assert.ok(Number.isInteger(tw.westen), "und hält zu null");
+  const st = K.saisonLeistung({ pos: "ST", ovr: 80, rolle: "stamm" }, 4, zufall);
+  assert.equal(st.gegentore, undefined, "ein Stürmer führt keine Gegentore");
+  assert.equal(K.istTorwart("TW"), true);
+  assert.equal(K.istTorwart("IV"), false);
+});
+
+test("weiße Westen können nie mehr sein als Spiele", () => {
+  const zufall = K.rng(103);
+  for (let i = 0; i < 500; i++) {
+    const l = K.saisonLeistung({ pos: "TW", ovr: 50 + (i % 45), rolle: "stamm" }, i % 6, zufall);
+    assert.ok(l.westen <= l.spiele, `${l.westen} Westen bei ${l.spiele} Spielen`);
+    assert.ok(l.gegentore >= 0);
+  }
+});
+
+/* Die Zahlen müssen wie Fußball aussehen: Ein Weltklassetorwart bei einem
+   Spitzenverein liegt unter einem Gegentor je Spiel, ein schwacher darüber. */
+test("der Gegentorschnitt hängt an Klasse und Verein", () => {
+  const schnitt = (ovr, stufe) => {
+    const zufall = K.rng(107);
+    let sp = 0, gt = 0;
+    for (let i = 0; i < 600; i++) { const l = K.saisonLeistung({ pos: "TW", ovr, rolle: "stamm" }, stufe, zufall); sp += l.spiele; gt += l.gegentore; }
+    return gt / sp;
+  };
+  const spitze = schnitt(90, 5), unten = schnitt(58, 1);
+  assert.ok(spitze < 1.1, `Weltklasse kassiert ${spitze.toFixed(2)} je Spiel`);
+  assert.ok(unten > 1.4, `ein schwacher Torwart kassiert nur ${unten.toFixed(2)} je Spiel`);
+  assert.ok(unten > spitze + 0.3, "der Unterschied muss deutlich sein");
+});
+
+// ── Verbandswechsel ──────────────────────────────────────────────────────────
+
+/* DER FEHLER, DEN DAS FÄNGT: Die Karte versprach „Du wärest dort sofort gesetzt"
+   und setzte nur ein Merkmal — das Land blieb, die Flagge blieb, die Titelchance
+   blieb. Die wirksamste Entscheidung des Spiels tat gar nichts. */
+test("der Verbandswechsel wechselt das Land", () => {
+  const k = { ...K.neueKarriere({ name: "T", land: "GER", nummer: 9, pos: "ST", seed: 5 }), alter: 22, ovr: 80 };
+  const r = K.entscheide(k, { label: "x", wirkung: { verbandswechsel: "AUT" } }, K.rng(11));
+  assert.equal(r.karriere.land, "AUT", "das Land muss wirklich wechseln");
+  assert.equal(r.karriere.verbandGewechselt, true);
+  assert.ok(r.folgen.some((f) => /Deutschland → Österreich/.test(f.text)), JSON.stringify(r.folgen));
+});
+
+test("wer den Verband wechselt, wird früher berufen", () => {
+  const ohne = { ovr: 70, land: "GER" };
+  const mit = { ovr: 70, land: "AUT", verbandGewechselt: true };
+  assert.equal(K.berufungAb(ohne), K.NATIONALELF_AB);
+  assert.equal(K.berufungAb(mit), K.NATIONALELF_AB - K.VERBAND_BONUS);
+  assert.equal(K.nationalLeistung(ohne, K.rng(13)).spiele, 0, "mit 70 ist er noch nicht dabei");
+  assert.ok(K.nationalLeistung(mit, K.rng(13)).spiele > 0, "nach dem Wechsel schon");
+});
+
+test("das angebotene Land liegt im selben Erdteil und hat eine andere Stärke", () => {
+  const zufall = K.rng(17);
+  for (const land of ["GER", "BR", "AUT", "JP", "MA", "US"]) {
+    for (let i = 0; i < 40; i++) {
+      const ziel = K.verbandsAngebot({ land }, zufall);
+      if (!ziel) continue;
+      assert.equal(K.erdteil(ziel), K.erdteil(land), `${land} → ${ziel} überspringt einen Erdteil`);
+      assert.notEqual(K.nationStaerke(ziel), K.nationStaerke(land), `${land} → ${ziel} ändert nichts`);
+    }
+  }
+  assert.equal(K.verbandsAngebot({ land: "NZ" }, zufall), null, "ohne Erdteil kein Angebot");
+});
+
+test("die Karte nennt das Land, das anklopft", () => {
+  const k = { ...K.neueKarriere({ name: "T", land: "GER", nummer: 9, pos: "ST", seed: 5 }), alter: 20, ovr: 70 };
+  const zufall = K.rng(19);
+  /* Alle anderen Karten ausschliessen, indem wir gezielt die eine ziehen. */
+  const andere = K.EREIGNISSE.filter((e) => e.key !== "grossvater").map((e) => e.key);
+  const e = K.ziehEreignis(k, zufall, andere);
+  assert.equal(e.key, "grossvater");
+  assert.ok(e.ziel, "die Karte muss ein Land mitbringen");
+  const wahl = e.optionen[0];
+  assert.ok(wahl.label.includes(K.landName(e.ziel)), `Option heisst „${wahl.label}"`);
+  assert.ok(e.text.includes(K.landName(e.ziel)), "das Land muss auch im Text stehen");
+  assert.equal(wahl.wirkung.verbandswechsel, e.ziel);
+  /* Nach dem Doppelpunkt, nie als „für X" — sonst fehlt bei der Hälfte der Länder
+     der Artikel („für die Slowakei"). */
+  assert.ok(!/für \S/.test(wahl.label), `Option „${wahl.label}" braucht einen Artikel`);
+  assert.deepEqual(e.optionen[1].wirkung, {}, "die zweite Option ändert nichts");
+});
+
+// ── Ereigniskarten ───────────────────────────────────────────────────────────
+
+test("jede Karte ist vollständig", () => {
+  const keys = new Set();
+  for (const e of K.EREIGNISSE) {
+    assert.ok(e.key && !keys.has(e.key), `doppelter Schlüssel ${e.key}`);
+    keys.add(e.key);
+    assert.ok(e.titel && e.text, `${e.key}: Titel oder Text fehlt`);
+    assert.ok(e.optionen.length >= 2, `${e.key}: braucht mindestens zwei Optionen`);
+    for (const o of e.optionen) {
+      assert.ok(o.label, `${e.key}: Option ohne Beschriftung`);
+      assert.ok(o.wirkung, `${e.key}/${o.label}: keine Wirkung`);
+      if (o.chance !== undefined) {
+        assert.ok(o.chance > 0 && o.chance < 1, `${e.key}/${o.label}: Chance ${o.chance}`);
+        assert.ok(o.sonst, `${e.key}/${o.label}: Chance ohne Gegenteil`);
+      }
+    }
+    if (e.wenn) assert.equal(typeof e.wenn, "function", `${e.key}: wenn ist keine Funktion`);
+  }
+});
+
+/* DER FEHLER, DEN DAS FÄNGT: Fünfzehn Karten, sechs je Laufbahn — ab der dritten
+   Laufbahn kannte man alle, und keine hatte mit der eigenen Lage zu tun. */
+test("die Karten sind an die Lage gebunden", () => {
+  const basis = (x) => ({ ...K.neueKarriere({ name: "T", land: "GER", nummer: 9, pos: "ST", seed: 3 }), ...x });
+  const moeglich = (k) => K.EREIGNISSE.filter((e) => !e.wenn || e.wenn(k)).map((e) => e.key);
+
+  const jung = moeglich(basis({ alter: 17, ovr: 55 }));
+  assert.ok(jung.includes("internat"), "mit siebzehn gehört das Internat dazu");
+  assert.ok(!jung.includes("knie"), "mit siebzehn meldet sich kein Knie");
+  assert.ok(!jung.includes("trainerschein"));
+
+  const alt = moeglich(basis({ alter: 34, ovr: 74, verein: { stufe: 3, liga: { land: "GER", stufe: 1 } } }));
+  assert.ok(alt.includes("knie") && alt.includes("trainerschein"), "mit 34 schon");
+  assert.ok(!alt.includes("internat") && !alt.includes("debuet"));
+
+  const feld = moeglich(basis({ alter: 26, pos: "ST" }));
+  assert.ok(!feld.includes("patzer"), "ein Stürmer patzt nicht beim Abschlag");
+  const tw = moeglich(basis({ alter: 26, pos: "TW", verein: { stufe: 4, liga: { land: "GER", stufe: 1 } } }));
+  assert.ok(tw.includes("patzer") && tw.includes("elfmeterschiessen"));
+
+  const daheim = moeglich(basis({ alter: 24, verein: { stufe: 3, liga: { land: "GER", stufe: 1 } } }));
+  assert.ok(!daheim.includes("sprache"), "wer zu Hause spielt, hat kein Sprachproblem");
+  const fremd = moeglich(basis({ alter: 24, verein: { stufe: 3, liga: { land: "ITA", stufe: 1 } } }));
+  assert.ok(fremd.includes("sprache") && fremd.includes("heimweh"));
+
+  const nachTitel = moeglich(basis({ alter: 27, verlauf: [{ titel: ["MBL"], spiele: 30, tore: 12, vorlagen: 5 }] }));
+  assert.ok(nachTitel.includes("titelverteidigung"), "nach einem Titel steht die Wiederholung an");
+  const ohneTitel = moeglich(basis({ alter: 27, verlauf: [{ titel: [], spiele: 30, tore: 12, vorlagen: 5 }] }));
+  assert.ok(!ohneTitel.includes("titelverteidigung"));
+});
+
+/* Es muss IMMER eine Karte geben — auch für den ungewöhnlichsten Stand. Ein leerer
+   Topf hiesse: kein Ereignis, und der Schritt fiele stumm aus. */
+test("für jede Lage findet sich eine Karte", () => {
+  const zufall = K.rng(23);
+  const staende = [];
+  for (const alter of [16, 19, 24, 31, 37]) {
+    for (const pos of ["TW", "IV", "ZM", "ST"]) {
+      for (const stufe of [0, 3, 5]) {
+        staende.push({ ...K.neueKarriere({ name: "T", land: "GER", nummer: 1, pos, seed: alter }),
+          alter, ovr: 50 + alter, verein: { stufe, liga: { land: "GER", stufe: stufe <= 2 ? 2 : 1 } } });
+      }
+    }
+  }
+  for (const k of staende) {
+    const e = K.ziehEreignis(k, zufall);
+    assert.ok(e && e.optionen?.length >= 2, `kein Ereignis für ${k.pos} mit ${k.alter}`);
+    /* Und auch dann noch, wenn die letzten fünf gesperrt sind. */
+    const gesperrt = K.EREIGNISSE.slice(0, 5).map((x) => x.key);
+    assert.ok(K.ziehEreignis(k, zufall, gesperrt)?.optionen?.length >= 2);
+  }
 });

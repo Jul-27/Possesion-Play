@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { CLUBS, HONOURS } from "./gameData.js";
+import { CLUBS } from "./gameData.js";
 import { alleLaender, passtAufSuche, namenVon, EIGENE, flaggeVon } from "./laender.js";
 import { trikotVon, kontrast } from "./trikots.js";
 import { WELT_LIGEN, WELT_VEREINE } from "./careerWorld.js";
@@ -22,16 +22,10 @@ import Trophaee from "./Trophaeen.jsx";
 
 /* Titelnamen für die Vitrine. Die Schlüssel sind dieselben wie im Feld `t` der
    Spielerdaten — „CL" heißt in der Karriere dasselbe wie in jedem anderen Modus. */
-const TITEL_NAME = {
-  MBL: "Deutscher Meister", MPL: "Englischer Meister", MLL: "Spanischer Meister",
-  MSA: "Italienischer Meister", ML1: "Französischer Meister",
-  DFB: "DFB-Pokal", FAC: "FA Cup", CDR: "Copa del Rey", CIT: "Coppa Italia",
-  CL: "Champions League", EL: "Europa League",
-  WM: "Weltmeister", EM: "Europameister", CA: "Copa América", BDO: "Ballon d'Or",
-};
-/* CA gehört dazu, seit Südamerika seine eigene Kontinentalmeisterschaft spielt —
-   ohne den Eintrag stünde bei einem Brasilianer „CA" statt eines Titelnamens. */
-const TITEL_REIHE = ["BDO", "WM", "EM", "CA", "CL", "EL", "MBL", "MPL", "MLL", "MSA", "ML1", "DFB", "FAC", "CDR", "CIT"];
+/* Namen und Reihenfolge kommen aus karriere.js — dort stehen sie neben Form und
+   Farbe, und dort werden sie auch gepflegt. */
+const TITEL_NAME = Object.fromEntries(Object.entries(K.TITEL_DATEN).map(([key, d]) => [key, d.name]));
+const TITEL_REIHE = K.TITEL_REIHE;
 
 /* Der Name eines Landes. Die sieben mit eigener Liga tragen unseren internen
    Schlüssel (GER, ENG, …), alle übrigen ihren ISO-Code — beide löst laender.js auf. */
@@ -301,7 +295,7 @@ function Titelfeier({ titel, onFertig }) {
   }, [i, titel.length, onFertig]);
 
   const key = titel[i];
-  const def = HONOURS.find((h) => h.key === key);
+  const def = K.TITEL_DATEN[key];
   if (!def) return null;
   const weiter = () => (i + 1 < titel.length ? setI(i + 1) : onFertig());
 
@@ -493,6 +487,9 @@ export default function Karriere({ onLeave }) {
     const neueTitel = [];
     const ereignisse = [];
     let spiele = 0, tore = 0, vorlagen = 0, ausgefallen = 0;
+    /* Nur beim Torwart gefüllt — bei allen anderen bleiben beide null und die
+       Spalten werden gar nicht erst angezeigt. */
+    let gegentore = 0, westen = 0;
 
     for (let s = 0; s < saisons; s++) {
       /* Schluss ist Schluss — MITTEN im Schritt. Die Pruefung stand danach, und weil
@@ -513,6 +510,7 @@ export default function Karriere({ onLeave }) {
       }
       const l = K.saisonLeistung(k2, verein.stufe, zufall);
       spiele += l.spiele; tore += l.tore; vorlagen += l.vorlagen;
+      gegentore += l.gegentore || 0; westen += l.westen || 0;
       for (const t of K.saisonTitel(verein, zufall, modRef.current)) neueTitel.push(t);
       for (const t of K.einzelTitel(k2, l, zufall)) { neueTitel.push(t); if (k2.bdoAlter === undefined) k2.bdoAlter = k2.alter; }
       k2.saisonNr = (k2.saisonNr || 0) + 1;
@@ -564,8 +562,10 @@ export default function Karriere({ onLeave }) {
         spiele: k2.gesamt.spiele + spiele,
         tore: k2.gesamt.tore + tore,
         vorlagen: k2.gesamt.vorlagen + vorlagen,
+        gegentore: (k2.gesamt.gegentore || 0) + gegentore,
+        westen: (k2.gesamt.westen || 0) + westen,
       },
-      verlauf: [...k2.verlauf, { alter: k2.alter, verein: verein.name, key: verein.key, lg: verein.lg, ovr: k2.ovr, spiele, tore, vorlagen, titel: neueTitel }],
+      verlauf: [...k2.verlauf, { alter: k2.alter, verein: verein.name, key: verein.key, lg: verein.lg, ovr: k2.ovr, spiele, tore, vorlagen, gegentore, westen, titel: neueTitel }],
     };
 
     setK(k2);
@@ -573,7 +573,7 @@ export default function Karriere({ onLeave }) {
     /* DIE SAISON HATTE KEINEN MOMENT. Man klickte, und die Tabelle rechts hatte eine
        Zeile mehr — 66 Spiele, 13 Tore, 15 Vorlagen liefen unsichtbar vorbei. Jetzt
        steht die Bilanz über der nächsten Entscheidung. */
-    setSaison({ saisons, bis: k2.alter, verein: verein.name, spiele, tore, vorlagen, verletzt: ausgefallen });
+    setSaison({ saisons, bis: k2.alter, verein: verein.name, spiele, tore, vorlagen, gegentore, westen, verletzt: ausgefallen });
     /* Jeder Titel bekommt seinen Moment — auch wenn in einem Schritt mehrere fallen.
        Doppelte werden zusammengefasst, sonst liefe dieselbe Trophaee zweimal. */
     if (neueTitel.length) { setFeier([...new Set(neueTitel)]); play("win"); }
@@ -743,11 +743,21 @@ export default function Karriere({ onLeave }) {
     </div>
   );
 
+  /* Eine Position, zwei Statistiken: Für den Torwart tauschen Tabelle, Saisonbilanz
+     und Urkunde die Spalten Tore/Vorlagen gegen Gegentore/weiße Westen. Die
+     Deklaration steht VOR der Zeitleiste, nicht dahinter — sonst greift die
+     Tabelle auf eine Konstante zu, die es an dieser Stelle noch nicht gibt, und der
+     ganze Modus stürzt beim ersten Rendern ab. */
+  const torwart = K.istTorwart(k?.pos);
+
   const zeitleiste = (
     <div className="kaLeiste">
       <Verlaufskurve verlauf={k.verlauf} defVon={defVon} />
       <table>
-        <thead><tr><th>Alter</th><th>Verein</th><th>Stärke</th><th>Sp</th><th>To</th><th>Vo</th></tr></thead>
+        <thead><tr><th>Alter</th><th>Verein</th><th>Stärke</th><th>Sp</th>
+          {torwart ? <><th title="Gegentore">GT</th><th title="weiße Westen">WW</th></>
+                   : <><th title="Tore">To</th><th title="Vorlagen">Vo</th></>}
+        </tr></thead>
         <tbody>
           {/* Die jüngste Zeile bekommt einen kurzen Auftritt: Sie ist der Grund,
               warum der Ratingzähler daneben eine halbe Sekunde wartet. */}
@@ -756,7 +766,9 @@ export default function Karriere({ onLeave }) {
               <td>{z.alter}</td>
               <td><span className="kaZeilenWappen"><Emblem def={defVon({ key: z.key, name: z.verein })} /></span>{z.verein} <small>{z.lg}</small>{z.titel.length ? <em>{z.titel.map((t, n) => <Trophaee key={n} titel={t} groesse={18} titelText={TITEL_NAME[t] || t} />)}</em> : null}</td>
               <td><span className="kaRatingMarke">{z.ovr}</span></td>
-              <td>{z.spiele}</td><td>{z.tore}</td><td>{z.vorlagen}</td>
+              <td>{z.spiele}</td>
+              {torwart ? <><td>{z.gegentore ?? 0}</td><td>{z.westen ?? 0}</td></>
+                       : <><td>{z.tore}</td><td>{z.vorlagen}</td></>}
             </tr>
           ))}
         </tbody>
@@ -776,6 +788,7 @@ export default function Karriere({ onLeave }) {
       const letzte = out[out.length - 1];
       if (letzte && letzte.key === z.key) {
         letzte.spiele += z.spiele; letzte.tore += z.tore; letzte.vorlagen += z.vorlagen;
+        letzte.gegentore += z.gegentore || 0; letzte.westen += z.westen || 0;
         letzte.titel.push(...(z.titel || []).filter((x) => x !== "BDO"));
         continue;
       }
@@ -783,6 +796,7 @@ export default function Karriere({ onLeave }) {
       out.push({
         key: z.key, name: z.verein, label: def.label || z.key, c1: def.c1, c2: def.c2, pat: def.pat,
         spiele: z.spiele, tore: z.tore, vorlagen: z.vorlagen,
+        gegentore: z.gegentore || 0, westen: z.westen || 0,
         titel: (z.titel || []).filter((x) => x !== "BDO"),
       });
     }
@@ -819,8 +833,12 @@ export default function Karriere({ onLeave }) {
           {k.national?.spiele
             ? <em className="kaNational">
                 {landFlagge(k.land)} {k.national.spiele} {k.national.spiele === 1 ? "Länderspiel" : "Länderspiele"}
-                {" · "}{k.national.tore} {k.national.tore === 1 ? "Tor" : "Tore"}
-                {" · "}{k.national.vorlagen} {k.national.vorlagen === 1 ? "Vorlage" : "Vorlagen"}
+                {/* Beim Torwart blieben hier zwei Nullen stehen — „0 Tore · 0 Vorlagen"
+                    ist keine Bilanz, sondern eine Positionsbeschreibung. */}
+                {torwart ? null : <>
+                  {" · "}{k.national.tore} {k.national.tore === 1 ? "Tor" : "Tore"}
+                  {" · "}{k.national.vorlagen} {k.national.vorlagen === 1 ? "Vorlage" : "Vorlagen"}
+                </>}
               </em>
             : null}
         </small>
@@ -861,8 +879,17 @@ export default function Karriere({ onLeave }) {
             <span className="kaSaisonZahlen">
               {/* „1 Vorlagen" liest sich falsch, und die Zahl eins kommt oft genug vor. */}
               <b>{saison.spiele}</b><small>{saison.spiele === 1 ? "Spiel" : "Spiele"}</small>
-              <b>{saison.tore}</b><small>{saison.tore === 1 ? "Tor" : "Tore"}</small>
-              <b>{saison.vorlagen}</b><small>{saison.vorlagen === 1 ? "Vorlage" : "Vorlagen"}</small>
+              {torwart ? (
+                <>
+                  <b>{saison.gegentore}</b><small>{saison.gegentore === 1 ? "Gegentor" : "Gegentore"}</small>
+                  <b>{saison.westen}</b><small>{saison.westen === 1 ? "weiße Weste" : "weiße Westen"}</small>
+                </>
+              ) : (
+                <>
+                  <b>{saison.tore}</b><small>{saison.tore === 1 ? "Tor" : "Tore"}</small>
+                  <b>{saison.vorlagen}</b><small>{saison.vorlagen === 1 ? "Vorlage" : "Vorlagen"}</small>
+                </>
+              )}
             </span>
           </div>
         )}
@@ -1006,7 +1033,10 @@ export default function Karriere({ onLeave }) {
             {karte.grund && <p className="kaGrund">{karte.grund}</p>}
             <p className="kaBilanz">
               {k.verlauf.length ? `${k.verlauf[0].alter - K.TEMPO[k.tempo].saisons} bis ${k.alter}` : k.alter} ·{" "}
-              {k.gesamt.spiele} Spiele · {k.gesamt.tore} Tore · {k.gesamt.vorlagen} Vorlagen ·{" "}
+              {k.gesamt.spiele} Spiele ·{" "}
+              {torwart
+                ? <>{k.gesamt.gegentore ?? 0} Gegentore · {k.gesamt.westen ?? 0} weiße Westen · </>
+                : <>{k.gesamt.tore} Tore · {k.gesamt.vorlagen} Vorlagen · </>}
               {k.vereine.length} Verein{k.vereine.length === 1 ? "" : "e"}
             </p>
             {/* ERST JETZT WIRD DAS TALENT GENANNT. Es wird beim Anlegen verdeckt
@@ -1046,6 +1076,7 @@ export default function Karriere({ onLeave }) {
               auszeichnungen={karte.auszeichnungen}
               stationen={stationen}
               national={k.national}
+              torwart={torwart}
               datum={new Date().toLocaleDateString("de-DE")}
             />
 

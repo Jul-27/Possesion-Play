@@ -36,6 +36,7 @@ function Zahl({ wert, name }) {
 export default function UrkundeKarriere({
   name, nummer, position, land, gesamt = {}, hoechste = 0, marktwert = "",
   titel = [], auszeichnungen = [], stationen = [], national = null, datum = "",
+  torwart = false,
 }) {
   const nationalTitel = titel.filter((t) => NATIONAL.has(t.key));
   const bdo = titel.find((t) => t.key === "BDO");
@@ -53,8 +54,19 @@ export default function UrkundeKarriere({
           <p className="ukUnter">#{nummer} · {position} · {land}</p>
           <div className="ukZahlen">
             <Zahl wert={gesamt.spiele ?? 0} name="Spiele" />
-            <Zahl wert={gesamt.tore ?? 0} name="Tore" />
-            <Zahl wert={gesamt.vorlagen ?? 0} name="Vorlagen" />
+            {/* Ein Torwart schießt keine Tore — seine Laufbahn misst sich an dem,
+                was nicht passiert ist. */}
+            {torwart ? (
+              <>
+                <Zahl wert={gesamt.gegentore ?? 0} name="Gegentore" />
+                <Zahl wert={gesamt.westen ?? 0} name="Weiße Westen" />
+              </>
+            ) : (
+              <>
+                <Zahl wert={gesamt.tore ?? 0} name="Tore" />
+                <Zahl wert={gesamt.vorlagen ?? 0} name="Vorlagen" />
+              </>
+            )}
             <Zahl wert={vereine} name="Vereine" />
           </div>
           <div className="ukRating">
@@ -73,8 +85,10 @@ export default function UrkundeKarriere({
           {national && national.spiele
             ? <p className="ukUnter">
                 {national.spiele} {national.spiele === 1 ? "Spiel" : "Spiele"}
-                {" · "}{national.tore} {national.tore === 1 ? "Tor" : "Tore"}
-                {" · "}{national.vorlagen} {national.vorlagen === 1 ? "Vorlage" : "Vorlagen"}
+                {torwart ? null : <>
+                  {" · "}{national.tore} {national.tore === 1 ? "Tor" : "Tore"}
+                  {" · "}{national.vorlagen} {national.vorlagen === 1 ? "Vorlage" : "Vorlagen"}
+                </>}
               </p>
             : <p className="ukUnter">nie berufen</p>}
           <div className="ukPokale">
@@ -111,8 +125,8 @@ export default function UrkundeKarriere({
             <b className="ukVereinName">{s.name}</b>
             <div className="ukZahlen">
               <Zahl wert={s.spiele} name="SP" />
-              <Zahl wert={s.tore} name="TO" />
-              <Zahl wert={s.vorlagen} name="VO" />
+              {torwart ? <><Zahl wert={s.gegentore ?? 0} name="GT" /><Zahl wert={s.westen ?? 0} name="WW" /></>
+                       : <><Zahl wert={s.tore} name="TO" /><Zahl wert={s.vorlagen} name="VO" /></>}
             </div>
             <div className="ukVereinPokale">
               {/* Ein Titel mit der Auswahl gehört ins Länderfeld, nicht auf die Karte des
