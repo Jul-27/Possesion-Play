@@ -72,6 +72,26 @@ export const WELT_LIGEN = [
      Q650236 = zweithöchste. Beide an Wikidata nachgesehen, nicht geraten. */
   { key: "AT",  name: "Bundesliga Österreich", land: "AUT", stufe: 1, plaetze: 12, qid: "Q219592", quelle: "beide"  },
   { key: "AT2", name: "2. Liga Österreich",    land: "AUT", stufe: 2, plaetze: 16, qid: "Q650236", quelle: "beide"  },
+  /* ── Vier Ligen ausserhalb Europas, nachgetragen am 15.09.2026 ──────────────
+     Bis hierher endete die Welt an Europas Grenze: Ein Brasilianer musste seine
+     Jugend in Europa beginnen, und ein Vierunddreissigjähriger hatte keine Bühne
+     mehr ausser dem Abstieg in die zweite Liga. Beides fällt jetzt weg.
+
+     Alle vier über P118 mit Kadertest — Saisonlisten gibt es für sie nicht, und der
+     Test trägt: Nachgesehen liefern Brasilien 26, Japan 25, die MLS 29 und
+     Saudi-Arabien 16 Vereine mit mindestens fünfzehn Spielern, die acht oder mehr
+     Wikipedia-Sprachversionen haben.
+
+     Zweite Spielklassen bekommen sie nicht. Sie sind Ziele für die späte Laufbahn
+     und für Spieler aus diesen Ländern, keine Leihstationen — und ohne zweite Liga
+     gibt es dort weder Auf- noch Abstieg, was `schwesterLiga` bereits verträgt.
+
+     QIDs nachgesehen, nicht geraten: Q206813 Campeonato Brasileiro de Futebol,
+     Q18543 Major League Soccer, Q255633 Saudi Professional League, Q276445 J1 League. */
+  { key: "BRA", name: "Brasileirão",        land: "BRA", stufe: 1, plaetze: 20, qid: "Q206813", quelle: "p118" },
+  { key: "MLS", name: "Major League Soccer", land: "USA", stufe: 1, plaetze: 29, qid: "Q18543",  quelle: "p118" },
+  { key: "SAU", name: "Saudi Pro League",   land: "SAU", stufe: 1, plaetze: 18, qid: "Q255633", quelle: "p118" },
+  { key: "JPN", name: "J1 League",          land: "JPN", stufe: 1, plaetze: 20, qid: "Q276445", quelle: "p118" },
 ];
 
 /* Der Kadertest gegen die P118-Schwemme: So viele Spieler muss ein Verein seit

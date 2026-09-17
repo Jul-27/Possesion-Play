@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TITEL_DATEN } from "./karriere.js";
 /* Gezeichnete Trophäen — eine eigene Form je Wettbewerb.
 
    ── WARUM ─────────────────────────────────────────────────────────────────────
@@ -30,14 +31,13 @@ import { useState } from "react";
    Jede gezeichnete Form ist ein reiner Pfad ohne Verlauf — das lässt sie in jeder
    Grösse gleich aussehen. */
 
-/* Welcher Titel trägt welche Form. Die Schlüssel sind dieselben wie überall. */
-export const FORM_VON_TITEL = {
-  MBL: "schale", MPL: "schale", MLL: "schale", MSA: "schale", ML1: "schale",
-  DFB: "pokal", FAC: "pokal", CDR: "pokal", CIT: "pokal",
-  CL: "ohren", EL: "amphore",
-  WM: "globus", EM: "kelch", CA: "kelch",
-  BDO: "ball",
-};
+/* Welche Form ein Titel trägt, steht bei den Titeldaten in karriere.js — zusammen
+   mit Name und Farbe. Zwei Listen, die man getrennt pflegen muss, laufen
+   auseinander: Beim Nachtragen der acht neuen Meisterschaften hätte die eine die
+   Namen bekommen und die andere nicht, und die Feier hätte einen Henkelpokal für
+   eine Meisterschaft gezeigt. */
+export const FORM_VON_TITEL = Object.fromEntries(
+  Object.entries(TITEL_DATEN).map(([key, d]) => [key, d.form]));
 
 /* Metall und Schattenseite. Gold für alles, was eine Trophäe ist; die zweite Farbe
    zeichnet die abgewandte Seite, damit die Form plastisch wirkt. */
