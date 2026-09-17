@@ -384,13 +384,21 @@ function Spielfeld({ pos, setPos }) {
 const prozent = (p) => `${Math.round(p * 100)} %`;
 /* Wie eine Wirkung auf der Karte steht. Ohne diese Zeile wäre die Entscheidung
    wieder ein Blindflug — sie ist der Kern des Modus. */
-function wirkungsText(w) {
+/* Die Vorschau auf einer Option. Sie nennt nur Wettbewerbe, die der Verein spielt —
+   bei Al-Hilal stand sonst „Pokal ×1.5" für einen Pokal, den es dort nicht gibt.
+   Und sie nennt Faktoren, wie sie sind: „halbiert" stand vorher für JEDEN Wert unter
+   eins, auch für 0,6 und 0,4. */
+function wirkungsText(w, verein) {
   const teile = [];
+  const hat = K.wettbewerbe(verein);
   if (w.ovr) teile.push(`${w.ovr > 0 ? "+" : ""}${w.ovr} Stärke`);
   if (w.rolle) teile.push({ stamm: "Stammplatz", rotation: "Rotation", kader: "nur im Kader" }[w.rolle]);
   if (w.verletzt) teile.push(`${w.verletzt} Saison verletzt`);
-  for (const [feld, name] of [["liga", "Meisterschaft"], ["pokal", "Pokal"], ["europa", "Europapokal"]])
-    if (w[feld] !== undefined) teile.push(`${name} ${w[feld] > 1 ? "×" + w[feld] : "halbiert"}`);
+  for (const [feld, name] of [["liga", "Meisterschaft"], ["pokal", "Pokal"], ["europa", "Europapokal"]]) {
+    const f = w[feld];
+    if (f === undefined || f === 1 || !hat[feld]) continue;
+    teile.push(`${name} ${f > 1 ? "×" + K.faktorText(f) : f === 0.5 ? "halbiert" : `auf ${Math.round(f * 100)} %`}`);
+  }
   if (w.verbandswechsel) teile.push("neuer Verband");
   if (w.abschluss) teile.push("Schulabschluss");
   return teile.length ? teile.join(" · ") : "nichts ändert sich";
@@ -955,7 +963,7 @@ export default function Karriere({ onLeave }) {
                 <button key={i} className="kaOption" onClick={() => waehleOption(o)}>
                   <b>{o.label}</b>
                   {o.chance === undefined
-                    ? <small>{wirkungsText(o.wirkung)}</small>
+                    ? <small>{wirkungsText(o.wirkung, karte.verein ?? k.verein)}</small>
                     : <>
                         {/* Der Balken zeigt dieselbe Quote, die daneben steht — aber
                             sichtbar. Eine Wette erfasst man schneller, als man sie liest. */}
@@ -963,8 +971,8 @@ export default function Karriere({ onLeave }) {
                           <span className="kaQuoteBalken"><i style={{ width: `${Math.round(o.chance * 100)}%` }} /></span>
                           <span className="kaQuoteZahl">{prozent(o.chance)}</span>
                         </span>
-                        <small className="gut">▲ {wirkungsText(o.wirkung)}</small>
-                        <small className="schlecht">▼ {wirkungsText(o.sonst)}</small>
+                        <small className="gut">▲ {wirkungsText(o.wirkung, karte.verein ?? k.verein)}</small>
+                        <small className="schlecht">▼ {wirkungsText(o.sonst, karte.verein ?? k.verein)}</small>
                       </>}
                 </button>
               ))}

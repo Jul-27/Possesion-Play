@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as K from "./karriere.js";
 import { WELT_LIGEN } from "./careerWorld.js";
+import { alleLaender } from "./laender.js";
 
 /* Eine kleine Welt mit bekannten Stärken: zwei Länder, je zwei Spielklassen. */
 const LIGEN = [
@@ -511,7 +512,9 @@ test("eine kleine Auswahl gewinnt deutlich seltener als eine grosse", () => {
     return n / 20000;
   };
   const br = quote("BR"), at = quote("AUT"), mt = quote("MT");
-  assert.ok(br > 0.10 && br < 0.25, `Brasilien gewinnt ${(br * 100).toFixed(1)} % der Weltmeisterschaften`);
+  /* Seit das Turnier im Feld ausgespielt wird, liegt die Spitze bei gut 5 % je WM
+     — neun Nationen teilen sich die oberste Gruppe, und es gibt EINEN Weltmeister. */
+  assert.ok(br > 0.03 && br < 0.12, `Brasilien gewinnt ${(br * 100).toFixed(1)} % der Weltmeisterschaften`);
   assert.ok(at < br / 8, `Österreich ${(at * 100).toFixed(2)} % gegen Brasilien ${(br * 100).toFixed(1)} %`);
   assert.ok(mt < at, "Malta muss noch seltener gewinnen als Österreich");
   assert.ok(mt > 0, "unmöglich soll es aber nirgends sein");
@@ -705,8 +708,49 @@ test("Rollenwechsel, Verletzung und Titelaussicht stehen im Klartext", () => {
   const texte = r.folgen.map((f) => f.text);
   assert.ok(texte.some((t) => t.includes("Stammspieler → Rotation")), texte.join(" | "));
   assert.ok(texte.some((t) => t.includes("verletzt")), texte.join(" | "));
-  assert.ok(texte.some((t) => t.includes("Meisterschaft") && t.includes("1.6")), texte.join(" | "));
-  assert.ok(texte.some((t) => t.includes("Pokal") && t.includes("50")), texte.join(" | "));
+  assert.ok(texte.some((t) => t.includes("Meisterschaft") && t.includes("1,6")), texte.join(" | "));
+  assert.ok(texte.some((t) => t.includes("den Pokal") && t.includes("50")), texte.join(" | "));
+});
+
+/* DER FEHLER, DEN DAS FÄNGT: „Aussicht auf die Pokal", „die Europapokal" und
+   „1.6-fach" standen so im Spiel. */
+test("die Titelaussicht steht in richtigem Deutsch", () => {
+  const k = K.neueKarriere({ name: "T", pos: "ZM", land: "GER", nummer: 9 });
+  const r = K.entscheide(k, { label: "x", wirkung: { liga: 1.6, pokal: 1.6, europa: 1.6 } }, () => 0);
+  const texte = r.folgen.map((f) => f.text).join(" | ");
+  assert.ok(texte.includes("auf die Meisterschaft"), texte);
+  assert.ok(texte.includes("auf den Pokal"), texte);
+  assert.ok(texte.includes("auf den Europapokal"), texte);
+  assert.ok(!/die Pokal|die Europapokal|\d\.\d/.test(texte), texte);
+});
+
+/* DER FEHLER, DEN DAS FÄNGT: Bei Al-Hilal kam „Drei Wettbewerbe — Liga, Pokal,
+   Europa", in der 2. Bundesliga „Aussicht auf die Meisterschaft ×1,5". Beides
+   verspricht etwas, das es dort nicht gibt. */
+test("Karten und Folgen kennen nur die Wettbewerbe des Vereins", () => {
+  const liga = (key) => WELT_LIGEN.find((l) => l.key === key);
+  const verein = (lg, stufe) => ({ key: "X", name: "X", lg, stufe, liga: liga(lg) });
+  assert.deepEqual(K.wettbewerbe(verein("BL", 5)), { liga: true, pokal: true, europa: true });
+  assert.deepEqual(K.wettbewerbe(verein("SAU", 4)), { liga: true, pokal: false, europa: false });
+  assert.deepEqual(K.wettbewerbe(verein("BL2", 2)), { liga: false, pokal: false, europa: false });
+
+  const basis = (v) => ({ ...K.neueKarriere({ name: "T", land: "GER", nummer: 9, pos: "ST", seed: 3 }),
+    alter: 30, ovr: 82, rolle: "stamm", verein: v });
+  const moeglich = (k) => K.EREIGNISSE.filter((e) => !e.wenn || e.wenn(k)).map((e) => e.key);
+  const riad = moeglich(basis(verein("SAU", 4)));
+  assert.ok(!riad.includes("dreifach"), "bei Al-Hilal gibt es keine drei Wettbewerbe");
+  assert.ok(!riad.includes("prioritaet"), "und keinen Europapokal, auf den man setzen könnte");
+  const zweite = moeglich(basis(verein("BL2", 2)));
+  assert.ok(!zweite.includes("prioritaet") && !zweite.includes("talent"));
+
+  /* Die Folge verschweigt, was es nicht gibt. */
+  const k = basis(verein("BL2", 2));
+  const r = K.entscheide(k, { label: "x", wirkung: { liga: 1.5, pokal: 1.5, europa: 1.5 } }, () => 0);
+  assert.deepEqual(r.folgen.map((f) => f.text), ["Es bleibt alles, wie es war"]);
+
+  /* Und keine Karte trägt eine Titelwirkung, die ihre Bedingung nie erfüllen kann. */
+  const aufstieg = K.EREIGNISSE.find((e) => e.key === "aufstiegsrennen");
+  for (const o of aufstieg.optionen) assert.equal(o.wirkung.liga, undefined, "in der zweiten Liga gibt es keine Meisterschaft");
 });
 
 test("jede Option jeder Ereigniskarte erzeugt eine beschreibbare Folge", () => {
@@ -1178,4 +1222,48 @@ test("für jede Lage findet sich eine Karte", () => {
     const gesperrt = K.EREIGNISSE.slice(0, 5).map((x) => x.key);
     assert.ok(K.ziehEreignis(k, zufall, gesperrt)?.optionen?.length >= 2);
   }
+});
+
+// ── Ein Turnier, ein Sieger ──────────────────────────────────────────────────
+
+/* DER FEHLER, DEN DAS FÄNGT: Jede Nation würfelte für sich, mit 22 % je WM für die
+   neun der obersten Gruppe — rechnerisch rund zwei Weltmeister je Turnier. */
+test("über alle Nationen gibt es höchstens einen Sieger je Turnier", () => {
+  const laender = [...new Set(alleLaender().map((l) => l.key))];
+  for (const [turnier, erdteil] of [["WM", null], ["EM", "EU"], ["CA", "SA"]]) {
+    const teilnehmer = laender.filter((l) => !erdteil || K.erdteil(l) === erdteil);
+    const summe = teilnehmer.reduce((s, l) => s + K.siegChance(l, turnier), 0);
+    assert.ok(summe <= 1.0001, `${turnier}: ${summe.toFixed(3)} Sieger je Turnier`);
+    assert.ok(summe > 0.6, `${turnier}: nur ${summe.toFixed(3)} — das Feld ist aufgebläht`);
+  }
+});
+
+/* DER FEHLER, DEN DAS FÄNGT: Ein Portugiese, der nie über Clermont und Burnley
+   hinauskam, wurde im Spiel zweimal Weltmeister und einmal Europameister. Gemessen
+   holte eine solche Laufbahn in 24 % aller Fälle einen Länderpokal. */
+test("eine gewöhnliche Laufbahn einer grossen Nation gewinnt selten einen Länderpokal", () => {
+  const zufall = K.rng(311);
+  const verlauf = (peak) => Array.from({ length: 21 }, (_, i) => {
+    const alter = 16 + i;
+    return Math.round(alter <= 26 ? 50 + (peak - 50) * (alter - 16) / 10 : alter <= 30 ? peak : peak - (alter - 30) * 2);
+  });
+  const quote = (land, peak) => {
+    let mit = 0;
+    for (let n = 0; n < 3000; n++) {
+      let t = 0;
+      verlauf(peak).forEach((ovr, s) => { t += K.nationalTitel({ ovr, land }, { stufe: 3 }, zufall, s + 1).length; });
+      if (t) mit++;
+    }
+    return mit / 3000;
+  };
+  const normal = quote("PRT", 74), spitze = quote("PRT", 90);
+  assert.ok(normal < 0.10, `Höchstwert 74: ${(normal * 100).toFixed(1)} % holen einen Länderpokal`);
+  assert.ok(spitze > 0.25 && spitze < 0.55, `Höchstwert 90: ${(spitze * 100).toFixed(1)} %`);
+  assert.ok(quote("AUT", 90) < 0.06, "Österreich bleibt die Ausnahme");
+});
+
+test("im Turnierkader steht, wer deutlich über der Berufung liegt", () => {
+  assert.equal(K.imKader({ ovr: K.NATIONALELF_AB, land: "GER" }), K.KADER_SOCKEL);
+  assert.equal(K.imKader({ ovr: K.NATIONALELF_AB + K.KADER_SPANNE + 5, land: "GER" }), 1);
+  assert.ok(K.imKader({ ovr: 78, land: "GER" }) < K.imKader({ ovr: 84, land: "GER" }));
 });

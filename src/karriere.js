@@ -25,7 +25,7 @@
    Rufstufe in die Rechnung ein. Die Stufe wird einmal aus der Mannschaftsstärke
    abgeleitet, danach ist die alte Skala nicht mehr im Spiel. */
 import { WELT_LIGEN, WELT_VEREINE } from "./careerWorld.js";
-import { namenVon, EIGENE } from "./laender.js";
+import { namenVon, EIGENE, alleLaender } from "./laender.js";
 
 export const START_ALTER = 16;
 export const OVR_START = 50;
@@ -688,9 +688,8 @@ export const berufungAb = (k) => NATIONALELF_AB - (k.verbandGewechselt ? VERBAND
      0,07  Nationen mit Tradition, die dafür alles zusammenkommen muss
      0,012 alle übrigen
 
-   Für einen Weltklassespieler heisst das rund 17 % je WM mit Brasilien, 4 % mit
-   Kroatien, 1 % mit Österreich und 0,2 % mit Malta. Möglich bleibt es überall — die
-   Ausnahme ist es überall ausser oben. */
+   Wie aus diesen Gewichten eine Siegchance wird, steht unten bei nationalTitel: Sie
+   werden gegen das Feld des Turniers gerechnet, nicht für sich allein. */
 export const NATION_A = 1.0, NATION_B = 0.25, NATION_C = 0.07, NATION_REST = 0.012;
 
 const NATIONEN_A = ["BR", "AR", "FRA", "GER", "ESP", "ENG", "ITA", "PRT", "NED"];
@@ -706,6 +705,10 @@ const NATION_STAERKE = new Map([
 ]);
 
 export const nationStaerke = (land) => NATION_STAERKE.get(land) ?? NATION_REST;
+
+/* Alle wählbaren Länder — sie bilden das Feld der WM. Unsere acht eigenen Schlüssel
+   (GER, ENG, …) ersetzen dort ihren ISO-Code, damit kein Land doppelt zählt. */
+const TURNIERLAENDER = alleLaender().map((l) => l.key);
 
 /* Der Name eines Landes. Die acht mit eigener Liga tragen unseren internen
    Schlüssel (GER, ENG, …), alle übrigen ihren ISO-Code — laender.js löst beide auf. */
@@ -783,18 +786,71 @@ export function nationalLeistung(k, zufall) {
   };
 }
 
+/* ── EIN TURNIER HAT EINEN SIEGER ──────────────────────────────────────────────
+   DER FEHLER DER VORIGEN FASSUNG war derselbe, den die Meisterschaften schon einmal
+   hatten: Jede Nation würfelte für sich. Mit einer Grundchance von 22 % je WM und
+   neun Nationen der obersten Gruppe kamen rechnerisch rund zwei Weltmeister auf
+   jedes Turnier. Gemessen an einer gewöhnlichen portugiesischen Laufbahn (Höchstwert
+   74, „harter Arbeiter"): In 24 % aller Laufbahnen fiel ein Länderpokal. Im Spiel
+   wurde ein Spieler, der nie über Clermont und Burnley hinauskam, zweimal
+   Weltmeister und einmal Europameister.
+
+   JETZT WIRD DAS TURNIER IM FELD AUSGESPIELT. Die Nationenfaktoren oben sind
+   Gewichte; die Siegchance einer Nation ist ihr Gewicht geteilt durch die Summe
+   aller Teilnehmer — bei der WM alle Länder, bei der EM Europa, bei der Copa
+   Südamerika. ÜBERRASCHUNG ist ein Punkt für alles, was die Gruppen nicht abbilden:
+   Gastmannschaften, Aussenseiter, einen schlechten Tag.
+
+   UND DER SPIELER MUSS DABEI SEIN. Wer gerade so berufen wird, fährt selten mit —
+   der Kaderanteil läuft von 10 % an der Berufungsschwelle bis zum vollen Wert
+   vierzehn Punkte darüber. Gewinnt Portugal, ist ein Stammspieler Europameister; ein
+   Ergänzungsspieler nur, wenn er im Aufgebot stand.
+
+   NACHGEMESSEN (je 4000 Laufbahnen): Portugal mit Höchstwert 74 holt in 5 % der
+   Laufbahnen einen Länderpokal (vorher 24 %), mit 90 in 40 % (vorher 67 %);
+   Brasilien mit 74 in 9 %, mit 90 in 60 %; Österreich mit 90 in 4 % (vorher 6 %).
+   Je Turnier: 5,9 % WM für eine Nation der obersten Gruppe, 9,9 % EM, 21,6 % Copa
+   América für Brasilien. */
+/* Klein gehalten, weil es gegen die ganze Summe zählt: Bei der Copa mit nur zehn
+   Verbänden hätte ein ganzer Punkt ein Viertel aller Turniere ohne Sieger gelassen —
+   eine Prüfung hat genau das aufgedeckt. Gäste gewinnen die Copa praktisch nie. */
+export const UEBERRASCHUNG = 0.5;
+export const KADER_SOCKEL = 0.10, KADER_SPANNE = 14;
+
+/* In der Copa América zählen zwei Verbände mehr, als ihre Weltstärke sagt: Uruguay
+   hat sie fünfzehnmal gewonnen, so oft wie Argentinien, und Kolumbien stand zuletzt
+   regelmässig im Halbfinale. Mit den Weltgewichten teilten sich Brasilien und
+   Argentinien die Copa fast allein (je 29 %); so sind es je gut 21 % — nahe an dem,
+   was die Geschichte des Turniers hergibt. Nur für die Copa, nicht für die WM. */
+const COPA_STAERKE = { UY: 1.0, CO: 0.7 };
+const turnierStaerke = (land, turnier) =>
+  turnier === "CA" && COPA_STAERKE[land] !== undefined ? COPA_STAERKE[land] : nationStaerke(land);
+
+const feldSummen = new Map();
+function feldSumme(turnier) {
+  if (feldSummen.has(turnier)) return feldSummen.get(turnier);
+  const teilnehmer = new Set([...NATIONEN_A, ...NATIONEN_B, ...NATIONEN_C, ...TURNIERLAENDER]);
+  let summe = UEBERRASCHUNG;
+  for (const land of teilnehmer) {
+    if (land === "AT") continue;   // dasselbe Land wie AUT, nur anders geschrieben
+    if (turnier === "EM" && erdteil(land) !== "EU") continue;
+    if (turnier === "CA" && erdteil(land) !== "SA") continue;
+    summe += turnierStaerke(land, turnier);
+  }
+  feldSummen.set(turnier, summe);
+  return summe;
+}
+
+/** Wie wahrscheinlich gewinnt dieses Land dieses Turnier? */
+export const siegChance = (land, turnier) => turnierStaerke(land, turnier) / feldSumme(turnier);
+
+/** Wie wahrscheinlich steht der Spieler im Turnieraufgebot? */
+export const imKader = (k) => grenze(KADER_SOCKEL + (k.ovr - berufungAb(k)) / KADER_SPANNE, KADER_SOCKEL, 1);
+
 export function nationalTitel(k, verein, zufall, saisonNr = 0) {
   const turnier = turnierIn(saisonNr, k.land ?? null);
   if (!turnier || k.ovr < berufungAb(k)) return [];
-  /* Der Spieler entscheidet ein Turnier nicht allein — aber wer Weltklasse ist,
-     steht meistens auch in einer Mannschaft, die gewinnen kann. Deshalb trägt seine
-     Klasse nur einen Teil, von einem Viertel bei frischer Berufung bis zum vollen
-     Wert an der Spitze. */
-  const klasse = 0.25 + 0.75 * grenze((k.ovr - 78) / 18, 0, 1);
-  /* Die Kontinentalmeisterschaft ist leichter zu gewinnen als die WM: weniger
-     Mitbewerber. */
-  const basis = turnier === "WM" ? 0.22 : 0.30;
-  return zufall() < basis * nationStaerke(k.land) * klasse ? [turnier] : [];
+  return zufall() < siegChance(k.land, turnier) * imKader(k) ? [turnier] : [];
 }
 
 /* ── Welcher Verband würde ihn nehmen? ────────────────────────────────────────
@@ -833,6 +889,23 @@ export function verbandsAngebot(k, zufall) {
    Die Felder von `wirkung`: ovr (sofortiger Zuwachs), rolle (neue Rolle im Team),
    liga/pokal/europa (Faktor auf die Titelchance dieser Saison), verletzt (Saisons
    ohne Spiel). */
+/* ── Welche Wettbewerbe spielt der Verein überhaupt? ──────────────────────────
+   Karten wirken auf Meisterschaft, Pokal und Europapokal. Solange es nur die
+   europäischen ersten Ligen gab, spielte fast jeder Verein, dem eine solche Karte
+   begegnete, alle drei. Mit den zweiten Ligen war das schon nicht mehr wahr, mit
+   Brasilien, der MLS, Saudi-Arabien und Japan ist es offensichtlich falsch: Bei
+   Al-Hilal kam „Drei Wettbewerbe — Liga, Pokal, Europa", in der 2. Bundesliga
+   „Aussicht auf die Meisterschaft ×1,5". Beides verspricht etwas, das es dort nicht
+   gibt. Ohne Verein (etwa in einer Prüfung) gilt alles als vorhanden. */
+export function wettbewerbe(verein) {
+  if (!verein?.lg) return { liga: true, pokal: true, europa: true };
+  return {
+    liga: !!LIGA_TITEL[verein.lg],
+    pokal: !!POKAL_TITEL[verein.lg],
+    europa: verein.liga?.stufe === 1 && EUROPA.has(verein.liga?.land),
+  };
+}
+
 /* Helfer für die Bedingungen unten. Sie lesen aus dem Verlauf, was gerade passiert
    ist — der Schritt davor ist die „letzte Saison", auch wenn er zwei umfasst. */
 export const letzteSaison = (k) => (k.verlauf && k.verlauf.length ? k.verlauf[k.verlauf.length - 1] : null);
@@ -871,6 +944,7 @@ export const EREIGNISSE = [
       { label: "Dazu stehen", chance: 0.4, wirkung: { ovr: 1 }, sonst: { rolle: "kader" } },
     ] },
   { key: "prioritaet", titel: "Ansage des Vereins", text: "Der Verein will wissen, worauf ihr diese Saison alles setzt.",
+    wenn: (k) => { const w = wettbewerbe(k.verein); return w.liga && w.europa; },
     optionen: [
       { label: "Auf die Liga", wirkung: { liga: 2, europa: 0.5 } },
       { label: "Auf Europa", wirkung: { europa: 2, liga: 0.5 } },
@@ -881,6 +955,7 @@ export const EREIGNISSE = [
       { label: "Sich fügen", wirkung: { rolle: "rotation" } },
     ] },
   { key: "talent", titel: "Ein Talent drängt nach", text: "Ein Sechzehnjähriger trainiert bei euch mit und ist nah dran.",
+    wenn: (k) => { const w = wettbewerbe(k.verein); return w.liga || w.pokal; },
     optionen: [
       { label: "Ihn unter die Fittiche nehmen", wirkung: { liga: 1.3, pokal: 1.3 } },
       { label: "Ihm keinen Raum lassen", chance: 0.6, wirkung: { rolle: "stamm" }, sonst: { rolle: "rotation", ovr: -1 } },
@@ -981,7 +1056,7 @@ export const EREIGNISSE = [
       { label: "Absagen", wirkung: { ovr: 1 } },
     ] },
   { key: "dreifach", titel: "Drei Wettbewerbe", text: "Liga, Pokal, Europa — und dazwischen kaum ein freier Mittwoch.",
-    wenn: (k) => (k.verein?.stufe ?? 0) >= 4,
+    wenn: (k) => { const w = wettbewerbe(k.verein); return (k.verein?.stufe ?? 0) >= 4 && w.liga && w.pokal && w.europa; },
     optionen: [
       { label: "Alles spielen", chance: 0.5, wirkung: { liga: 1.4, pokal: 1.4, europa: 1.4 }, sonst: { verletzt: 1 } },
       { label: "Im Pokal schonen", wirkung: { pokal: 0.4, liga: 1.2, europa: 1.2 } },
@@ -1024,7 +1099,9 @@ export const EREIGNISSE = [
   { key: "aufstiegsrennen", titel: "Das Aufstiegsrennen", text: "Zweite Liga, dritter Platz, fünf Spieltage. Jetzt entscheidet sich das Jahr.",
     wenn: (k) => (k.verein?.liga?.stufe ?? 1) === 2,
     optionen: [
-      { label: "Alles auf diese Saison", chance: 0.55, wirkung: { ovr: 3, liga: 1.5 }, sonst: { ovr: -1 } },
+      /* Ohne Meisterschaftsfaktor: In der zweiten Liga gibt es keinen Titel, auf
+         den er wirken könnte — er stand hier und versprach nichts. */
+      { label: "Alles auf diese Saison", chance: 0.55, wirkung: { ovr: 3 }, sonst: { ovr: -1 } },
       { label: "Auf die eigene Entwicklung schauen", wirkung: { ovr: 1 } },
     ] },
 
@@ -1036,7 +1113,7 @@ export const EREIGNISSE = [
       { label: "Um eine Pause bitten", wirkung: { rolle: "rotation" } },
     ] },
   { key: "elfmeterschiessen", titel: "Elfmeterschießen", text: "Pokalhalbfinale, es steht unentschieden nach Verlängerung. Jetzt bist du dran.",
-    wenn: (k) => posDaten(k.pos).gruppe === "TOR" && (k.verein?.stufe ?? 0) >= 2,
+    wenn: (k) => posDaten(k.pos).gruppe === "TOR" && (k.verein?.stufe ?? 0) >= 2 && wettbewerbe(k.verein).pokal,
     optionen: [
       { label: "Auf die Ecke gehen", chance: 0.45, wirkung: { ovr: 3, pokal: 1.8 }, sonst: { ovr: -1 } },
       { label: "Stehen bleiben und reagieren", chance: 0.6, wirkung: { ovr: 1, pokal: 1.3 }, sonst: {} },
@@ -1185,6 +1262,9 @@ export const ROLLEN_NAME = { stamm: "Stammspieler", rotation: "Rotation", kader:
    Die Sätze entstehen aus dem Vergleich VORHER/NACHHER, nicht aus der Beschreibung
    der Option. So kann hier nichts stehen, was nicht wirklich passiert ist: Ein
    Zuwachs, der an der Obergrenze verpufft, taucht nicht als Zuwachs auf. */
+/* „1.6" ist englisch — im Spiel steht „1,6". */
+export const faktorText = (f) => String(Math.round(f * 100) / 100).replace(".", ",");
+
 export function folgen(vorher, nachher, w, verletzt) {
   const liste = [];
   if (nachher.ovr !== vorher.ovr)
@@ -1195,11 +1275,14 @@ export function folgen(vorher, nachher, w, verletzt) {
       art: nachher.rolle === "stamm" ? "gut" : "schlecht",
     });
   if (verletzt) liste.push({ text: "Du fällst die kommende Saison verletzt aus", art: "schlecht" });
-  for (const [feld, name] of [["liga", "Meisterschaft"], ["pokal", "Pokal"], ["europa", "Europapokal"]]) {
+  /* Nur, was der Verein spielt — und mit dem richtigen Artikel: „die Pokal" und
+     „die Europapokal" standen so im Spiel. */
+  const hat = wettbewerbe(vorher.verein);
+  for (const [feld, name] of [["liga", "die Meisterschaft"], ["pokal", "den Pokal"], ["europa", "den Europapokal"]]) {
     const f = w[feld];
-    if (f === undefined || f === 1) continue;
+    if (f === undefined || f === 1 || !hat[feld]) continue;
     liste.push({
-      text: f > 1 ? `Aussicht auf die ${name}: ${f}-fach` : `Aussicht auf die ${name}: auf ${Math.round(f * 100)} Prozent gesenkt`,
+      text: f > 1 ? `Aussicht auf ${name}: ${faktorText(f)}-fach` : `Aussicht auf ${name}: auf ${Math.round(f * 100)} Prozent gesenkt`,
       art: f > 1 ? "gut" : "schlecht",
     });
   }
