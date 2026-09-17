@@ -135,20 +135,29 @@ const FORMEN = {
  * Eine Trophäe. `titel` ist der Titelschlüssel (CL, MBL, DFB …), `groesse` die
  * Kantenlänge in Pixeln. `silber` zeichnet sie in Metallgrau statt Gold.
  *
- * ── ERST DAS BILD, DANN DIE ZEICHNUNG ───────────────────────────────────────
- * Liegt unter /bilder/trophaee/<form>.png ein Bild, wird es genommen; fehlt es,
- * bleibt die gezeichnete Form. Dieselbe Regel wie bei den Ereigniskarten: Jedes
- * Bild ist eine Zugabe, keine Bedingung — ohne Datei sieht man die Zeichnung, und
- * nichts bricht.
+ * ── DREI STUFEN, VON ECHT BIS GEZEICHNET ────────────────────────────────────
+ * 1. /bilder/trophaee/titel/<TITEL>.jpg — ein Foto der ECHTEN Trophäe. Für 15 der
+ *    26 Wettbewerbe war eines zu finden. Diese Bilder sind nicht frei lizenziert;
+ *    warum sie trotzdem hier liegen, steht in jenem Ordner in LIZENZ.md.
+ * 2. /bilder/trophaee/<form>.png — die erzeugte Aufnahme je Form, für alles, wofür
+ *    es kein Foto gibt.
+ * 3. Die gezeichnete Form. Sie greift, wenn gar keine Datei da ist.
+ *
+ * Jede Stufe fällt von selbst auf die nächste zurück, wenn ihr Bild fehlt. Löscht
+ * man den Ordner mit den Fotos, sieht das Spiel wieder aus wie vorher — es bricht
+ * nichts.
  */
 export default function Trophaee({ titel, groesse = 40, silber = false, titelText }) {
   const formKey = FORM_VON_TITEL[titel] || "pokal";
-  const [fehlt, setFehlt] = useState(false);
-  if (!silber && !fehlt) {
+  const [stufe, setStufe] = useState(0);   // 0 = Foto, 1 = erzeugt, 2 = gezeichnet
+  if (!silber && stufe < 2) {
+    const quelle = stufe === 0
+      ? `/bilder/trophaee/titel/${titel}.jpg`
+      : `/bilder/trophaee/${formKey}.png`;
     return (
-      <img className="trophaee" src={`/bilder/trophaee/${formKey}.png`}
+      <img className="trophaee" src={quelle} key={quelle}
         width={groesse} height={groesse} alt={titelText || titel} title={titelText}
-        loading="lazy" onError={() => setFehlt(true)} />
+        loading="lazy" onError={() => setStufe((s) => s + 1)} />
     );
   }
   const form = FORMEN[formKey];

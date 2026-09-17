@@ -102,9 +102,9 @@ export const ausSpanne = ([min, max], zufall) => min + Math.floor(zufall() * (ma
    Die Werte gelten JE SAISON, nicht je Entscheidungsschritt. Ein Frühentwickler mit
    Glück steht damit um die 86 bis 88, wenn er 22 wird. */
 export const ENTWICKLUNG = {
-  frueh:  { 18: [5, 10], 20: [4, 9], 22: [2, 6], 24: [0, 4], 26: [-1, 1], 28: [-1, 0], 30: [-1, 0], 32: [-2, 0], 34: [-3, -1], 36: [-4, -1], 38: [-5, -2] },
-  normal: { 18: [3, 8],  20: [3, 8], 22: [2, 6], 24: [1, 4], 26: [0, 2],  28: [-1, 0], 30: [-1, 0], 32: [-2, 0], 34: [-3, -1], 36: [-4, -1], 38: [-5, -2] },
-  spaet:  { 18: [2, 6],  20: [2, 6], 22: [2, 6], 24: [2, 5], 26: [1, 3],  28: [0, 1],  30: [0, 1],  32: [-1, 0], 34: [-3, -1], 36: [-4, -1], 38: [-5, -2] },
+  frueh:  { 18: [5, 10], 20: [4, 9], 22: [2, 6], 24: [0, 4], 26: [-1, 1], 28: [-1, 0], 30: [-1, 0], 32: [-2, 0], 34: [-3, -1], 36: [-4, -1], 38: [-5, -2], 40: [-6, -3] },
+  normal: { 18: [3, 8],  20: [3, 8], 22: [2, 6], 24: [1, 4], 26: [0, 2],  28: [-1, 0], 30: [-1, 0], 32: [-2, 0], 34: [-3, -1], 36: [-4, -1], 38: [-5, -2], 40: [-6, -3] },
+  spaet:  { 18: [2, 6],  20: [2, 6], 22: [2, 6], 24: [2, 5], 26: [1, 3],  28: [0, 1],  30: [0, 1],  32: [-1, 0], 34: [-3, -1], 36: [-4, -1], 38: [-5, -2], 40: [-6, -3] },
 };
 export const ENTWICKLUNG_NAMEN = { frueh: "Frühentwickler", normal: "normale Entwicklung", spaet: "Spätentwickler" };
 
@@ -1361,7 +1361,11 @@ export function ruecktrittFaellig(k, zufall) {
 /* Spaetestens hier ist Schluss, auch wenn noch Angebote kaemen. Gemessen: Ohne
    diese Grenze liefen Laufbahnen bis 41, weil die Welt 345 Vereine kennt und sich
    fuer einen Spieler mit Stufe 0 immer noch einer findet. */
-export const ALTERSGRENZE = 38;
+/* Bis vierzig. Vorher war bei 38 Schluss — die Zeitleiste zeigt jetzt aber alle
+   Zeilen von Anfang an, und eine Zeile, die nie gefüllt werden kann, ist eine
+   Lücke. Die beiden zusätzlichen Jahre sind hart: Der Abbau läuft weiter, und mit
+   39 steht kaum noch jemand bei einem Verein, der ihn spielen lässt. */
+export const ALTERSGRENZE = 40;
 
 /* ── Ligaland und Spielerland sind nicht dasselbe Wort ────────────────────────
    Die Ligen der vier neuen Länder tragen BRA, USA, SAU und JPN; die Spieler tragen
@@ -1589,9 +1593,10 @@ export const wahlDauer = (ziel) => wahlLauf(ziel).reduce((s, x) => s + x.dauer, 
    fünfzehn sind es 110 und die Zahl rollt sichtbar hoch. Genau der Eindruck, den das
    Vorbild macht — kleine Änderung gemächlich, grosse rasant.
 
-   NACHGEZOGEN: Die erste Fassung war insgesamt zu hastig — 300 Millisekunden Grund
-   und 42 je Punkt. Jetzt ist jeder Lauf gut doppelt so lang. */
-export const zaehlerDauer = (sprung) => Math.round(Math.min(2200, 600 + Math.abs(sprung) * 70));
+   ZWEIMAL NACHGEZOGEN: Die erste Fassung war zu hastig (300 ms Grund, 42 je Punkt),
+   die zweite immer noch (600/70). Jetzt sind es 900 und 110 — bei zwei Punkten
+   steht eine Ziffer rund 560 ms, bei fünfzehn 170. */
+export const zaehlerDauer = (sprung) => Math.round(Math.min(3000, 900 + Math.abs(sprung) * 110));
 
 /* ── Und wann er losläuft ─────────────────────────────────────────────────────
    Eine gespielte Saison setzt zwei Dinge auf einmal: die neue Zeile in der Tabelle
@@ -1600,4 +1605,12 @@ export const zaehlerDauer = (sprung) => Math.round(Math.min(2200, 600 + Math.abs
 
    Deshalb wartet die Kachel. Erst steht die Zeile mit Spielen, Toren und Vorlagen,
    dann läuft die Zahl. */
-export const ZAEHLER_WARTEN = 620;
+export const ZAEHLER_WARTEN = 900;
+
+/* ── Solange darf nichts geklickt werden ──────────────────────────────────────
+   Die nächste Entscheidung stand sofort bereit, während die Zeilen noch einliefen
+   und die Ratingkachel noch hochlief. Wer schnell klickte, sah von der eigenen
+   Saison nichts. Die Sperre dauert genau so lange wie das, was gerade läuft:
+   Wartezeit, Zählerlauf und ein kurzer Atemzug danach. */
+export const SPERRE_NACHLAUF = 260;
+export const sperrDauer = (sprung) => ZAEHLER_WARTEN + zaehlerDauer(sprung) + SPERRE_NACHLAUF;
