@@ -1267,3 +1267,56 @@ test("im Turnierkader steht, wer deutlich über der Berufung liegt", () => {
   assert.equal(K.imKader({ ovr: K.NATIONALELF_AB + K.KADER_SPANNE + 5, land: "GER" }), 1);
   assert.ok(K.imKader({ ovr: 78, land: "GER" }) < K.imKader({ ovr: 84, land: "GER" }));
 });
+
+// ── Der Lauf der Auswahl ─────────────────────────────────────────────────────
+
+/* Nach dem Klick springt die Auswahl zwischen den beiden Ausgängen hin und her und
+   bleibt auf einem stehen. Gelost wird dabei nichts: Der Ausgang steht vorher fest,
+   der Lauf zeigt ihn nur. Diese Prüfung hält genau das fest. */
+test("der Lauf endet immer auf dem wahren Ausgang", () => {
+  for (const ziel of [0, 1]) {
+    const lauf = K.wahlLauf(ziel);
+    assert.equal(lauf.at(-1).feld, ziel, `Ziel ${ziel}: endet auf ${lauf.at(-1).feld}`);
+    assert.ok(lauf.length >= 6, `nur ${lauf.length} Sprünge — das sieht nach nichts aus`);
+  }
+});
+
+test("die Auswahl springt wirklich hin und her", () => {
+  for (const ziel of [0, 1]) {
+    const felder = K.wahlLauf(ziel).map((s) => s.feld);
+    for (let i = 1; i < felder.length; i++)
+      assert.notEqual(felder[i], felder[i - 1], `Sprung ${i} bleibt stehen: ${felder.join("")}`);
+    assert.ok(felder.includes(0) && felder.includes(1), "beide Felder müssen vorkommen");
+  }
+});
+
+/* Sie wird langsamer, nicht schneller — sonst wirkt das Stehenbleiben wie ein
+   Abbruch statt wie ein Auslaufen. */
+test("der Lauf wird langsamer und dauert nicht zu lang", () => {
+  for (const ziel of [0, 1]) {
+    const dauern = K.wahlLauf(ziel).map((s) => s.dauer);
+    for (let i = 1; i < dauern.length; i++)
+      assert.ok(dauern[i] >= dauern[i - 1], `Sprung ${i} ist schneller als der davor: ${dauern.join(",")}`);
+    assert.equal(dauern.at(-1), K.WAHL_LETZT);
+    const gesamt = K.wahlDauer(ziel);
+    assert.ok(gesamt > 900 && gesamt < 2200, `${gesamt} ms — zu kurz zum Mitfiebern oder zu lang zum Warten`);
+  }
+});
+
+/* Jede Option braucht ein Motiv, sonst steht die Kachel ohne Bild da. */
+test("jede Option trägt ein Bildmotiv", () => {
+  const ohne = [];
+  for (const e of K.EREIGNISSE) for (const o of e.optionen) if (!o.bild) ohne.push(`${e.key}/${o.label}`);
+  assert.deepEqual(ohne, [], "Option ohne Motiv");
+});
+
+test("alle Motive gibt es auch als Datei", async () => {
+  const { readdirSync } = await import("node:fs");
+  const da = new Set(readdirSync("public/bilder/wahl").map((f) => f.replace(/\.[a-z]+$/, "")));
+  const genutzt = [...new Set(K.EREIGNISSE.flatMap((e) => e.optionen.map((o) => o.bild)))];
+  const fehlen = genutzt.filter((m) => !da.has(m));
+  assert.deepEqual(fehlen, [], "Motiv ohne Bilddatei");
+  /* Und umgekehrt: kein Bild, das niemand zeigt. */
+  const tot = [...da].filter((m) => !genutzt.includes(m));
+  assert.deepEqual(tot, [], "Bilddatei, die keine Option verwendet");
+});

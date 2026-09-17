@@ -404,6 +404,116 @@ function wirkungsText(w, verein) {
   return teile.length ? teile.join(" · ") : "nichts ändert sich";
 }
 
+/* ── Die Ereigniskarte ────────────────────────────────────────────────────────
+   VORHER WAREN ES ZWEI SCHALTFLÄCHEN MIT TEXT, und nach dem Klick stand das
+   Ergebnis da. Damit war die Wette eine Zeile Text: Man las eine Quote, drückte und
+   las eine Zahl. Nichts daran fühlte sich nach einer Entscheidung an.
+
+   JETZT SIND ES ZWEI KACHELN mit je einem Bild und ihren möglichen Ausgängen als
+   eigene Felder — eine sichere Wahl hat eines, eine Wette zwei (Gelingen und
+   Rückschlag). Nach dem Klick springt die Auswahl zwischen den beiden Feldern der
+   gewählten Kachel hin und her, wird langsamer und bleibt auf einem stehen. Dieses
+   Stehenbleiben IST das Ergebnis; erst danach erscheint, was es bedeutet.
+
+   ── WARUM setTimeout UND KEIN requestAnimationFrame ──────────────────────────
+   In einem verdeckten Tab ruht rAF. Der Lauf bliebe dann mitten im Sprung stehen
+   und die Laufbahn hinge. setTimeout läuft weiter; zusätzlich springt der Lauf
+   sofort ans Ende, wenn die Seite beim Klick schon verdeckt ist. */
+function Ereigniskarte({ ereignis, verein, bewerte, onFertig, folge, onWeiter }) {
+  const [wahl, setWahl] = useState(null);      // { i, ergebnis }
+  const [feld, setFeld] = useState(null);      // welches Ausgangsfeld gerade leuchtet
+  const [steht, setSteht] = useState(false);   // Lauf beendet
+  const uhren = useRef([]);
+
+  useEffect(() => () => uhren.current.forEach(clearTimeout), []);
+
+  function waehle(option, i) {
+    if (wahl) return;                           // ein Klick, nicht zwei
+    const ergebnis = bewerte(option);
+    setWahl({ i, ergebnis, option });
+    /* Ohne Wette gibt es nichts zu springen — ein Feld, sofort. */
+    const ziel = option.chance === undefined ? 0 : (ergebnis.gelungen ? 0 : 1);
+    const ruhig = typeof window !== "undefined"
+      && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (option.chance === undefined || ruhig || (typeof document !== "undefined" && document.hidden)) {
+      setFeld(ziel); setSteht(true);
+      uhren.current.push(setTimeout(() => onFertig(option, ergebnis), 450));
+      return;
+    }
+    let t = 0;
+    for (const schritt of K.wahlLauf(ziel)) {
+      t += schritt.dauer;
+      uhren.current.push(setTimeout(() => setFeld(schritt.feld), t));
+    }
+    uhren.current.push(setTimeout(() => setSteht(true), t + 40));
+    uhren.current.push(setTimeout(() => onFertig(option, ergebnis), t + 620));
+  }
+
+  return (
+    <div className="kaEntscheidung">
+      <p className="kaKartenArt">Ereignis</p>
+      <h3>{ereignis.titel}</h3>
+      <p>{ereignis.text}</p>
+      <div className="kaKacheln">
+        {ereignis.optionen.map((o, i) => {
+          const gewaehlt = wahl?.i === i;
+          const ausgaenge = o.chance === undefined
+            ? [{ art: "neutral", text: wirkungsText(o.wirkung, verein) }]
+            : [{ art: "gut", text: wirkungsText(o.wirkung, verein) },
+               { art: "schlecht", text: wirkungsText(o.sonst, verein) }];
+          return (
+            <button key={i} type="button"
+              className={"kaKachel" + (gewaehlt ? " gewaehlt" : "") + (wahl && !gewaehlt ? " matt" : "")}
+              disabled={!!wahl} onClick={() => waehle(o, i)}>
+              <Bild pfad={`/bilder/wahl/${o.bild || "platz"}.jpg`} klasse="kaKachelBild" alt="" />
+              <b className="kaKachelName">{o.label}</b>
+              {o.chance !== undefined && (
+                <span className="kaQuote">
+                  {/* Der Balken zeigt dieselbe Quote, die daneben steht — aber
+                      sichtbar. Eine Wette erfasst man schneller, als man sie liest. */}
+                  <span className="kaQuoteBalken"><i style={{ width: `${Math.round(o.chance * 100)}%` }} /></span>
+                  <span className="kaQuoteZahl">{prozent(o.chance)}</span>
+                </span>
+              )}
+              <span className="kaAusgaenge">
+                {ausgaenge.map((a2, n) => (
+                  <span key={n}
+                    className={"kaAusgang " + a2.art
+                      + (gewaehlt && feld === n ? " leuchtet" : "")
+                      + (gewaehlt && steht && feld === n ? " steht" : "")}>
+                    {a2.art === "gut" ? "▲ " : a2.art === "schlecht" ? "▼ " : ""}{a2.text}
+                  </span>
+                ))}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {/* Solange gesprungen wird, steht hier, worauf man wartet — ein stummer
+          Bildschirm wirkt wie ein Hänger. */}
+      <p className="kaKachelFuss" aria-live="polite">
+        {!wahl ? "Wähle — bei einer Wette entscheidet danach der Zufall."
+          : !steht ? "Es entscheidet sich …"
+          : wahl.ergebnis.gewagt ? (wahl.ergebnis.gelungen ? "Es ist aufgegangen." : "Es ist schiefgegangen.")
+          : "Entschieden."}
+      </p>
+      {/* DIE FOLGE STEHT UNTER DEN KACHELN, nicht an ihrer Stelle. Vorher tauschte
+          der Bildschirm die Karte gegen eine Ergebnistafel — und damit war genau das
+          Feld verschwunden, auf dem die Auswahl gerade stehen geblieben war. Was
+          hier steht, ist deshalb nur noch, was die Entscheidung bewirkt hat; DASS
+          sie aufging, sieht man oben. */}
+      {folge && (
+        <div className="kaFolgeUnten">
+          <ul className="kaFolgen">
+            {folge.ergebnis.folgen.map((f, i) => <li key={i} className={f.art}>{f.text}</li>)}
+          </ul>
+          <button className="btn primary" onClick={onWeiter}>Weiter zur Saison</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Karriere({ onLeave }) {
   const [players, setPlayers] = useState(null);
   const [einsaetze, setEinsaetze] = useState(undefined);
@@ -643,18 +753,23 @@ export default function Karriere({ onLeave }) {
   /* DIE FOLGE WURDE ÜBERSPRUNGEN. Vorher lief hier sofort die naechste Saison an —
      man waehlte den Privattrainer und erfuhr nie, ob er angeschlagen hat. Die Wahl
      wirkt wie gehabt, aber dazwischen steht jetzt eine Karte, die es ausspricht. */
-  function waehleOption(option) {
-    const r = K.entscheide(k, option, zufallRef.current);
+  /* Nur rechnen, nichts anwenden: Die Karte braucht den Ausgang, BEVOR sie ihn
+     zeigt — sonst wüsste der Lauf nicht, wo er stehen bleiben soll. */
+  function bewerteOption(option) {
+    return K.entscheide(k, option, zufallRef.current);
+  }
+
+  function waehleOption(option, r) {
     modRef.current = r.mod;
     verletztRef.current += r.verletzt;
     play(r.gelungen ? "ok" : "err");
+    setKarte((v) => ({ ...v, folge: { option, ergebnis: r } }));
     /* DIE KACHEL BLIEB AUF DEM ALTEN WERT. Die Folge sagte „Stärke 70 → 73", die
        Ratingkachel daneben zeigte weiter 70 — die Zahl sprang erst nach dem Klick
        auf „Weiter zur Saison", zusammen mit dem Saisonwachstum, und damit war nicht
        mehr zu sehen, was die Entscheidung gebracht hat. Jetzt läuft sie sofort hoch;
        spieleSchritt bekommt denselben Stand weiterhin ausdrücklich übergeben. */
     setK(r.karriere);
-    setKarte({ art: "folge", ereignis: karte.ereignis, option, ergebnis: r, verein: karte.verein });
   }
 
   function beende(k2, grund = null) {
@@ -954,58 +1069,16 @@ export default function Karriere({ onLeave }) {
         )}
 
         {karte?.art === "ereignis" && (
-          <div className="kaEntscheidung">
-            <Bild pfad={`/bilder/ereignis/${karte.ereignis.key}.jpg`} klasse="kaKartenBild" alt="" />
-            <h3>{karte.ereignis.titel}</h3>
-            <p>{karte.ereignis.text}</p>
-            <div className="kaOptionen">
-              {karte.ereignis.optionen.map((o, i) => (
-                <button key={i} className="kaOption" onClick={() => waehleOption(o)}>
-                  <b>{o.label}</b>
-                  {o.chance === undefined
-                    ? <small>{wirkungsText(o.wirkung, karte.verein ?? k.verein)}</small>
-                    : <>
-                        {/* Der Balken zeigt dieselbe Quote, die daneben steht — aber
-                            sichtbar. Eine Wette erfasst man schneller, als man sie liest. */}
-                        <span className="kaQuote">
-                          <span className="kaQuoteBalken"><i style={{ width: `${Math.round(o.chance * 100)}%` }} /></span>
-                          <span className="kaQuoteZahl">{prozent(o.chance)}</span>
-                        </span>
-                        <small className="gut">▲ {wirkungsText(o.wirkung, karte.verein ?? k.verein)}</small>
-                        <small className="schlecht">▼ {wirkungsText(o.sonst, karte.verein ?? k.verein)}</small>
-                      </>}
-                </button>
-              ))}
-            </div>
-          </div>
+          <Ereigniskarte
+            key={karte.ereignis.key + (karte.verein?.key || "")}
+            ereignis={karte.ereignis}
+            verein={karte.verein ?? k.verein}
+            bewerte={bewerteOption}
+            onFertig={waehleOption}
+            folge={karte.folge}
+            onWeiter={() => spieleSchritt(karte.folge.ergebnis.karriere, karte.verein)} />
         )}
 
-        {karte?.art === "folge" && (() => {
-          const { ergebnis: e, option } = karte;
-          const stimmung = !e.gewagt ? "neutral" : e.gelungen ? "gut" : "schlecht";
-          const kopf = !e.gewagt ? "Deine Entscheidung"
-            : e.gelungen ? "Es ist aufgegangen" : "Es ist schiefgegangen";
-          return (
-            <div className="kaEntscheidung">
-              <div className={"kaFolgeKopf " + stimmung}>
-                <span className="kaFolgeZeichen">{stimmung === "gut" ? "✓" : stimmung === "schlecht" ? "✕" : "·"}</span>
-                <span>
-                  <b>{kopf}</b>
-                  <small>
-                    {karte.ereignis.titel} · „{option.label}“
-                    {e.gewagt ? ` · ${prozent(e.gelungen ? option.chance : 1 - option.chance)} Wahrscheinlichkeit` : ""}
-                  </small>
-                </span>
-              </div>
-              <ul className="kaFolgen">
-                {e.folgen.map((f, i) => <li key={i} className={f.art}>{f.text}</li>)}
-              </ul>
-              <button className="btn primary" onClick={() => spieleSchritt(e.karriere, karte.verein)}>
-                Weiter zur Saison
-              </button>
-            </div>
-          );
-        })()}
 
         {karte?.art === "angebot" && (
           <div className="kaEntscheidung">

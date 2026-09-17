@@ -920,86 +920,86 @@ export function torBeitrag(k) {
 export const EREIGNISSE = [
   { key: "ernaehrung", titel: "Ernährungsplan", text: "Ein Ernährungsberater will deine Kost umstellen. Das kann anschlagen oder nach hinten losgehen.",
     optionen: [
-      { label: "Dem Plan folgen", chance: 0.6, wirkung: { ovr: 3 }, sonst: { ovr: -2 } },
-      { label: "Beim Gewohnten bleiben", wirkung: {} },
+      { label: "Dem Plan folgen", bild: "ruhe", chance: 0.6, wirkung: { ovr: 3 }, sonst: { ovr: -2 } },
+      { label: "Beim Gewohnten bleiben", bild: "familie", wirkung: {} },
     ] },
   { key: "extraschicht", titel: "Extraschichten", text: "Du könntest nach dem Training bleiben. Mehr Arbeit, mehr Risiko.",
     optionen: [
-      { label: "Jeden Abend länger", chance: 0.55, wirkung: { ovr: 4 }, sonst: { ovr: -1, verletzt: 1 } },
-      { label: "Normal trainieren", wirkung: {} },
+      { label: "Jeden Abend länger", bild: "training", chance: 0.55, wirkung: { ovr: 4 }, sonst: { ovr: -1, verletzt: 1 } },
+      { label: "Normal trainieren", bild: "platz", wirkung: {} },
     ] },
   { key: "trainer", titel: "Privattrainer", text: "Ein Individualtrainer bietet sich an. Er kostet dich einen Teil deiner Erholung.",
     optionen: [
-      { label: "Verpflichten", chance: 0.7, wirkung: { ovr: 3 }, sonst: { ovr: -1 } },
-      { label: "Dankend ablehnen", wirkung: {} },
+      { label: "Verpflichten", bild: "training", chance: 0.7, wirkung: { ovr: 3 }, sonst: { ovr: -1 } },
+      { label: "Dankend ablehnen", bild: "ruhe", wirkung: {} },
     ] },
   { key: "mittel", titel: "Zweifelhaftes Mittel", text: "Jemand im Umfeld verspricht dir ein Präparat, das angeblich nicht auffällt.",
     optionen: [
-      { label: "Nehmen", chance: 0.65, wirkung: { ovr: 6 }, sonst: { ovr: -8, verletzt: 1 } },
-      { label: "Finger weg", wirkung: {} },
+      { label: "Nehmen", bild: "risiko", chance: 0.65, wirkung: { ovr: 6 }, sonst: { ovr: -8, verletzt: 1 } },
+      { label: "Finger weg", bild: "medizin", wirkung: {} },
     ] },
   { key: "posting", titel: "Unbedachter Beitrag", text: "Ein Beitrag von dir schlägt Wellen. Der Verein erwartet eine Reaktion.",
     optionen: [
-      { label: "Öffentlich entschuldigen", wirkung: { rolle: "rotation" } },
-      { label: "Dazu stehen", chance: 0.4, wirkung: { ovr: 1 }, sonst: { rolle: "kader" } },
+      { label: "Öffentlich entschuldigen", bild: "presse", wirkung: { rolle: "rotation" } },
+      { label: "Dazu stehen", bild: "risiko", chance: 0.4, wirkung: { ovr: 1 }, sonst: { rolle: "kader" } },
     ] },
   { key: "prioritaet", titel: "Ansage des Vereins", text: "Der Verein will wissen, worauf ihr diese Saison alles setzt.",
     wenn: (k) => { const w = wettbewerbe(k.verein); return w.liga && w.europa; },
     optionen: [
-      { label: "Auf die Liga", wirkung: { liga: 2, europa: 0.5 } },
-      { label: "Auf Europa", wirkung: { europa: 2, liga: 0.5 } },
+      { label: "Auf die Liga", bild: "platz", wirkung: { liga: 2, europa: 0.5 } },
+      { label: "Auf Europa", bild: "pokal", wirkung: { europa: 2, liga: 0.5 } },
     ] },
   { key: "konkurrenz", titel: "Konkurrenz auf deiner Position", text: "Der Verein holt jemanden für deinen Platz.",
     optionen: [
-      { label: "Kampf annehmen", chance: 0.5, wirkung: { rolle: "stamm", ovr: 2 }, sonst: { rolle: "rotation" } },
-      { label: "Sich fügen", wirkung: { rolle: "rotation" } },
+      { label: "Kampf annehmen", bild: "training", chance: 0.5, wirkung: { rolle: "stamm", ovr: 2 }, sonst: { rolle: "rotation" } },
+      { label: "Sich fügen", bild: "bank", wirkung: { rolle: "rotation" } },
     ] },
   { key: "talent", titel: "Ein Talent drängt nach", text: "Ein Sechzehnjähriger trainiert bei euch mit und ist nah dran.",
     wenn: (k) => { const w = wettbewerbe(k.verein); return w.liga || w.pokal; },
     optionen: [
-      { label: "Ihn unter die Fittiche nehmen", wirkung: { liga: 1.3, pokal: 1.3 } },
-      { label: "Ihm keinen Raum lassen", chance: 0.6, wirkung: { rolle: "stamm" }, sonst: { rolle: "rotation", ovr: -1 } },
+      { label: "Ihn unter die Fittiche nehmen", bild: "nachwuchs", wirkung: { liga: 1.3, pokal: 1.3 } },
+      { label: "Ihm keinen Raum lassen", bild: "kabine", chance: 0.6, wirkung: { rolle: "stamm" }, sonst: { rolle: "rotation", ovr: -1 } },
     ] },
   { key: "pfiffe", titel: "Pfiffe von den Rängen", text: "Die eigenen Zuschauer stellen dich infrage.",
     optionen: [
-      { label: "Bleiben und liefern", chance: 0.5, wirkung: { ovr: 2, rolle: "stamm" }, sonst: { ovr: -2 } },
-      { label: "Sich zurückziehen", wirkung: { rolle: "rotation" } },
+      { label: "Bleiben und liefern", bild: "platz", chance: 0.5, wirkung: { ovr: 2, rolle: "stamm" }, sonst: { ovr: -2 } },
+      { label: "Sich zurückziehen", bild: "bank", wirkung: { rolle: "rotation" } },
     ] },
   { key: "verletzung", titel: "Verletzung", text: "Es hat dich erwischt. Die Frage ist nur, wie lange.",
     optionen: [
-      { label: "Auskurieren", wirkung: { verletzt: 1 } },
-      { label: "Auf die Zähne beißen", chance: 0.35, wirkung: {}, sonst: { verletzt: 1, ovr: -3 } },
+      { label: "Auskurieren", bild: "medizin", wirkung: { verletzt: 1 } },
+      { label: "Auf die Zähne beißen", bild: "risiko", chance: 0.35, wirkung: {}, sonst: { verletzt: 1, ovr: -3 } },
     ] },
   { key: "endspiel", titel: "Verletzt vor dem Endspiel", text: "Kurz vor dem wichtigsten Spiel deiner Saison zwickt es.",
     wenn: (k) => (k.verein?.stufe ?? 0) >= 3,
     optionen: [
-      { label: "Spielen", chance: 0.8, wirkung: { liga: 1.6, europa: 1.6, pokal: 1.6 }, sonst: { ovr: -2 } },
-      { label: "Aussetzen", wirkung: { liga: 0.6, europa: 0.6, pokal: 0.6 } },
+      { label: "Spielen", bild: "platz", chance: 0.8, wirkung: { liga: 1.6, europa: 1.6, pokal: 1.6 }, sonst: { ovr: -2 } },
+      { label: "Aussetzen", bild: "medizin", wirkung: { liga: 0.6, europa: 0.6, pokal: 0.6 } },
     ] },
   { key: "elfmeter", titel: "Elfmeter in der Nachspielzeit", text: "Alle schauen dich an. Übernimmst du?",
     optionen: [
-      { label: "Schießen", chance: 0.5, wirkung: { ovr: 2, pokal: 1.5 }, sonst: { ovr: -1, rolle: "rotation" } },
-      { label: "Einem anderen überlassen", wirkung: {} },
+      { label: "Schießen", bild: "platz", chance: 0.5, wirkung: { ovr: 2, pokal: 1.5 }, sonst: { ovr: -1, rolle: "rotation" } },
+      { label: "Einem anderen überlassen", bild: "kabine", wirkung: {} },
     ] },
   { key: "schule", titel: "Abschluss nachholen", text: "Du könntest neben dem Fußball die Schule zu Ende bringen.",
     wenn: (k) => k.alter <= 20 && !k.abschluss,
     optionen: [
-      { label: "Durchziehen", wirkung: { ovr: -1, abschluss: true } },
-      { label: "Ganz auf Fußball setzen", chance: 0.5, wirkung: { ovr: 2 }, sonst: {} },
+      { label: "Durchziehen", bild: "lernen", wirkung: { ovr: -1, abschluss: true } },
+      { label: "Ganz auf Fußball setzen", bild: "training", chance: 0.5, wirkung: { ovr: 2 }, sonst: {} },
     ] },
   /* Die Optionen dieser Karte werden in ziehEreignis ersetzt — erst dort steht
      fest, welches Land anklopft. Was hier steht, ist der Rückfall. */
   { key: "grossvater", titel: "Ein Großvater aus dem Ausland", text: "Ein anderer Verband hätte dich gern. Du wärest dort sofort gesetzt.",
     wenn: (k) => k.alter <= 26 && !k.verbandGewechselt && !!k.land,
     optionen: [
-      { label: "Verband wechseln", wirkung: { verbandswechsel: true } },
-      { label: "Beim eigenen Land bleiben", wirkung: {} },
+      { label: "Verband wechseln", bild: "verband", wirkung: { verbandswechsel: true } },
+      { label: "Beim eigenen Land bleiben", bild: "platz", wirkung: {} },
     ] },
   { key: "steuer", titel: "Post vom Finanzamt", text: "Deine Berater haben etwas übersehen. Es wird öffentlich.",
     wenn: (k) => k.alter >= 22,
     optionen: [
-      { label: "Alles nachzahlen", wirkung: { ovr: -1 } },
-      { label: "Anwälte kämpfen lassen", chance: 0.45, wirkung: {}, sonst: { ovr: -3, rolle: "rotation" } },
+      { label: "Alles nachzahlen", bild: "geld", wirkung: { ovr: -1 } },
+      { label: "Anwälte kämpfen lassen", bild: "vertrag", chance: 0.45, wirkung: {}, sonst: { ovr: -3, rolle: "rotation" } },
     ] },
 
   /* ── Karten, die an die Lage gebunden sind ──────────────────────────────────
@@ -1012,74 +1012,74 @@ export const EREIGNISSE = [
   { key: "internat", titel: "Ein Platz im Internat", text: "Der Verein bietet dir einen Platz im Nachwuchsinternat — näher am Training, weiter weg von zu Hause.",
     wenn: (k) => k.alter <= 18,
     optionen: [
-      { label: "Hingehen", chance: 0.7, wirkung: { ovr: 3 }, sonst: { ovr: -1 } },
-      { label: "Zu Hause bleiben", wirkung: {} },
+      { label: "Hingehen", bild: "nachwuchs", chance: 0.7, wirkung: { ovr: 3 }, sonst: { ovr: -1 } },
+      { label: "Zu Hause bleiben", bild: "familie", wirkung: {} },
     ] },
   { key: "debuet", titel: "Der Trainer ruft dich", text: "Zwei Ausfälle, und plötzlich stehst du im Kader der Profis. Eine Halbzeit, mehr wird es nicht.",
     wenn: (k) => k.alter <= 21 && k.rolle !== "stamm",
     optionen: [
-      { label: "Alles riskieren", chance: 0.45, wirkung: { ovr: 4, rolle: "rotation" }, sonst: { ovr: -1 } },
-      { label: "Kein Risiko eingehen", chance: 0.75, wirkung: { ovr: 1 }, sonst: {} },
+      { label: "Alles riskieren", bild: "platz", chance: 0.45, wirkung: { ovr: 4, rolle: "rotation" }, sonst: { ovr: -1 } },
+      { label: "Kein Risiko eingehen", bild: "bank", chance: 0.75, wirkung: { ovr: 1 }, sonst: {} },
     ] },
   { key: "berater", titel: "Ein Berater umwirbt dich", text: "Er verspricht dir die großen Vereine. Sein Anteil ist happig, seine Verbindungen sind es auch.",
     wenn: (k) => k.alter <= 23,
     optionen: [
-      { label: "Unterschreiben", chance: 0.6, wirkung: { ovr: 2 }, sonst: { ovr: -2 } },
-      { label: "Beim Familienberater bleiben", wirkung: {} },
+      { label: "Unterschreiben", bild: "vertrag", chance: 0.6, wirkung: { ovr: 2 }, sonst: { ovr: -2 } },
+      { label: "Beim Familienberater bleiben", bild: "familie", wirkung: {} },
     ] },
 
   /* Rolle und Stellung im Verein. */
   { key: "bank", titel: "Die Bank wird eng", text: "Seit Wochen kommst du nicht mehr rein. Der Trainer redet nicht mit dir darüber.",
     wenn: (k) => k.rolle === "kader",
     optionen: [
-      { label: "Ihn zur Rede stellen", chance: 0.5, wirkung: { rolle: "rotation" }, sonst: { ovr: -2 } },
-      { label: "Im Training antworten", chance: 0.4, wirkung: { rolle: "rotation", ovr: 2 }, sonst: {} },
+      { label: "Ihn zur Rede stellen", bild: "kabine", chance: 0.5, wirkung: { rolle: "rotation" }, sonst: { ovr: -2 } },
+      { label: "Im Training antworten", bild: "training", chance: 0.4, wirkung: { rolle: "rotation", ovr: 2 }, sonst: {} },
     ] },
   { key: "binde", titel: "Die Binde", text: "Der Kapitän hat aufgehört. Die Mannschaft sieht dich an.",
     wenn: (k) => k.alter >= 27 && k.rolle === "stamm" && (k.verein?.stufe ?? 0) >= 2,
     optionen: [
-      { label: "Übernehmen", chance: 0.65, wirkung: { ovr: 2, liga: 1.3, pokal: 1.3 }, sonst: { ovr: -1 } },
-      { label: "Einem anderen lassen", wirkung: {} },
+      { label: "Übernehmen", bild: "kabine", chance: 0.65, wirkung: { ovr: 2, liga: 1.3, pokal: 1.3 }, sonst: { ovr: -1 } },
+      { label: "Einem anderen lassen", bild: "platz", wirkung: {} },
     ] },
   { key: "trainerwechsel", titel: "Neuer Trainer", text: "Der Verein entlässt den Trainer. Der Neue bringt eigene Vorstellungen mit — und eigene Spieler.",
     wenn: (k) => k.alter >= 20,
     optionen: [
-      { label: "Sich anbieten", chance: 0.55, wirkung: { rolle: "stamm", ovr: 1 }, sonst: { rolle: "rotation" } },
-      { label: "Abwarten", chance: 0.5, wirkung: {}, sonst: { rolle: "rotation" } },
+      { label: "Sich anbieten", bild: "kabine", chance: 0.55, wirkung: { rolle: "stamm", ovr: 1 }, sonst: { rolle: "rotation" } },
+      { label: "Abwarten", bild: "bank", chance: 0.5, wirkung: {}, sonst: { rolle: "rotation" } },
     ] },
 
   /* Spitzenverein. */
   { key: "ausruester", titel: "Ein Ausrüster klopft an", text: "Werbetermine, Fototage, eigener Schuh. Es zahlt sich aus und kostet Trainingszeit.",
     wenn: (k) => k.ovr >= 80,
     optionen: [
-      { label: "Unterschreiben", chance: 0.5, wirkung: { ovr: 1 }, sonst: { ovr: -2 } },
-      { label: "Absagen", wirkung: { ovr: 1 } },
+      { label: "Unterschreiben", bild: "geld", chance: 0.5, wirkung: { ovr: 1 }, sonst: { ovr: -2 } },
+      { label: "Absagen", bild: "training", wirkung: { ovr: 1 } },
     ] },
   { key: "dreifach", titel: "Drei Wettbewerbe", text: "Liga, Pokal, Europa — und dazwischen kaum ein freier Mittwoch.",
     wenn: (k) => { const w = wettbewerbe(k.verein); return (k.verein?.stufe ?? 0) >= 4 && w.liga && w.pokal && w.europa; },
     optionen: [
-      { label: "Alles spielen", chance: 0.5, wirkung: { liga: 1.4, pokal: 1.4, europa: 1.4 }, sonst: { verletzt: 1 } },
-      { label: "Im Pokal schonen", wirkung: { pokal: 0.4, liga: 1.2, europa: 1.2 } },
+      { label: "Alles spielen", bild: "platz", chance: 0.5, wirkung: { liga: 1.4, pokal: 1.4, europa: 1.4 }, sonst: { verletzt: 1 } },
+      { label: "Im Pokal schonen", bild: "ruhe", wirkung: { pokal: 0.4, liga: 1.2, europa: 1.2 } },
     ] },
   { key: "medien", titel: "Das große Interview", text: "Eine Zeitung will ein langes Gespräch. Offen reden bringt Sympathien und Ärger.",
     wenn: (k) => k.ovr >= 78,
     optionen: [
-      { label: "Klartext reden", chance: 0.45, wirkung: { ovr: 2 }, sonst: { rolle: "rotation" } },
-      { label: "Nichts sagen", wirkung: {} },
+      { label: "Klartext reden", bild: "presse", chance: 0.45, wirkung: { ovr: 2 }, sonst: { rolle: "rotation" } },
+      { label: "Nichts sagen", bild: "kabine", wirkung: {} },
     ] },
 
   /* Nach einem Titel. */
   { key: "titelverteidigung", titel: "Alle erwarten die Wiederholung", text: "Ihr habt geliefert. Jetzt ist genau das die Erwartung, nicht mehr die Hoffnung.",
     wenn: (k) => letzteTitel(k).length > 0,
     optionen: [
-      { label: "Den Druck annehmen", chance: 0.5, wirkung: { liga: 1.5, pokal: 1.3 }, sonst: { ovr: -2 } },
-      { label: "Ruhe bewahren", wirkung: { ovr: 1 } },
+      { label: "Den Druck annehmen", bild: "pokal", chance: 0.5, wirkung: { liga: 1.5, pokal: 1.3 }, sonst: { ovr: -2 } },
+      { label: "Ruhe bewahren", bild: "ruhe", wirkung: { ovr: 1 } },
     ] },
   { key: "feier", titel: "Die Feier läuft aus dem Ruder", text: "Ein Bild von der Nacht nach dem Titel geht herum. Der Verein ist not amused.",
     wenn: (k) => letzteTitel(k).length > 0,
     optionen: [
-      { label: "Dazu stehen", chance: 0.55, wirkung: {}, sonst: { ovr: -2, rolle: "rotation" } },
-      { label: "Sich entschuldigen und zahlen", wirkung: { ovr: -1 } },
+      { label: "Dazu stehen", bild: "pokal", chance: 0.55, wirkung: {}, sonst: { ovr: -2, rolle: "rotation" } },
+      { label: "Sich entschuldigen und zahlen", bild: "geld", wirkung: { ovr: -1 } },
     ] },
 
   /* Nach einer schlechten Saison. */
@@ -1087,98 +1087,98 @@ export const EREIGNISSE = [
     wenn: (k) => k.alter >= 22 && letzteSaison(k) && letzteSaison(k).spiele >= 15
       && torBeitrag(k) < 0.14 && posDaten(k.pos).gruppe !== "TOR" && posDaten(k.pos).gruppe !== "ABW",
     optionen: [
-      { label: "Zum Sportpsychologen", chance: 0.65, wirkung: { ovr: 3 }, sonst: { ovr: -1 } },
-      { label: "Da muss man durch", chance: 0.4, wirkung: { ovr: 2 }, sonst: { ovr: -3 } },
+      { label: "Zum Sportpsychologen", bild: "ruhe", chance: 0.65, wirkung: { ovr: 3 }, sonst: { ovr: -1 } },
+      { label: "Da muss man durch", bild: "training", chance: 0.4, wirkung: { ovr: 2 }, sonst: { ovr: -3 } },
     ] },
   { key: "abstiegskampf", titel: "Der Abstiegskampf", text: "Neun Spiele, sechs Punkte Rückstand. Es geht um die Liga.",
     wenn: (k) => (k.verein?.stufe ?? 9) <= 2 && (k.verein?.liga?.stufe ?? 2) === 1,
     optionen: [
-      { label: "Vorangehen", chance: 0.5, wirkung: { ovr: 3 }, sonst: { ovr: -2, verletzt: 1 } },
-      { label: "Die Saison abhaken", wirkung: { ovr: -1 } },
+      { label: "Vorangehen", bild: "platz", chance: 0.5, wirkung: { ovr: 3 }, sonst: { ovr: -2, verletzt: 1 } },
+      { label: "Die Saison abhaken", bild: "bank", wirkung: { ovr: -1 } },
     ] },
   { key: "aufstiegsrennen", titel: "Das Aufstiegsrennen", text: "Zweite Liga, dritter Platz, fünf Spieltage. Jetzt entscheidet sich das Jahr.",
     wenn: (k) => (k.verein?.liga?.stufe ?? 1) === 2,
     optionen: [
       /* Ohne Meisterschaftsfaktor: In der zweiten Liga gibt es keinen Titel, auf
          den er wirken könnte — er stand hier und versprach nichts. */
-      { label: "Alles auf diese Saison", chance: 0.55, wirkung: { ovr: 3 }, sonst: { ovr: -1 } },
-      { label: "Auf die eigene Entwicklung schauen", wirkung: { ovr: 1 } },
+      { label: "Alles auf diese Saison", bild: "platz", chance: 0.55, wirkung: { ovr: 3 }, sonst: { ovr: -1 } },
+      { label: "Auf die eigene Entwicklung schauen", bild: "training", wirkung: { ovr: 1 } },
     ] },
 
   /* Torwart. */
   { key: "patzer", titel: "Der Patzer", text: "Ein Abschlag genau vor die Füße des Gegners. Das Bild läuft eine Woche lang.",
     wenn: (k) => posDaten(k.pos).gruppe === "TOR",
     optionen: [
-      { label: "Im nächsten Spiel antworten", chance: 0.55, wirkung: { ovr: 3 }, sonst: { ovr: -3, rolle: "rotation" } },
-      { label: "Um eine Pause bitten", wirkung: { rolle: "rotation" } },
+      { label: "Im nächsten Spiel antworten", bild: "platz", chance: 0.55, wirkung: { ovr: 3 }, sonst: { ovr: -3, rolle: "rotation" } },
+      { label: "Um eine Pause bitten", bild: "ruhe", wirkung: { rolle: "rotation" } },
     ] },
   { key: "elfmeterschiessen", titel: "Elfmeterschießen", text: "Pokalhalbfinale, es steht unentschieden nach Verlängerung. Jetzt bist du dran.",
     wenn: (k) => posDaten(k.pos).gruppe === "TOR" && (k.verein?.stufe ?? 0) >= 2 && wettbewerbe(k.verein).pokal,
     optionen: [
-      { label: "Auf die Ecke gehen", chance: 0.45, wirkung: { ovr: 3, pokal: 1.8 }, sonst: { ovr: -1 } },
-      { label: "Stehen bleiben und reagieren", chance: 0.6, wirkung: { ovr: 1, pokal: 1.3 }, sonst: {} },
+      { label: "Auf die Ecke gehen", bild: "platz", chance: 0.45, wirkung: { ovr: 3, pokal: 1.8 }, sonst: { ovr: -1 } },
+      { label: "Stehen bleiben und reagieren", bild: "kabine", chance: 0.6, wirkung: { ovr: 1, pokal: 1.3 }, sonst: {} },
     ] },
 
   /* Auswahl. */
   { key: "erste_berufung", titel: "Die erste Berufung", text: "Ein Brief vom Verband. Du stehst im vorläufigen Kader — zum ersten Mal.",
     wenn: (k) => k.ovr >= berufungAb(k) && (k.national?.spiele ?? 0) === 0,
     optionen: [
-      { label: "Alles darauf ausrichten", chance: 0.6, wirkung: { ovr: 2 }, sonst: { ovr: -1 } },
-      { label: "Den Verein nicht vernachlässigen", wirkung: { liga: 1.2 } },
+      { label: "Alles darauf ausrichten", bild: "verband", chance: 0.6, wirkung: { ovr: 2 }, sonst: { ovr: -1 } },
+      { label: "Den Verein nicht vernachlässigen", bild: "platz", wirkung: { liga: 1.2 } },
     ] },
   { key: "turnierpause", titel: "Turnier statt Urlaub", text: "Ein ganzer Sommer mit der Auswahl. Erholung gibt es dann eben nicht.",
     wenn: (k) => k.ovr >= berufungAb(k) + 4,
     optionen: [
-      { label: "Hinfahren", chance: 0.5, wirkung: { ovr: 2 }, sonst: { ovr: -1, verletzt: 1 } },
-      { label: "Absagen und regenerieren", wirkung: { ovr: 1, liga: 1.2 } },
+      { label: "Hinfahren", bild: "reise", chance: 0.5, wirkung: { ovr: 2 }, sonst: { ovr: -1, verletzt: 1 } },
+      { label: "Absagen und regenerieren", bild: "ruhe", wirkung: { ovr: 1, liga: 1.2 } },
     ] },
 
   /* Im Ausland. */
   { key: "sprache", titel: "Die Sprache", text: "In der Kabine verstehst du die Hälfte. Beim Trainer ist es dieselbe Hälfte.",
     wenn: (k) => !!k.verein && !!k.land && k.verein.liga.land !== k.land,
     optionen: [
-      { label: "Jeden Morgen Unterricht", chance: 0.75, wirkung: { ovr: 2 }, sonst: {} },
-      { label: "Das regelt der Platz", chance: 0.35, wirkung: { ovr: 1 }, sonst: { rolle: "rotation" } },
+      { label: "Jeden Morgen Unterricht", bild: "lernen", chance: 0.75, wirkung: { ovr: 2 }, sonst: {} },
+      { label: "Das regelt der Platz", bild: "platz", chance: 0.35, wirkung: { ovr: 1 }, sonst: { rolle: "rotation" } },
     ] },
   { key: "heimweh", titel: "Heimweh", text: "Es läuft sportlich, aber es ist weit weg. Die Familie fragt, wann du zurückkommst.",
     wenn: (k) => !!k.verein && !!k.land && k.verein.liga.land !== k.land && k.alter <= 25,
     optionen: [
-      { label: "Die Familie nachholen", chance: 0.7, wirkung: { ovr: 2 }, sonst: { ovr: -1 } },
-      { label: "Durchhalten", chance: 0.45, wirkung: { ovr: 1 }, sonst: { ovr: -2 } },
+      { label: "Die Familie nachholen", bild: "familie", chance: 0.7, wirkung: { ovr: 2 }, sonst: { ovr: -1 } },
+      { label: "Durchhalten", bild: "reise", chance: 0.45, wirkung: { ovr: 1 }, sonst: { ovr: -2 } },
     ] },
 
   /* Spät. */
   { key: "knie", titel: "Das Knie meldet sich", text: "Nicht schlimm, sagt der Arzt. Aber es meldet sich jetzt jeden Montag.",
     wenn: (k) => k.alter >= 30,
     optionen: [
-      { label: "Operieren lassen", wirkung: { verletzt: 1, ovr: 2 } },
-      { label: "Mit Spritzen durch die Saison", chance: 0.5, wirkung: {}, sonst: { ovr: -4 } },
+      { label: "Operieren lassen", bild: "medizin", wirkung: { verletzt: 1, ovr: 2 } },
+      { label: "Mit Spritzen durch die Saison", bild: "risiko", chance: 0.5, wirkung: {}, sonst: { ovr: -4 } },
     ] },
   { key: "trainerschein", titel: "Der Trainerschein", text: "Die Lehrgänge laufen parallel zur Saison. Danach hättest du etwas in der Hand.",
     wenn: (k) => k.alter >= 32,
     optionen: [
-      { label: "Nebenher machen", wirkung: { ovr: -1, abschluss: true } },
-      { label: "Später, erst spielen", wirkung: {} },
+      { label: "Nebenher machen", bild: "lernen", wirkung: { ovr: -1, abschluss: true } },
+      { label: "Später, erst spielen", bild: "platz", wirkung: {} },
     ] },
   { key: "abschiedsspiel", titel: "Ein Verein von früher fragt an", text: "Dein Jugendverein will dich zurück — als Aushängeschild, nicht als Verstärkung.",
     wenn: (k) => k.alter >= 33 && k.vereine.length >= 3,
     optionen: [
-      { label: "Zusagen", wirkung: { ovr: -1, liga: 1.2, pokal: 1.2 } },
-      { label: "Noch nicht", wirkung: {} },
+      { label: "Zusagen", bild: "nachwuchs", wirkung: { ovr: -1, liga: 1.2, pokal: 1.2 } },
+      { label: "Noch nicht", bild: "platz", wirkung: {} },
     ] },
 
   /* Umfeld. */
   { key: "wetten", titel: "Ein Anruf, den man nicht annimmt", text: "Jemand bietet viel Geld für eine gelbe Karte zur richtigen Minute.",
     wenn: (k) => k.alter >= 21,
     optionen: [
-      { label: "Auflegen und melden", wirkung: { ovr: 1 } },
-      { label: "Zuhören", chance: 0.5, wirkung: { ovr: 2 }, sonst: { ovr: -6, rolle: "kader" } },
+      { label: "Auflegen und melden", bild: "presse", wirkung: { ovr: 1 } },
+      { label: "Zuhören", bild: "risiko", chance: 0.5, wirkung: { ovr: 2 }, sonst: { ovr: -6, rolle: "kader" } },
     ] },
   { key: "stiftung", titel: "Eine Kinderstation fragt an", text: "Einmal im Monat vorbeikommen, ohne Kameras. Es kostet freie Tage.",
     wenn: (k) => k.alter >= 24,
     optionen: [
-      { label: "Zusagen", chance: 0.8, wirkung: { ovr: 1 }, sonst: {} },
-      { label: "Die Saison ist zu eng", wirkung: {} },
+      { label: "Zusagen", bild: "familie", chance: 0.8, wirkung: { ovr: 1 }, sonst: {} },
+      { label: "Die Saison ist zu eng", bild: "reise", wirkung: {} },
     ] },
 ];
 
@@ -1546,6 +1546,39 @@ export const AUSZEICHNUNGEN = [
 export function erreichteAuszeichnungen(k) {
   return AUSZEICHNUNGEN.filter((a) => { try { return a.pruefe(k); } catch { return false; } });
 }
+
+/* ── Die Auswahl, die zwischen den Ausgängen hin- und herspringt ──────────────
+   Nach dem Klick auf eine Kachel sah man sofort das Ergebnis. Eine Wette, deren
+   Ausgang unmittelbar daliegt, ist keine Wette — man liest eine Zahl. Beim Vorbild
+   springt die Auswahl nach dem Klick zwischen den möglichen Ausgängen hin und her
+   und bleibt auf einem stehen; erst dieses Stehenbleiben ist das Ergebnis.
+
+   `wahlLauf` rechnet die Sprünge aus: Wie viele, und wie lange jeder dauert. Die
+   Folge endet IMMER beim wahren Ausgang — gelost wird nichts, es wird nur gezeigt.
+   Die Abstände wachsen (ease-out), damit es ausläuft statt abzubrechen.
+
+   SPRUENGE ist ungerade oder gerade je nach Ziel: Wer bei 0 anfängt und auf 1
+   landen soll, braucht eine ungerade Zahl von Sprüngen. Das rechnet die Funktion
+   selbst aus, damit der Aufrufer nur das Ziel kennen muss. */
+export const WAHL_SPRUENGE = 7;
+export const WAHL_ERST = 90, WAHL_LETZT = 420;
+
+export function wahlLauf(ziel, sprungZahl = WAHL_SPRUENGE) {
+  /* Von 0 aus: gerade Zahl Sprünge endet bei 0, ungerade bei 1. */
+  const n = (sprungZahl % 2 === ziel % 2) ? sprungZahl : sprungZahl + 1;
+  const schritte = [];
+  for (let i = 0; i < n; i++) {
+    const anteil = n === 1 ? 1 : i / (n - 1);
+    const dauer = Math.round(WAHL_ERST + (WAHL_LETZT - WAHL_ERST) * Math.pow(anteil, 2));
+    schritte.push({ feld: (i + 1) % 2, dauer });
+  }
+  /* Der letzte Sprung muss auf dem Ziel stehen bleiben. */
+  schritte[schritte.length - 1].feld = ziel;
+  return schritte;
+}
+
+/** Wie lange der ganze Lauf dauert — für das Sicherungsnetz. */
+export const wahlDauer = (ziel) => wahlLauf(ziel).reduce((s, x) => s + x.dauer, 0);
 
 /* ── Wie lange der Ratingzähler läuft ─────────────────────────────────────────
    Vorher waren es immer 900 Millisekunden, egal ob zwei Punkte oder fünfzehn. Zwei
