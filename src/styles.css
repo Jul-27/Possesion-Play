@@ -1243,16 +1243,35 @@ body::after {
 
 /* Zeitleiste: die Laufbahn als Tabelle, Zahlen mit fester Breite. */
 .kaLeiste { margin-top: 16px; overflow-x: auto; }
-.kaLeiste table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.kaLeiste table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .kaLeiste th {
   text-align: left; font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
   color: var(--muted); font-weight: 700; padding: 0 8px 6px 0; border-bottom: 1px solid var(--line);
 }
-.kaLeiste td { padding: 7px 8px 7px 0; border-bottom: 1px solid var(--line-soft); vertical-align: baseline; }
+/* Eng, weil jetzt FÜNFUNDZWANZIG Jahre untereinander stehen und alle ohne
+   Scrollen sichtbar sein sollen — gemessen passt die Spalte damit auch in ein
+   Fenster von 800 Pixeln Höhe. */
+.kaLeiste td { padding: 3px 8px 3px 0; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
 .kaLeiste td:first-child, .kaLeiste th:first-child { width: 42px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .kaLeiste td:nth-child(n+3) { text-align: right; font-variant-numeric: tabular-nums; }
 .kaLeiste th:nth-child(n+3) { text-align: right; padding-right: 0; }
 .kaLeiste small { color: var(--muted); font-size: 10.5px; margin-left: 4px; }
+/* ── Alle Jahre stehen von Anfang an da ──────────────────────────────────────
+   Leere Jahre sind sichtbar, aber zurückgenommen: Sie sind das, was noch kommt.
+   Die Zeilen müssen dabei so knapp sein, dass 25 Jahre plus Kopf, Kurve und
+   Auswahl ohne Scrollen in die Spalte passen. */
+.kaLeiste tbody tr.leer td, .kaLeiste tbody tr.naechste td { height: 17px; padding-block: 0; }
+.kaLeiste tbody tr.leer td:first-child { color: var(--line); }
+.kaLeiste tbody tr.naechste td:first-child { color: var(--gold); }
+.kaLeiste tbody tr.naechste { background: rgba(245,179,1,.05); }
+.kaLeiste tbody tr.leer td:not(:first-child) { border-bottom-color: transparent; }
+.kaAus { color: var(--rose) !important; }
+/* Die Auswahl als Abschluss der Tabelle. */
+.kaLeiste tfoot td { padding-top: 10px; border-top: 1px solid var(--line); border-bottom: none; }
+.kaZeilenFlagge { font-size: 15px; }
+/* Das Wappen in der Zeile bestimmt sonst die Zeilenhöhe. */
+.kaZeilenWappen .emblem { width: 16px; height: 16px; }
+.kaLeiste .trophaee { width: 15px; height: 15px; }
 /* Die eben gespielte Saison hebt sich kurz hervor. Nur Farbe und Versatz, keine
    Deckkraft — in einem verdeckten Tab läuft keine Zeitleiste, und eine Zeile, die
    dann auf 0 stehen bliebe, wäre unsichtbar statt unauffällig. */
@@ -1498,6 +1517,21 @@ body::after {
 .kaVereinWappen .emblem { width: 64px; height: 64px; }
 .kaVereinName { font-size: 14px; line-height: 1.25; }
 .kaVereinLiga { font-size: 11.5px; color: var(--muted); }
+/* Bleiben ist keine Fussnote: dieselbe Kachel, nur über die ganze Breite und
+   waagrecht gelesen — Wappen links, Anlass und Name daneben. */
+.kaVerein.breit {
+  flex-direction: row; align-items: center; justify-content: flex-start;
+  gap: 14px; text-align: left; padding: 12px 16px; width: 100%;
+  display: grid; grid-template-columns: auto 1fr; grid-template-areas: "wappen anlass" "wappen name" "wappen liga";
+  row-gap: 1px;
+}
+.kaVerein.breit .kaVereinWappen { grid-area: wappen; margin: 0; }
+.kaVerein.breit .kaVereinWappen .emblem { width: 48px; height: 48px; }
+.kaVerein.breit .kaVereinAnlass { grid-area: anlass; }
+.kaVerein.breit .kaVereinName { grid-area: name; }
+.kaVerein.breit .kaVereinLiga { grid-area: liga; }
+.kaVerein:disabled { opacity: .5; cursor: default; transform: none; }
+.kaVerein:disabled:hover { border-color: var(--line); transform: none; background: var(--bg-2); }
 /* Die Rufstufe als Punktreihe: schneller zu erfassen als eine Zahl. */
 
 /* ── Titelfeier ──────────────────────────────────────────────────────────────
@@ -1570,7 +1604,9 @@ body::after {
   color: var(--muted); margin: 0 0 10px;
 }
 @media (min-width: 1000px) {
-  .kaBuehne { grid-template-columns: minmax(0, 1fr) 390px; }
+  /* Breiter, seit die Tabelle fünfundzwanzig Jahre trägt: Bei 390 Pixeln drängten
+     sich Wappen, Vereinsname und fünf Zahlenspalten. */
+  .kaBuehne { grid-template-columns: minmax(0, 1fr) 460px; }
   /* `sticky` braucht eine eigene Höhe, sonst wächst die Spalte mit der Laufbahn
      mit und klebt nie. */
   .kaLaufbahn { position: sticky; top: 14px; max-height: calc(100vh - 32px); overflow-y: auto; }

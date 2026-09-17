@@ -889,7 +889,7 @@ test("ein Torwart trifft für sein Land so wenig wie im Verein", () => {
    Verwechslung fängt der zweite Test. */
 test("ein grösserer Sprung dauert insgesamt länger", () => {
   assert.ok(K.zaehlerDauer(15) > K.zaehlerDauer(2), "15 Punkte müssen länger laufen als 2");
-  assert.equal(K.zaehlerDauer(0), 600, "ohne Sprung bleibt die Grunddauer");
+  assert.equal(K.zaehlerDauer(0), 900, "ohne Sprung bleibt die Grunddauer");
   assert.equal(K.zaehlerDauer(-7), K.zaehlerDauer(7), "ein Absturz läuft wie ein Anstieg");
 });
 
@@ -897,12 +897,23 @@ test("je grösser der Sprung, desto schneller rollt eine Ziffer durch", () => {
   const jeZiffer = (s) => K.zaehlerDauer(s) / Math.abs(s);
   assert.ok(jeZiffer(2) > jeZiffer(5), "2 Punkte müssen gemächlicher ticken als 5");
   assert.ok(jeZiffer(5) > jeZiffer(15), "5 Punkte müssen gemächlicher ticken als 15");
-  assert.ok(jeZiffer(2) > 300, `bei 2 Punkten steht eine Ziffer nur ${jeZiffer(2).toFixed(0)} ms`);
-  assert.ok(jeZiffer(15) < 130, `bei 15 Punkten steht eine Ziffer noch ${jeZiffer(15).toFixed(0)} ms`);
+  assert.ok(jeZiffer(2) > 450, `bei 2 Punkten steht eine Ziffer nur ${jeZiffer(2).toFixed(0)} ms`);
+  assert.ok(jeZiffer(15) < 200, `bei 15 Punkten steht eine Ziffer noch ${jeZiffer(15).toFixed(0)} ms`);
 });
 
-test("auch ein unsinnig grosser Sprung bleibt unter zweieinhalb Sekunden", () => {
-  assert.equal(K.zaehlerDauer(999), 2200);
+test("auch ein unsinnig grosser Sprung bleibt unter drei Sekunden", () => {
+  assert.equal(K.zaehlerDauer(999), 3000);
+});
+
+/* Erst wenn die Zahl steht, geht es weiter — sonst klickt man an der eigenen
+   Saison vorbei. Die Sperre muss den ganzen Lauf abdecken und danach enden. */
+test("die Sperre deckt Wartezeit und Zählerlauf ab", () => {
+  for (const sprung of [0, 2, 8, 15]) {
+    const s = K.sperrDauer(sprung);
+    assert.ok(s > K.ZAEHLER_WARTEN + K.zaehlerDauer(sprung), `${sprung}: ${s} ms zu kurz`);
+    assert.ok(s < 4500, `${sprung}: ${s} ms — so lange wartet niemand`);
+  }
+  assert.ok(K.sperrDauer(12) > K.sperrDauer(2), "ein grösserer Sprung sperrt länger");
 });
 
 /* Erst die Zeile, dann die Zahl: Laufen beide gleichzeitig, sieht man keines von

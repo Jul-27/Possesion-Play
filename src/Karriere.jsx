@@ -53,7 +53,7 @@ function Verlaufskurve({ verlauf, defVon }) {
   if (verlauf.length < 2) return null;
   /* Links Platz für die Skala: Ohne sie war die Kurve eine hübsche Linie, an der
      sich nicht ablesen liess, WIE STARK der Spieler an einer Stelle war. */
-  const B = 600, H = 168, RAND = { o: 16, u: 26, l: 30, r: 10 };
+  const B = 600, H = 132, RAND = { o: 14, u: 22, l: 30, r: 10 };
   const werte = verlauf.map((z) => z.ovr);
   /* Die Skala läuft auf runde Zehner, damit die Linien beschriftbar sind. */
   const min = Math.max(0, Math.floor((Math.min(...werte) - 4) / 10) * 10);
@@ -333,9 +333,10 @@ function Titelfeier({ titel, onFertig }) {
    eine Anforderungszeile, dann bei einer Leihe noch die zu erwartende Zahl der
    Spiele. Beides ist weg: Wer wählt, soll den Verein sehen, nicht eine Vorschau auf
    seine Statistik. Das Niveau steht ohnehin im Ligennamen. */
-function VereinsKarte({ verein, anlass, onClick }) {
+function VereinsKarte({ verein, anlass, onClick, breit = false, gesperrt = false }) {
   return (
-    <button type="button" className="kaVerein" onClick={onClick}>
+    <button type="button" className={"kaVerein" + (breit ? " breit" : "")}
+      disabled={gesperrt} onClick={onClick}>
       <span className="kaVereinAnlass">{anlass}</span>
       <b className="kaVereinName">{verein.name}</b>
       <span className="kaVereinWappen"><Emblem def={defVon(verein)} /></span>
@@ -419,7 +420,7 @@ function wirkungsText(w, verein) {
    In einem verdeckten Tab ruht rAF. Der Lauf bliebe dann mitten im Sprung stehen
    und die Laufbahn hinge. setTimeout läuft weiter; zusätzlich springt der Lauf
    sofort ans Ende, wenn die Seite beim Klick schon verdeckt ist. */
-function Ereigniskarte({ ereignis, verein, bewerte, onFertig, folge, onWeiter }) {
+function Ereigniskarte({ ereignis, verein, bewerte, onFertig, folge, onWeiter, gesperrt }) {
   const [wahl, setWahl] = useState(null);      // { i, ergebnis }
   const [feld, setFeld] = useState(null);      // welches Ausgangsfeld gerade leuchtet
   const [steht, setSteht] = useState(false);   // Lauf beendet
@@ -428,7 +429,7 @@ function Ereigniskarte({ ereignis, verein, bewerte, onFertig, folge, onWeiter })
   useEffect(() => () => uhren.current.forEach(clearTimeout), []);
 
   function waehle(option, i) {
-    if (wahl) return;                           // ein Klick, nicht zwei
+    if (wahl || gesperrt) return;               // ein Klick, nicht zwei — und nicht zu früh
     const ergebnis = bewerte(option);
     setWahl({ i, ergebnis, option });
     /* Ohne Wette gibt es nichts zu springen — ein Feld, sofort. */
@@ -464,7 +465,7 @@ function Ereigniskarte({ ereignis, verein, bewerte, onFertig, folge, onWeiter })
           return (
             <button key={i} type="button"
               className={"kaKachel" + (gewaehlt ? " gewaehlt" : "") + (wahl && !gewaehlt ? " matt" : "")}
-              disabled={!!wahl} onClick={() => waehle(o, i)}>
+              disabled={!!wahl || gesperrt} onClick={() => waehle(o, i)}>
               <Bild pfad={`/bilder/wahl/${o.bild || "platz"}.jpg`} klasse="kaKachelBild" alt="" />
               <b className="kaKachelName">{o.label}</b>
               {o.chance !== undefined && (
@@ -492,7 +493,8 @@ function Ereigniskarte({ ereignis, verein, bewerte, onFertig, folge, onWeiter })
       {/* Solange gesprungen wird, steht hier, worauf man wartet — ein stummer
           Bildschirm wirkt wie ein Hänger. */}
       <p className="kaKachelFuss" aria-live="polite">
-        {!wahl ? "Wähle — bei einer Wette entscheidet danach der Zufall."
+        {gesperrt ? "Die Saison läuft noch ein …"
+          : !wahl ? "Wähle — bei einer Wette entscheidet danach der Zufall."
           : !steht ? "Es entscheidet sich …"
           : wahl.ergebnis.gewagt ? (wahl.ergebnis.gelungen ? "Es ist aufgegangen." : "Es ist schiefgegangen.")
           : "Entschieden."}
@@ -534,6 +536,10 @@ export default function Karriere({ onLeave }) {
   const [meldung, setMeldung] = useState([]); // was im letzten Schritt geschah
   const [saison, setSaison] = useState(null);  // die Bilanz des letzten Schritts
   const [feier, setFeier] = useState(null);   // Titel, die gerade gefeiert werden
+  /* Gesperrt, solange die Saison noch einläuft: Zeilen, Bilanz und Ratingkachel
+     brauchen ihre Zeit, und wer vorher klickt, sieht nichts davon. */
+  const [sperre, setSperre] = useState(false);
+  const sperrUhr = useRef(null);
   const zufallRef = useRef(null);
   const modRef = useRef({ liga: 1, pokal: 1, europa: 1 });
   const verletztRef = useRef(0);
@@ -542,6 +548,7 @@ export default function Karriere({ onLeave }) {
   const ereignisZahlRef = useRef(0);
   const seitEreignisRef = useRef(Infinity);
 
+  useEffect(() => () => clearTimeout(sperrUhr.current), []);
   useEffect(() => { loadPlayers().then(setPlayers); }, []);
   useEffect(() => { loadAppearances().then((e) => setEinsaetze(e || null)); }, []);
 
@@ -608,6 +615,10 @@ export default function Karriere({ onLeave }) {
     /* Nur beim Torwart gefüllt — bei allen anderen bleiben beide null und die
        Spalten werden gar nicht erst angezeigt. */
     let gegentore = 0, westen = 0;
+    /* EINE ZEILE JE SAISON, nicht je Schritt. Die Zeitleiste zeigt jetzt jedes
+       Lebensjahr von 16 bis 40 als eigene Zeile und füllt sie nacheinander; ein
+       Schritt über zwei Saisons hätte sonst jede zweite Zeile leer gelassen. */
+    const zeilen = [];
 
     for (let s = 0; s < saisons; s++) {
       /* Schluss ist Schluss — MITTEN im Schritt. Die Pruefung stand danach, und weil
@@ -621,16 +632,21 @@ export default function Karriere({ onLeave }) {
       if (verletztRef.current > 0) {
         verletztRef.current--;
         ausgefallen++;
+        const alterVorher = k2.alter;
         k2.alter += 1;
         const ab = K.wachstumGanz(k2, verein.stufe, zufall);
         if (ab.zuwachs < 0) { k2.rest = ab.rest; k2.ovr = K.grenze(k2.ovr + ab.zuwachs, K.OVR_MIN, K.OVR_MAX); }
+        zeilen.push({ alter: alterVorher, verein: verein.name, key: verein.key, lg: verein.lg, ovr: k2.ovr,
+          spiele: 0, tore: 0, vorlagen: 0, gegentore: 0, westen: 0, titel: [], verletzt: true });
         continue;
       }
       const l = K.saisonLeistung(k2, verein.stufe, zufall);
       spiele += l.spiele; tore += l.tore; vorlagen += l.vorlagen;
       gegentore += l.gegentore || 0; westen += l.westen || 0;
-      for (const t of K.saisonTitel(verein, zufall, modRef.current)) neueTitel.push(t);
-      for (const t of K.einzelTitel(k2, l, zufall)) { neueTitel.push(t); if (k2.bdoAlter === undefined) k2.bdoAlter = k2.alter; }
+      const saisonTitel = [];
+      const alterVorher = k2.alter, vereinVorher = verein;
+      for (const t of K.saisonTitel(verein, zufall, modRef.current)) { neueTitel.push(t); saisonTitel.push(t); }
+      for (const t of K.einzelTitel(k2, l, zufall)) { neueTitel.push(t); saisonTitel.push(t); if (k2.bdoAlter === undefined) k2.bdoAlter = k2.alter; }
       k2.saisonNr = (k2.saisonNr || 0) + 1;
       /* Die Auswahl zählt auch ohne Turnier: Wer stark genug ist, spielt jede Saison
          Länderspiele, und ohne sie stünde ein Weltmeistertitel ohne einen einzigen
@@ -641,11 +657,15 @@ export default function Karriere({ onLeave }) {
         tore: (k2.national?.tore || 0) + nl.tore,
         vorlagen: (k2.national?.vorlagen || 0) + nl.vorlagen,
       };
-      for (const t of K.nationalTitel(k2, verein, zufall, k2.saisonNr)) neueTitel.push(t);
+      for (const t of K.nationalTitel(k2, verein, zufall, k2.saisonNr)) { neueTitel.push(t); saisonTitel.push(t); }
       k2.alter += 1;
       const g = K.wachstumGanz(k2, verein.stufe, zufall);
       k2.rest = g.rest;
       k2.ovr = K.grenze(k2.ovr + g.zuwachs, K.OVR_MIN, K.OVR_MAX);
+      /* Die Zeile trägt das Alter, in dem gespielt wurde, und den Wert danach. */
+      zeilen.push({ alter: alterVorher, verein: vereinVorher.name, key: vereinVorher.key, lg: vereinVorher.lg,
+        ovr: k2.ovr, spiele: l.spiele, tore: l.tore, vorlagen: l.vorlagen,
+        gegentore: l.gegentore || 0, westen: l.westen || 0, titel: saisonTitel });
       /* Auf- und Abstieg am Saisonende. Wer aufsteigt, wird vermerkt — nur so kann
          später „Aus der Zweiten" überhaupt zutreffen. */
       /* welt.ligen statt der Standardliste: Nur diese Kopien tragen das Titelfeld,
@@ -683,10 +703,15 @@ export default function Karriere({ onLeave }) {
         gegentore: (k2.gesamt.gegentore || 0) + gegentore,
         westen: (k2.gesamt.westen || 0) + westen,
       },
-      verlauf: [...k2.verlauf, { alter: k2.alter, verein: verein.name, key: verein.key, lg: verein.lg, ovr: k2.ovr, spiele, tore, vorlagen, gegentore, westen, titel: neueTitel }],
+      verlauf: [...k2.verlauf, ...zeilen],
     };
 
     setK(k2);
+    /* Die Sperre hängt am Ratingsprung: Ein Sprung von zwölf Punkten läuft länger
+       als einer von zweien, und so lange bleibt die nächste Entscheidung zu. */
+    clearTimeout(sperrUhr.current);
+    setSperre(true);
+    sperrUhr.current = setTimeout(() => setSperre(false), K.sperrDauer(k2.ovr - basis.ovr));
     setMeldung([...neueTitel.map((t) => `🏆 ${TITEL_NAME[t] || t}`), ...ereignisse.map((e) => `↕ ${e}`)]);
     /* DIE SAISON HATTE KEINEN MOMENT. Man klickte, und die Tabelle rechts hatte eine
        Zeile mehr — 66 Spiele, 13 Tore, 15 Vorlagen liefen unsichtbar vorbei. Jetzt
@@ -873,6 +898,19 @@ export default function Karriere({ onLeave }) {
      ganze Modus stürzt beim ersten Rendern ab. */
   const torwart = K.istTorwart(k?.pos);
 
+  /* ── Die Laufbahn als vollständige Tabelle ────────────────────────────────
+     VORHER WUCHS SIE MIT: Nach jeder Saison kam eine Zeile dazu, davor war da
+     nichts. Damit fehlte das, was eine Laufbahn ausmacht — zu sehen, wie viel
+     noch vor einem liegt. Jetzt stehen alle Jahre von 16 bis 40 von Anfang an
+     da und füllen sich eines nach dem anderen.
+
+     Die Zeile nach der zuletzt gespielten trägt die Marke „naechste" und zeigt,
+     dass es dort weitergeht. */
+  const jahre = [];
+  for (let a2 = K.START_ALTER; a2 <= K.ALTERSGRENZE; a2++) jahre.push(a2);
+  const nachAlter = new Map(k.verlauf.map((z) => [z.alter, z]));
+  const letztesGespielt = k.verlauf.length ? k.verlauf.at(-1).alter : K.START_ALTER - 1;
+
   const zeitleiste = (
     <div className="kaLeiste">
       <Verlaufskurve verlauf={k.verlauf} defVon={defVon} />
@@ -882,19 +920,48 @@ export default function Karriere({ onLeave }) {
                    : <><th title="Tore">To</th><th title="Vorlagen">Vo</th></>}
         </tr></thead>
         <tbody>
-          {/* Die jüngste Zeile bekommt einen kurzen Auftritt: Sie ist der Grund,
-              warum der Ratingzähler daneben eine halbe Sekunde wartet. */}
-          {k.verlauf.map((z, i) => (
-            <tr key={i} className={i === k.verlauf.length - 1 ? "neu" : undefined}>
-              <td>{z.alter}</td>
-              <td><span className="kaZeilenWappen"><Emblem def={defVon({ key: z.key, name: z.verein })} /></span>{z.verein} <small>{z.lg}</small>{z.titel.length ? <em>{z.titel.map((t, n) => <Trophaee key={n} titel={t} groesse={18} titelText={TITEL_NAME[t] || t} />)}</em> : null}</td>
-              <td><span className="kaRatingMarke">{z.ovr}</span></td>
-              <td>{z.spiele}</td>
-              {torwart ? <><td>{z.gegentore ?? 0}</td><td>{z.westen ?? 0}</td></>
-                       : <><td>{z.tore}</td><td>{z.vorlagen}</td></>}
-            </tr>
-          ))}
+          {jahre.map((alter) => {
+            const z = nachAlter.get(alter);
+            /* Die zuletzt gefüllte Zeile bekommt einen kurzen Auftritt: Sie ist der
+               Grund, warum der Ratingzähler daneben eine halbe Sekunde wartet. */
+            const klasse = !z ? (alter === letztesGespielt + 1 ? "naechste" : "leer")
+              : alter === letztesGespielt ? "neu" : undefined;
+            return (
+              <tr key={alter} className={klasse}>
+                <td>{alter}</td>
+                {z ? (
+                  <>
+                    <td>
+                      <span className="kaZeilenWappen"><Emblem def={defVon({ key: z.key, name: z.verein })} /></span>
+                      {z.verein} <small>{z.lg}</small>
+                      {z.verletzt ? <small className="kaAus">verletzt</small> : null}
+                      {z.titel.length ? <em>{z.titel.map((t, n) => <Trophaee key={n} titel={t} groesse={16} titelText={TITEL_NAME[t] || t} />)}</em> : null}
+                    </td>
+                    <td><span className="kaRatingMarke">{z.ovr}</span></td>
+                    <td>{z.spiele}</td>
+                    {torwart ? <><td>{z.gegentore ?? 0}</td><td>{z.westen ?? 0}</td></>
+                             : <><td>{z.tore}</td><td>{z.vorlagen}</td></>}
+                  </>
+                ) : (
+                  <td colSpan={5} />
+                )}
+              </tr>
+            );
+          })}
         </tbody>
+        {/* Die Auswahl schliesst die Tabelle ab — sie gehört zur Laufbahn, hat aber
+            kein Lebensjahr und deshalb keine eigene Zeile im Raster. */}
+        <tfoot>
+          <tr>
+            <td><span className="kaZeilenFlagge">{landFlagge(k.land)}</span></td>
+            <td>{landName(k.land)} <small>Auswahl</small></td>
+            <td />
+            <td>{k.national?.spiele || 0}</td>
+            {torwart
+              ? <><td>—</td><td>—</td></>
+              : <><td>{k.national?.tore || 0}</td><td>{k.national?.vorlagen || 0}</td></>}
+          </tr>
+        </tfoot>
       </table>
     </div>
   );
@@ -1000,17 +1067,20 @@ export default function Karriere({ onLeave }) {
               )}
             </span>
             <span className="kaSaisonZahlen">
+              {/* Die Zahlen laufen hoch statt zu stehen — dieselbe Regel wie beim
+                  Rating: Eine Zahl, die sich bewegt, wird gelesen. Sie starten
+                  sofort, damit die Bilanz VOR dem Rating fertig ist. */}
               {/* „1 Vorlagen" liest sich falsch, und die Zahl eins kommt oft genug vor. */}
-              <b>{saison.spiele}</b><small>{saison.spiele === 1 ? "Spiel" : "Spiele"}</small>
+              <b><Zaehler wert={saison.spiele} dauer={K.ZAEHLER_WARTEN - 120} /></b><small>{saison.spiele === 1 ? "Spiel" : "Spiele"}</small>
               {torwart ? (
                 <>
-                  <b>{saison.gegentore}</b><small>{saison.gegentore === 1 ? "Gegentor" : "Gegentore"}</small>
-                  <b>{saison.westen}</b><small>{saison.westen === 1 ? "weiße Weste" : "weiße Westen"}</small>
+                  <b><Zaehler wert={saison.gegentore} dauer={K.ZAEHLER_WARTEN - 120} /></b><small>{saison.gegentore === 1 ? "Gegentor" : "Gegentore"}</small>
+                  <b><Zaehler wert={saison.westen} dauer={K.ZAEHLER_WARTEN - 120} /></b><small>{saison.westen === 1 ? "weiße Weste" : "weiße Westen"}</small>
                 </>
               ) : (
                 <>
-                  <b>{saison.tore}</b><small>{saison.tore === 1 ? "Tor" : "Tore"}</small>
-                  <b>{saison.vorlagen}</b><small>{saison.vorlagen === 1 ? "Vorlage" : "Vorlagen"}</small>
+                  <b><Zaehler wert={saison.tore} dauer={K.ZAEHLER_WARTEN - 120} /></b><small>{saison.tore === 1 ? "Tor" : "Tore"}</small>
+                  <b><Zaehler wert={saison.vorlagen} dauer={K.ZAEHLER_WARTEN - 120} /></b><small>{saison.vorlagen === 1 ? "Vorlage" : "Vorlagen"}</small>
                 </>
               )}
             </span>
@@ -1032,7 +1102,7 @@ export default function Karriere({ onLeave }) {
             <div className="kaVereine">
               {karte.vereine.map((v) => (
                 <VereinsKarte key={v.key} verein={v} anlass="Anfangen bei"
-                  onClick={() => spieleSchritt(k, v)} />
+                  gesperrt={sperre} onClick={() => spieleSchritt(k, v)} />
               ))}
             </div>
           </div>
@@ -1045,7 +1115,7 @@ export default function Karriere({ onLeave }) {
             <div className="kaVereine">
               {karte.vereine.map((v) => (
                 <VereinsKarte key={v.key} verein={v} anlass="Leihe zu"
-                  onClick={() => spieleSchritt({ ...k, leiheVon: karte.bleiben }, v)} />
+                  gesperrt={sperre} onClick={() => spieleSchritt({ ...k, leiheVon: karte.bleiben }, v)} />
               ))}
             </div>
             <div className="kaOptionen">
@@ -1063,7 +1133,7 @@ export default function Karriere({ onLeave }) {
             <p>Die Zeit bei {karte.verein.name} ist vorbei — {karte.heim.name} holt dich zurück.</p>
             <div className="kaVereine einer">
               <VereinsKarte verein={karte.heim} anlass="Zurück zu"
-                onClick={() => spieleSchritt(k, karte.heim)} />
+                gesperrt={sperre} onClick={() => spieleSchritt(k, karte.heim)} />
             </div>
           </div>
         )}
@@ -1074,6 +1144,7 @@ export default function Karriere({ onLeave }) {
             ereignis={karte.ereignis}
             verein={karte.verein ?? k.verein}
             bewerte={bewerteOption}
+            gesperrt={sperre}
             onFertig={waehleOption}
             folge={karte.folge}
             onWeiter={() => spieleSchritt(karte.folge.ergebnis.karriere, karte.verein)} />
@@ -1088,22 +1159,24 @@ export default function Karriere({ onLeave }) {
               <div className="kaVereine">
                 {karte.vereine.map((v) => (
                   <VereinsKarte key={v.key} verein={v} anlass="Wechseln zu"
-                    onClick={() => spieleSchritt(k, v)} />
+                    gesperrt={sperre} onClick={() => spieleSchritt(k, v)} />
                 ))}
               </div>
             )}
-            <div className="kaOptionen">
-              <button className="kaOption mitWappen" onClick={() => spieleSchritt(k, karte.bleiben)}>
-                <Emblem def={defVon(karte.bleiben)} />
-                <span><b>Bleiben bei {karte.bleiben.name}</b><small>{karte.bleiben.liga.name}</small></span>
-              </button>
-              {karte.rücktritt && (
-                <button className="kaOption kaEnde" onClick={() => beende(k)}>
+            {/* BLEIBEN IST KEINE FUSSNOTE. Es stand als schmale Zeile unter den drei
+                Vereinskacheln und ging unter — dabei ist es genauso eine
+                Entscheidung wie ein Wechsel. Jetzt ist es eine Kachel derselben
+                Bauart, nur über die ganze Breite. */}
+            <VereinsKarte verein={karte.bleiben} anlass="Bleiben bei" breit
+              gesperrt={sperre} onClick={() => spieleSchritt(k, karte.bleiben)} />
+            {karte.rücktritt && (
+              <div className="kaOptionen" style={{ marginTop: 10 }}>
+                <button className="kaOption kaEnde" disabled={sperre} onClick={() => beende(k)}>
                   <b>Die Schuhe an den Nagel hängen</b>
                   <small>Laufbahn beenden</small>
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1113,7 +1186,7 @@ export default function Karriere({ onLeave }) {
             <h2>Laufbahn beendet</h2>
             {karte.grund && <p className="kaGrund">{karte.grund}</p>}
             <p className="kaBilanz">
-              {k.verlauf.length ? `${k.verlauf[0].alter - K.TEMPO[k.tempo].saisons} bis ${k.alter}` : k.alter} ·{" "}
+              {k.verlauf.length ? `${k.verlauf[0].alter} bis ${k.alter}` : k.alter} ·{" "}
               {k.gesamt.spiele} Spiele ·{" "}
               {torwart
                 ? <>{k.gesamt.gegentore ?? 0} Gegentore · {k.gesamt.westen ?? 0} weiße Westen · </>
@@ -1166,7 +1239,7 @@ export default function Karriere({ onLeave }) {
                 text={() => shareKarriere({
                   name: k.name,
                   stufe: karte.auszeichnungen[0]?.name || "ohne Auszeichnung",
-                  saisons: k.gesamt.spiele ? k.verlauf.length * K.TEMPO[k.tempo].saisons : 0,
+                  saisons: k.verlauf.length,
                   tore: k.gesamt.tore, vorlagen: k.gesamt.vorlagen, overall: k.ovr,
                   titel: TITEL_REIHE.filter((t) => k.titel[t]).map((t) => TITEL_NAME[t]),
                 })} />
@@ -1181,9 +1254,9 @@ export default function Karriere({ onLeave }) {
       <aside className="panel kaLaufbahn">
         <h3>Laufbahn</h3>
         {vitrine}
-        {k.verlauf.length > 0
-          ? zeitleiste
-          : <p className="kaLeer">Noch keine Saison gespielt.</p>}
+        {/* Die Tabelle steht von der ersten Sekunde an da, auch leer: Sie zeigt,
+            wie viel Laufbahn noch vor einem liegt. */}
+        {zeitleiste}
       </aside>
       </div>
     </div>
