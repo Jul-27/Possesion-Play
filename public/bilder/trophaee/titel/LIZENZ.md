@@ -13,4 +13,11 @@ Danach greift von selbst der Rückfall: zuerst die erzeugten Aufnahmen unter
 nichts — es sehen nur wieder alle Meisterschaften gleich aus.
 
 Geholt mit `data-pipeline/hole_pokalfotos.mjs`, danach von Hand durchgesehen:
-Von 26 Wettbewerben war für 15 ein brauchbares Foto zu finden.
+Von 26 Wettbewerben war für 24 ein brauchbares Foto zu finden. Es fehlen nur die
+Saudi Pro League und die J1 League — zu beiden führt Wikimedia keine Aufnahme der
+Trophäe; sie behalten die erzeugte Schale.
+
+Die Suche lief in zwei Durchgängen. Der erste über die Wikipedia-Artikelbilder
+lieferte viel Falsches (Logos, Stadien, einmal die Trophäe der Baseball World
+Series); der zweite über die Commons-Dateisuche und die Bilderlisten der Artikel
+traf. Jedes Bild wurde einzeln angesehen.
