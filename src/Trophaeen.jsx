@@ -136,8 +136,9 @@ const FORMEN = {
  * Kantenlänge in Pixeln. `silber` zeichnet sie in Metallgrau statt Gold.
  *
  * ── DREI STUFEN, VON ECHT BIS GEZEICHNET ────────────────────────────────────
- * 1. /bilder/trophaee/titel/<TITEL>.jpg — ein Foto der ECHTEN Trophäe. Für 15 der
- *    26 Wettbewerbe war eines zu finden. Diese Bilder sind nicht frei lizenziert;
+ * 1. /bilder/trophaee/titel/<TITEL>.jpg — ein Foto der ECHTEN Trophäe. Für 24 der
+ *    26 Wettbewerbe war eines zu finden; nur die Saudi Pro League und die J1 League
+ *    führt Wikimedia nicht. Diese Bilder sind nicht frei lizenziert;
  *    warum sie trotzdem hier liegen, steht in jenem Ordner in LIZENZ.md.
  * 2. /bilder/trophaee/<form>.png — die erzeugte Aufnahme je Form, für alles, wofür
  *    es kein Foto gibt.
