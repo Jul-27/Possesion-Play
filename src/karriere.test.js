@@ -1321,6 +1321,86 @@ test("jede Option trägt ein Bildmotiv", () => {
   assert.deepEqual(ohne, [], "Option ohne Motiv");
 });
 
+/* ── Leere Kacheln, Gruppe für Gruppe ──────────────────────────────────────────
+   Eine sichere Kachel mit `wirkung: {}` zeigt im Spiel „nichts ändert sich". Dann
+   ist die Rechnung immer dieselbe: Die Wette daneben hat einen Erwartungswert über
+   null, das Ablehnen keinen — es gibt nichts zu entscheiden.
+
+   Die Karten werden in Gruppen zu acht durchgegangen; Gruppe 1 ist durch. Diese
+   Liste ist der Rest, und sie darf nur schrumpfen. Kommt eine neue leere Kachel
+   dazu, schlägt die Prüfung an, und wer eine Gruppe abarbeitet, streicht ihre
+   Zeilen hier.
+
+   Eine WETTE mit leerem Gelingen ist etwas anderes und bleibt erlaubt: Bei „Auf die
+   Zähne beissen" heisst der gute Ausgang, dass nichts passiert. Das ist eine
+   Aussage, keine Lücke. */
+const KACHELN_OHNE_WIRKUNG = [
+  "elfmeter/Einem anderen überlassen",
+  "grossvater/Beim eigenen Land bleiben",
+  "internat/Zu Hause bleiben",
+  "berater/Beim Familienberater bleiben",
+  "binde/Einem anderen lassen",
+  "medien/Nichts sagen",
+  "trainerschein/Später, erst spielen",
+  "abschiedsspiel/Noch nicht",
+  "stiftung/Die Saison ist zu eng",
+];
+
+test("keine sichere Kachel ohne Wirkung ausser den bekannten", () => {
+  const leer = [];
+  for (const e of K.EREIGNISSE)
+    for (const o of e.optionen)
+      if (o.chance === undefined && !Object.keys(o.wirkung).length) leer.push(`${e.key}/${o.label}`);
+  assert.deepEqual(leer.sort(), [...KACHELN_OHNE_WIRKUNG].sort());
+});
+
+test("die drei Trainingskarten sind drei verschiedene Wetten", () => {
+  const drei = ["ernaehrung", "extraschicht", "trainer"].map((k) => K.EREIGNISSE.find((e) => e.key === k));
+  for (const e of drei) {
+    const [wette, sicher] = e.optionen;
+    assert.ok(wette.chance > 0 && wette.chance < 1, `${e.key}: keine Wette`);
+    assert.ok(Object.keys(sicher.wirkung).length, `${e.key}: sichere Kachel ist leer`);
+    assert.equal(sicher.chance, undefined, `${e.key}: die zweite Kachel soll sicher sein`);
+  }
+  /* Jede trägt ein eigenes Risiko: die kleine Wette, die grosse (eine Saison weg),
+     und die, die nicht die Stärke, sondern den Platz in der Elf betrifft. */
+  const [ern, extra, trainer] = drei;
+  assert.equal(extra.optionen[0].sonst.verletzt, 1);
+  assert.equal(trainer.optionen[0].wirkung.rolle, "stamm");
+  assert.equal(ern.optionen[0].sonst.verletzt, undefined);
+  assert.equal(ern.optionen[0].wirkung.rolle, undefined);
+});
+
+test("das Präparat kostet eine Sperre, keine Verletzung", () => {
+  const karte = K.EREIGNISSE.find((e) => e.key === "mittel");
+  const [nehmen, lassen] = karte.optionen;
+  assert.equal(nehmen.wirkung.ovr, 5);
+  assert.equal(nehmen.sonst.ovr, -2);
+  assert.equal(nehmen.sonst.gesperrt, 1);
+  assert.equal(nehmen.sonst.verletzt, undefined, "eine Sperre ist keine Verletzung");
+  /* Sauber bleiben ist nicht gratis — sonst wäre die moralische Wahl keine. */
+  assert.ok(Object.keys(lassen.wirkung).length, "„Finger weg\" darf nicht leer sein");
+});
+
+test("eine Sperre fällt aus wie eine Verletzung, heisst aber anders", () => {
+  const k = { ovr: 70, rolle: "stamm", alter: 24, land: "GER", verein: null };
+  const sperre = K.entscheide(k, { label: "x", chance: 1, wirkung: { gesperrt: 1 } }, () => 0);
+  assert.equal(sperre.ausfall, 1);
+  assert.equal(sperre.grund, "gesperrt");
+  const texte = sperre.folgen.map((f) => f.text);
+  assert.ok(texte.some((t) => t.includes("gesperrt")), texte.join(" | "));
+  assert.ok(!texte.some((t) => t.includes("verletzt")), texte.join(" | "));
+
+  const riss = K.entscheide(k, { label: "x", wirkung: { verletzt: 2 } }, () => 0);
+  assert.equal(riss.ausfall, 2);
+  assert.equal(riss.grund, "verletzt");
+  assert.ok(riss.folgen.some((f) => f.text.includes("verletzt")));
+
+  /* Ohne Ausfall gibt es keinen Grund zu nennen. */
+  const nichts = K.entscheide(k, { label: "x", wirkung: { ovr: 1 } }, () => 0);
+  assert.equal(nichts.ausfall, 0);
+});
+
 test("alle Motive gibt es auch als Datei", async () => {
   const { readdirSync } = await import("node:fs");
   const da = new Set(readdirSync("public/bilder/wahl").map((f) => f.replace(/\.[a-z]+$/, "")));
