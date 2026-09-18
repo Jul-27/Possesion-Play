@@ -21,3 +21,14 @@ Die Suche lief in zwei Durchgängen. Der erste über die Wikipedia-Artikelbilder
 lieferte viel Falsches (Logos, Stadien, einmal die Trophäe der Baseball World
 Series); der zweite über die Commons-Dateisuche und die Bilderlisten der Artikel
 traf. Jedes Bild wurde einzeln angesehen.
+
+## Nachtrag 18.09.2026: fünf Bilder aus Copero
+
+CL.png, EL.png, WM.png, EM.png und CA.png sind freigestellte Trophäen aus dem
+Vorbild (copero.org, /assets/trophies/). Sie sind fremde Arbeit und wurden auf
+ausdrücklichen Wunsch 1:1 übernommen — dieselbe Bedingung wie oben: privat,
+nicht veröffentlichen, vor einer Veröffentlichung löschen.
+
+Mehr gibt es dort nicht: Coperos trophy-assets.js führt 41 Wettbewerbe, aber nur
+diese fünf Dateien liegen tatsächlich auf dem Server; alle übrigen antworten mit
+404, auch auf den anderen Copero-Adressen.

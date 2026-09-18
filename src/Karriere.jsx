@@ -672,7 +672,8 @@ export default function Karriere({ onLeave }) {
          und ohne sie stünde ein Aufsteiger ohne Gegner da. */
       const w = K.ligaWechsel(verein, zufall, welt.ligen);
       if (w.richtung) {
-        ereignisse.push(`${verein.name} ${w.richtung === "auf" ? "steigt auf" : "steigt ab"}`);
+        ereignisse.push({ art: w.richtung, verein: verein.name, key: verein.key,
+          von: verein.liga.name, nach: w.verein.liga.name });
         if (w.richtung === "auf") k2.aufgestiegenMit = verein.key;
         verein = w.verein;
       }
@@ -712,7 +713,7 @@ export default function Karriere({ onLeave }) {
     clearTimeout(sperrUhr.current);
     setSperre(true);
     sperrUhr.current = setTimeout(() => setSperre(false), K.sperrDauer(k2.ovr - basis.ovr));
-    setMeldung([...neueTitel.map((t) => `🏆 ${TITEL_NAME[t] || t}`), ...ereignisse.map((e) => `↕ ${e}`)]);
+    setMeldung([...neueTitel.map((t) => ({ art: "titel", titel: t })), ...ereignisse]);
     /* DIE SAISON HATTE KEINEN MOMENT. Man klickte, und die Tabelle rechts hatte eine
        Zeile mehr — 66 Spiele, 13 Tore, 15 Vorlagen liefen unsichtbar vorbei. Jetzt
        steht die Bilanz über der nächsten Entscheidung. */
@@ -1015,6 +1016,13 @@ export default function Karriere({ onLeave }) {
       <div className="kaOvr" data-rang={K.rangVon(k.ovr)}>
         <small>RATING</small><b><Zaehler wert={k.ovr} warten={K.ZAEHLER_WARTEN} /></b>
       </div>
+      {/* DAS ALTER STAND NUR IN DER KOPFLEISTE DES MODUS und in der Zeitleiste —
+          dort, wo man beim Entscheiden nicht hinsieht. Es gehört neben das Rating:
+          Mit 19 heisst dieselbe Entscheidung etwas anderes als mit 33. */}
+      <div className="kaAlter">
+        <small>ALTER</small><b><Zaehler wert={k.alter} warten={K.ZAEHLER_WARTEN} dauer={520} /></b>
+        <i>von {K.ALTERSGRENZE}</i>
+      </div>
       {k.verein && <span className="kaWappen"><Emblem def={defVon(k.verein)} /></span>}
       <div className="kaWer">
         <b>#{k.nummer} {k.name}</b>
@@ -1088,7 +1096,25 @@ export default function Karriere({ onLeave }) {
         )}
 
         {meldung.length > 0 && (
-          <div className="kaMeldung">{meldung.map((m, i) => <span key={i}>{m}</span>)}</div>
+          <div className="kaMeldung">
+            {meldung.map((m, i) => m.art === "titel" ? (
+              <span key={i} className="kaMeldungTitel">
+                <Trophaee titel={m.titel} groesse={20} titelText={TITEL_NAME[m.titel]} />
+                {TITEL_NAME[m.titel] || m.titel}
+              </span>
+            ) : (
+              /* AUF- UND ABSTIEG WAREN EINE TEXTZEILE mit einem Pfeil davor. Dabei
+                 ist das der Moment, der die nächsten Jahre bestimmt: eine andere
+                 Liga, andere Gegner, andere Titel. Jetzt mit Wappen, Richtung und
+                 beiden Ligen. */
+              <span key={i} className={"kaMeldungLiga " + m.art}>
+                <span className="kaMeldungWappen"><Emblem def={defVon({ key: m.key, name: m.verein })} /></span>
+                <b>{m.verein}</b>
+                <i>{m.art === "auf" ? "steigt auf" : "steigt ab"}</i>
+                <small>{m.von} → {m.nach}</small>
+              </span>
+            ))}
+          </div>
         )}
 
         {karte?.art === "jugend" && (

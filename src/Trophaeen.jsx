@@ -135,14 +135,18 @@ const FORMEN = {
  * Eine Trophäe. `titel` ist der Titelschlüssel (CL, MBL, DFB …), `groesse` die
  * Kantenlänge in Pixeln. `silber` zeichnet sie in Metallgrau statt Gold.
  *
- * ── DREI STUFEN, VON ECHT BIS GEZEICHNET ────────────────────────────────────
- * 1. /bilder/trophaee/titel/<TITEL>.jpg — ein Foto der ECHTEN Trophäe. Für 24 der
+ * ── VIER STUFEN, VON FREIGESTELLT BIS GEZEICHNET ────────────────────────────
+ * 1. /bilder/trophaee/titel/<TITEL>.png — die Trophäe freigestellt, ohne Hintergrund.
+ *    Fünf davon stammen aus dem Vorbild; mehr liegen dort nicht, die übrigen stehen
+ *    in dessen Code, aber nicht auf dem Server.
+ * 2. /bilder/trophaee/titel/<TITEL>.jpg — ein FOTO der echten Trophäe. Für 24 der
  *    26 Wettbewerbe war eines zu finden; nur die Saudi Pro League und die J1 League
- *    führt Wikimedia nicht. Diese Bilder sind nicht frei lizenziert;
- *    warum sie trotzdem hier liegen, steht in jenem Ordner in LIZENZ.md.
- * 2. /bilder/trophaee/<form>.png — die erzeugte Aufnahme je Form, für alles, wofür
- *    es kein Foto gibt.
- * 3. Die gezeichnete Form. Sie greift, wenn gar keine Datei da ist.
+ *    führt Wikimedia nicht.
+ * 3. /bilder/trophaee/<form>.png — die erzeugte Aufnahme je Form.
+ * 4. Die gezeichnete Form. Sie greift, wenn gar keine Datei da ist.
+ *
+ * Weder die Fotos noch die freigestellten Bilder sind frei lizenziert; warum sie
+ * trotzdem hier liegen, steht in jenem Ordner in LIZENZ.md.
  *
  * Jede Stufe fällt von selbst auf die nächste zurück, wenn ihr Bild fehlt. Löscht
  * man den Ordner mit den Fotos, sieht das Spiel wieder aus wie vorher — es bricht
@@ -150,10 +154,10 @@ const FORMEN = {
  */
 export default function Trophaee({ titel, groesse = 40, silber = false, titelText }) {
   const formKey = FORM_VON_TITEL[titel] || "pokal";
-  const [stufe, setStufe] = useState(0);   // 0 = Foto, 1 = erzeugt, 2 = gezeichnet
-  if (!silber && stufe < 2) {
-    const quelle = stufe === 0
-      ? `/bilder/trophaee/titel/${titel}.jpg`
+  const [stufe, setStufe] = useState(0);   // 0 = freigestellt, 1 = Foto, 2 = erzeugt, 3 = gezeichnet
+  if (!silber && stufe < 3) {
+    const quelle = stufe === 0 ? `/bilder/trophaee/titel/${titel}.png`
+      : stufe === 1 ? `/bilder/trophaee/titel/${titel}.jpg`
       : `/bilder/trophaee/${formKey}.png`;
     return (
       <img className="trophaee" src={quelle} key={quelle}
