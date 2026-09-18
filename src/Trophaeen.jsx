@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { TITEL_DATEN } from "./karriere.js";
-/* Gezeichnete Trophäen — eine eigene Form je Wettbewerb.
+import { GESTALTEN, MIT_BILD } from "./trophaeenFormen.js";
+import { Gestalt } from "./TrophaeenFormen.jsx";
+/* Eine Trophäe je Wettbewerb — 26 Stück, ein Satz.
 
    ── WARUM ─────────────────────────────────────────────────────────────────────
    Vorher trug jeder Titel dasselbe Wappenzeichen in anderer Farbe. In der Vitrine
@@ -8,41 +10,42 @@ import { TITEL_DATEN } from "./karriere.js";
    der Champions League dasselbe Bild wie beim DFB-Pokal. Ein Pokal, den man nicht
    erkennt, ist kein Pokal.
 
-   Das Vorbild löst das mit Fotos je Wettbewerb. Fotos der echten Pokale gibt es
-   dafür nicht: Wikidata und Commons führen zu keinem der vierzehn Wettbewerbe ein
-   freies Bild, und die Trophäen selbst sind geschützte Entwürfe. Also stehen unter
-   /bilder/trophaee/ eigene Aufnahmen — je Form ein Pokal, kein Nachbau einer
-   bestimmten Trophäe. Die gezeichneten Formen bleiben als Rückfall, damit nichts
-   von einer Datei abhängt; verwendet wird beides überall gleich: Feier, Vitrine,
-   Zeitleiste, Urkunde.
+   ── WOHER DIE BILDER KOMMEN ───────────────────────────────────────────────────
+   Fünf liegen als freigestellte Bilder unter /bilder/trophaee/titel/: Champions
+   League, Europa League, WM, EM und Copa América, aus dem Vorbild übernommen.
+   Mehr hat dessen Server nicht; sein Code führt einundvierzig Wettbewerbe, die
+   Dateien dazu fehlen.
 
-   ── DIE SIEBEN FORMEN ─────────────────────────────────────────────────────────
-   schale   Meisterschaft — eine flache Schale mit Griffen, wie sie für eine über
-            eine ganze Saison erspielte Meisterschaft steht.
-   pokal    Landespokal — der klassische Henkelpokal mit Deckel.
-   ohren    Champions League — der Pokal mit den grossen Ohren; seine Henkel sind
-            das Erkennungszeichen schlechthin.
-   amphore  Europa League — hoch, schlank, henkellos.
-   globus   Weltmeisterschaft — eine Kugel auf einem Sockel.
-   kelch    Europameisterschaft — breite Schale auf schmalem Fuss.
-   ball     Ballon d'Or — eine Kugel auf einer Säule, als einzige Auszeichnung für
-            eine Person statt für eine Mannschaft.
+   Die übrigen 21 sind gezeichnet — siehe TrophaeenFormen.jsx, dort steht auch,
+   warum nicht erzeugt. Beide Sätze sind hochkant, ohne Hintergrund, ohne Kontur
+   und tragen denselben Schlagschatten aus dem Stylesheet. Nebeneinander sollen
+   sie nicht auffallen.
 
-   Jede gezeichnete Form ist ein reiner Pfad ohne Verlauf — das lässt sie in jeder
-   Grösse gleich aussehen. */
+   Weder die fünf Bilder noch die Fotos in jenem Ordner sind frei lizenziert;
+   warum sie trotzdem hier liegen, steht dort in LIZENZ.md.
 
-/* Welche Form ein Titel trägt, steht bei den Titeldaten in karriere.js — zusammen
-   mit Name und Farbe. Zwei Listen, die man getrennt pflegen muss, laufen
+   ── DREI STUFEN ───────────────────────────────────────────────────────────────
+   1. das freigestellte Bild, wenn es eines gibt,
+   2. sonst die gezeichnete Gestalt des Wettbewerbs,
+   3. sonst — für einen Titel, den beide Listen nicht kennen — die Grundform
+      seiner Gattung.
+   Jede Stufe fällt von selbst auf die nächste zurück. Löscht man den Bilderordner,
+   sieht das Spiel wieder aus wie vorher; es bricht nichts. */
+
+/* Welche Grundform ein Titel trägt, steht bei den Titeldaten in karriere.js —
+   zusammen mit Name und Farbe. Zwei Listen, die man getrennt pflegen muss, laufen
    auseinander: Beim Nachtragen der acht neuen Meisterschaften hätte die eine die
    Namen bekommen und die andere nicht, und die Feier hätte einen Henkelpokal für
    eine Meisterschaft gezeigt. */
 export const FORM_VON_TITEL = Object.fromEntries(
   Object.entries(TITEL_DATEN).map(([key, d]) => [key, d.form]));
 
-/* Metall und Schattenseite. Gold für alles, was eine Trophäe ist; die zweite Farbe
-   zeichnet die abgewandte Seite, damit die Form plastisch wirkt. */
+/* Metall und Schattenseite der Grundformen. */
 const GOLD = "#F0C040", GOLD_TIEF = "#9A6B12", SILBER = "#D8DEE6", SILBER_TIEF = "#8D97A4";
 
+/* Die sieben Grundformen — eine je Gattung, nicht je Wettbewerb. Sie greifen nur
+   noch für einen Titel ohne eigene Gestalt; solange beide Listen aus TITEL_DATEN
+   gefüllt sind, kommt das nicht vor. */
 const FORMEN = {
   /* Flache Schale mit zwei Griffen — die Meisterschaft. */
   schale: (h, d) => (
@@ -133,39 +136,33 @@ const FORMEN = {
 
 /**
  * Eine Trophäe. `titel` ist der Titelschlüssel (CL, MBL, DFB …), `groesse` die
- * Kantenlänge in Pixeln. `silber` zeichnet sie in Metallgrau statt Gold.
- *
- * ── VIER STUFEN, VON FREIGESTELLT BIS GEZEICHNET ────────────────────────────
- * 1. /bilder/trophaee/titel/<TITEL>.png — die Trophäe freigestellt, ohne Hintergrund.
- *    Fünf davon stammen aus dem Vorbild; mehr liegen dort nicht, die übrigen stehen
- *    in dessen Code, aber nicht auf dem Server.
- * 2. /bilder/trophaee/titel/<TITEL>.jpg — ein FOTO der echten Trophäe. Für 24 der
- *    26 Wettbewerbe war eines zu finden; nur die Saudi Pro League und die J1 League
- *    führt Wikimedia nicht.
- * 3. /bilder/trophaee/<form>.png — die erzeugte Aufnahme je Form.
- * 4. Die gezeichnete Form. Sie greift, wenn gar keine Datei da ist.
- *
- * Weder die Fotos noch die freigestellten Bilder sind frei lizenziert; warum sie
- * trotzdem hier liegen, steht in jenem Ordner in LIZENZ.md.
- *
- * Jede Stufe fällt von selbst auf die nächste zurück, wenn ihr Bild fehlt. Löscht
- * man den Ordner mit den Fotos, sieht das Spiel wieder aus wie vorher — es bricht
- * nichts.
+ * Kantenlänge in Pixeln — das Bild wird darin eingepasst, nicht verzerrt.
+ * `silber` zeichnet eine goldene Trophäe in Metallgrau; das nutzt die Vitrine
+ * für Titel, die der Spieler noch nicht gewonnen hat.
  */
 export default function Trophaee({ titel, groesse = 40, silber = false, titelText }) {
-  const formKey = FORM_VON_TITEL[titel] || "pokal";
-  const [stufe, setStufe] = useState(0);   // 0 = freigestellt, 1 = Foto, 2 = erzeugt, 3 = gezeichnet
-  if (!silber && stufe < 3) {
-    const quelle = stufe === 0 ? `/bilder/trophaee/titel/${titel}.png`
-      : stufe === 1 ? `/bilder/trophaee/titel/${titel}.jpg`
-      : `/bilder/trophaee/${formKey}.png`;
+  const id = useId().replace(/:/g, "");
+  const [bildWeg, setBildWeg] = useState(false);
+
+  if (MIT_BILD.has(titel) && !silber && !bildWeg) {
     return (
-      <img className="trophaee" src={quelle} key={quelle}
+      <img className="trophaee" src={`/bilder/trophaee/titel/${titel}.png`}
         width={groesse} height={groesse} alt={titelText || titel} title={titelText}
-        loading="lazy" onError={() => setStufe((s) => s + 1)} />
+        loading="lazy" onError={() => setBildWeg(true)} />
     );
   }
-  const form = FORMEN[formKey];
+
+  if (titel in GESTALTEN) {
+    return (
+      <svg className="trophaee" viewBox="0 0 200 300" width={groesse} height={groesse}
+        role="img" aria-label={titelText || titel}>
+        {titelText ? <title>{titelText}</title> : null}
+        <Gestalt titel={titel} id={id} silber={silber} />
+      </svg>
+    );
+  }
+
+  const form = FORMEN[FORM_VON_TITEL[titel] || "pokal"];
   const [h, d] = silber ? [SILBER, SILBER_TIEF] : [GOLD, GOLD_TIEF];
   return (
     <svg className="trophaee" viewBox="0 0 100 82" width={groesse} height={groesse * 0.82}
