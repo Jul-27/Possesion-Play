@@ -887,8 +887,14 @@ export function verbandsAngebot(k, zufall) {
    sicher ein.
 
    Die Felder von `wirkung`: ovr (sofortiger Zuwachs), rolle (neue Rolle im Team),
-   liga/pokal/europa (Faktor auf die Titelchance dieser Saison), verletzt (Saisons
-   ohne Spiel). */
+   liga/pokal/europa (Faktor auf die Titelchance dieser Saison), verletzt und
+   gesperrt (Saisons ohne Spiel).
+
+   Verletzt und gesperrt kosten mechanisch dasselbe — die Saison ist weg. Sie
+   stehen trotzdem getrennt da, weil sie im Lebenslauf nicht dasselbe sind: Ein
+   Kreuzbandriss ist Pech, eine Sperre ist die Rechnung für eine Entscheidung.
+   Wer beim Präparat erwischt wird, soll in der Zeitleiste „gesperrt" lesen und
+   nicht „verletzt". */
 /* ── Welche Wettbewerbe spielt der Verein überhaupt? ──────────────────────────
    Karten wirken auf Meisterschaft, Pokal und Europapokal. Solange es nur die
    europäischen ersten Ligen gab, spielte fast jeder Verein, dem eine solche Karte
@@ -910,6 +916,16 @@ export function wettbewerbe(verein) {
    ist — der Schritt davor ist die „letzte Saison", auch wenn er zwei umfasst. */
 export const letzteSaison = (k) => (k.verlauf && k.verlauf.length ? k.verlauf[k.verlauf.length - 1] : null);
 export const letzteTitel = (k) => letzteSaison(k)?.titel || [];
+/* Ging es zuletzt aufwärts oder abwärts? Der Vergleich der beiden letzten Zeilen.
+   Er ist der einzige Maßstab, der für jede Position gleich gilt: Ein Torwart und
+   ein Stürmer haben ganz verschiedene Zahlen, aber beide einen Wert, der steigt
+   oder fällt. Ohne zwei Zeilen gibt es keinen Trend — dann null. */
+export function ratingTrend(k) {
+  const v = k.verlauf || [];
+  if (v.length < 2) return 0;
+  return v[v.length - 1].ovr - v[v.length - 2].ovr;
+}
+
 /* Tore plus Vorlagen je Spiel — der einfachste Maßstab dafür, ob etwas ankam. */
 export function torBeitrag(k) {
   const s = letzteSaison(k);
@@ -918,25 +934,41 @@ export function torBeitrag(k) {
 }
 
 export const EREIGNISSE = [
-  { key: "ernaehrung", titel: "Ernährungsplan", text: "Ein Ernährungsberater will deine Kost umstellen. Das kann anschlagen oder nach hinten losgehen.",
+  /* ── Die drei Trainingskarten ────────────────────────────────────────────────
+     Sie fragen alle dasselbe: mehr Arbeit gegen mehr Risiko. Damit daraus nicht
+     dreimal dieselbe Karte wird, hat jede ein eigenes Risikobild — die Ernährung
+     ist die kleine Wette, die Extraschicht die grosse (sie kann eine ganze Saison
+     kosten), der Privattrainer geht nicht auf die Stärke, sondern auf den Platz in
+     der Elf.
+
+     Und keine der sicheren Kacheln ist mehr leer. Vorher stand dort `{}` — „nichts
+     ändert sich". Damit war die Rechnung jedes Mal dieselbe: Wetten hatte einen
+     Erwartungswert über null, Ablehnen keinen. Das ist keine Entscheidung, das ist
+     ein Knopf. Jetzt zahlt die sichere Kachel sicher etwas, die riskante im Schnitt
+     mehr — und wer nicht wetten will, gibt trotzdem nicht umsonst ab. */
+  { key: "ernaehrung", titel: "Ernährungsplan", text: "Ein Ernährungsberater will deine Kost umstellen. Dein Körper kennt allerdings, was er kennt.",
     optionen: [
       { label: "Dem Plan folgen", bild: "ruhe", chance: 0.6, wirkung: { ovr: 3 }, sonst: { ovr: -2 } },
-      { label: "Beim Gewohnten bleiben", bild: "familie", wirkung: {} },
+      { label: "Beim Gewohnten bleiben", bild: "familie", wirkung: { ovr: 1 } },
     ] },
-  { key: "extraschicht", titel: "Extraschichten", text: "Du könntest nach dem Training bleiben. Mehr Arbeit, mehr Risiko.",
+  { key: "extraschicht", titel: "Extraschichten", text: "Du könntest nach dem Training bleiben. Mehr Arbeit, weniger Erholung.",
     optionen: [
       { label: "Jeden Abend länger", bild: "training", chance: 0.55, wirkung: { ovr: 4 }, sonst: { ovr: -1, verletzt: 1 } },
-      { label: "Normal trainieren", bild: "platz", wirkung: {} },
+      { label: "Normal trainieren", bild: "platz", wirkung: { ovr: 1, liga: 1.2, pokal: 1.2, europa: 1.2 } },
     ] },
-  { key: "trainer", titel: "Privattrainer", text: "Ein Individualtrainer bietet sich an. Er kostet dich einen Teil deiner Erholung.",
+  { key: "trainer", titel: "Privattrainer", text: "Ein Individualtrainer bietet sich an. Er arbeitet genau an dem, was der Trainer an dir vermisst.",
     optionen: [
-      { label: "Verpflichten", bild: "training", chance: 0.7, wirkung: { ovr: 3 }, sonst: { ovr: -1 } },
-      { label: "Dankend ablehnen", bild: "ruhe", wirkung: {} },
+      { label: "Verpflichten", bild: "training", chance: 0.7, wirkung: { ovr: 2, rolle: "stamm" }, sonst: { ovr: -1, rolle: "rotation" } },
+      { label: "Dankend ablehnen", bild: "ruhe", wirkung: { ovr: 1 } },
     ] },
+  /* Die einzige Karte mit einem Gewissen — und die einzige, bei der ein Ausfall
+     keine Verletzung ist, sondern eine Sperre. Wer sauber bleibt, verliert
+     trotzdem: nicht viel, aber die anderen ziehen vorbei. Eine moralische Wahl,
+     die gratis ist, ist keine. */
   { key: "mittel", titel: "Zweifelhaftes Mittel", text: "Jemand im Umfeld verspricht dir ein Präparat, das angeblich nicht auffällt.",
     optionen: [
-      { label: "Nehmen", bild: "risiko", chance: 0.65, wirkung: { ovr: 6 }, sonst: { ovr: -8, verletzt: 1 } },
-      { label: "Finger weg", bild: "medizin", wirkung: {} },
+      { label: "Nehmen", bild: "risiko", chance: 0.65, wirkung: { ovr: 5 }, sonst: { ovr: -2, gesperrt: 1 } },
+      { label: "Finger weg", bild: "medizin", wirkung: { ovr: -1 } },
     ] },
   { key: "posting", titel: "Unbedachter Beitrag", text: "Ein Beitrag von dir schlägt Wellen. Der Verein erwartet eine Reaktion.",
     optionen: [
@@ -960,26 +992,48 @@ export const EREIGNISSE = [
       { label: "Ihn unter die Fittiche nehmen", bild: "nachwuchs", wirkung: { liga: 1.3, pokal: 1.3 } },
       { label: "Ihm keinen Raum lassen", bild: "kabine", chance: 0.6, wirkung: { rolle: "stamm" }, sonst: { rolle: "rotation", ovr: -1 } },
     ] },
+  /* PFIFFE KAMEN AUS DEM NICHTS. Die Karte hatte keine Bedingung und traf damit auch
+     einen, der gerade Meister geworden war und dreissig Tore geschossen hatte. Jetzt
+     braucht sie eine Saison, die dazu passt: gespielt, nichts gewonnen, und der Wert
+     ist nicht gestiegen. */
   { key: "pfiffe", titel: "Pfiffe von den Rängen", text: "Die eigenen Zuschauer stellen dich infrage.",
+    wenn: (k) => {
+      const s = letzteSaison(k);
+      /* Mindestens zwei Zeilen: In der ersten Saison kann der Wert noch nicht
+         gefallen sein, und nach einem einzigen Jahr pfeift auch niemand. */
+      return k.alter >= 20 && !!s && (k.verlauf?.length ?? 0) >= 2
+        && s.spiele >= 10 && !s.titel.length && ratingTrend(k) <= 0;
+    },
     optionen: [
       { label: "Bleiben und liefern", bild: "platz", chance: 0.5, wirkung: { ovr: 2, rolle: "stamm" }, sonst: { ovr: -2 } },
       { label: "Sich zurückziehen", bild: "bank", wirkung: { rolle: "rotation" } },
     ] },
+  /* AUSKURIEREN WAR DIE DUMME WAHL. Es kostete sicher eine ganze Saison, während
+     Durchbeissen im Schnitt nur 0,65 kostete — vernünftig war also genau das, wovon
+     die Karte abrät. Die Reha zahlt jetzt zurück: ein Jahr weg, aber danach stärker. */
   { key: "verletzung", titel: "Verletzung", text: "Es hat dich erwischt. Die Frage ist nur, wie lange.",
     optionen: [
-      { label: "Auskurieren", bild: "medizin", wirkung: { verletzt: 1 } },
+      { label: "Auskurieren", bild: "medizin", wirkung: { verletzt: 1, ovr: 1 } },
       { label: "Auf die Zähne beißen", bild: "risiko", chance: 0.35, wirkung: {}, sonst: { verletzt: 1, ovr: -3 } },
     ] },
+  /* Achtzig Prozent auf das Dreifache der Titelchance, und der Rückschlag kostete nur
+     zwei Punkte Stärke — da drückte man immer. Wenn es schiefgeht, bricht man im
+     Endspiel ab, und das kostet die Mannschaft den Titel. Erst damit ist es eine Wette. */
   { key: "endspiel", titel: "Verletzt vor dem Endspiel", text: "Kurz vor dem wichtigsten Spiel deiner Saison zwickt es.",
     wenn: (k) => (k.verein?.stufe ?? 0) >= 3,
     optionen: [
-      { label: "Spielen", bild: "platz", chance: 0.8, wirkung: { liga: 1.6, europa: 1.6, pokal: 1.6 }, sonst: { ovr: -2 } },
+      { label: "Spielen", bild: "platz", chance: 0.8, wirkung: { liga: 1.6, europa: 1.6, pokal: 1.6 },
+        sonst: { ovr: -2, liga: 0.6, europa: 0.6, pokal: 0.6 } },
       { label: "Aussetzen", bild: "medizin", wirkung: { liga: 0.6, europa: 0.6, pokal: 0.6 } },
     ] },
+  /* Nur dort, wo es einen Pokal zu gewinnen gibt — beide Kacheln sprechen von ihm. */
   { key: "elfmeter", titel: "Elfmeter in der Nachspielzeit", text: "Alle schauen dich an. Übernimmst du?",
+    wenn: (k) => wettbewerbe(k.verein).pokal,
     optionen: [
       { label: "Schießen", bild: "platz", chance: 0.5, wirkung: { ovr: 2, pokal: 1.5 }, sonst: { ovr: -1, rolle: "rotation" } },
-      { label: "Einem anderen überlassen", bild: "kabine", wirkung: {} },
+      /* Er trifft — der Mannschaft hilft es, dir nicht: Wer in der Nachspielzeit
+         wegschaut, steht danach kleiner da. */
+      { label: "Einem anderen überlassen", bild: "kabine", wirkung: { pokal: 1.2, ovr: -1 } },
     ] },
   { key: "schule", titel: "Abschluss nachholen", text: "Du könntest neben dem Fußball die Schule zu Ende bringen.",
     wenn: (k) => k.alter <= 20 && !k.abschluss,
@@ -993,7 +1047,9 @@ export const EREIGNISSE = [
     wenn: (k) => k.alter <= 26 && !k.verbandGewechselt && !!k.land,
     optionen: [
       { label: "Verband wechseln", bild: "verband", wirkung: { verbandswechsel: true } },
-      { label: "Beim eigenen Land bleiben", bild: "platz", wirkung: {} },
+      /* Bleiben ist nicht gratis und nicht umsonst: kein Wechsel der Verbände, kein
+         neues Umfeld, kein Sommer voller Formalitäten — ein ruhiges Jahr. */
+      { label: "Beim eigenen Land bleiben", bild: "platz", wirkung: { ovr: 1 } },
     ] },
   { key: "steuer", titel: "Post vom Finanzamt", text: "Deine Berater haben etwas übersehen. Es wird öffentlich.",
     wenn: (k) => k.alter >= 22,
@@ -1013,7 +1069,7 @@ export const EREIGNISSE = [
     wenn: (k) => k.alter <= 18,
     optionen: [
       { label: "Hingehen", bild: "nachwuchs", chance: 0.7, wirkung: { ovr: 3 }, sonst: { ovr: -1 } },
-      { label: "Zu Hause bleiben", bild: "familie", wirkung: {} },
+      { label: "Zu Hause bleiben", bild: "familie", wirkung: { ovr: 1 } },
     ] },
   { key: "debuet", titel: "Der Trainer ruft dich", text: "Zwei Ausfälle, und plötzlich stehst du im Kader der Profis. Eine Halbzeit, mehr wird es nicht.",
     wenn: (k) => k.alter <= 21 && k.rolle !== "stamm",
@@ -1154,10 +1210,19 @@ export const EREIGNISSE = [
       { label: "Operieren lassen", bild: "medizin", wirkung: { verletzt: 1, ovr: 2 } },
       { label: "Mit Spritzen durch die Saison", bild: "risiko", chance: 0.5, wirkung: {}, sonst: { ovr: -4 } },
     ] },
+  /* DER SCHULABSCHLUSS HAT ENDLICH EINEN ZWECK. Er kostete mit zwanzig einen Punkt
+     Stärke und tat danach nichts: Er stand in keiner Rechnung, auf keiner Urkunde,
+     er schaltete nur seine eigene Karte ab. Jetzt ist er die Voraussetzung für den
+     Trainerschein — wer mit zwanzig durchgezogen hat, kann mit zweiunddreissig den
+     Schein machen; wer nur gespielt hat, bekommt diese Karte nie zu sehen.
+
+     Und es sind zwei Dinge, nicht eines: Vorher setzten BEIDE Karten dasselbe Feld
+     `abschluss`. Der Trainerschein trug sich damit als Schulabschluss ein, was auf
+     der Urkunde schlicht falsch stand. */
   { key: "trainerschein", titel: "Der Trainerschein", text: "Die Lehrgänge laufen parallel zur Saison. Danach hättest du etwas in der Hand.",
-    wenn: (k) => k.alter >= 32,
+    wenn: (k) => k.alter >= 32 && !!k.abschluss && !k.trainerschein,
     optionen: [
-      { label: "Nebenher machen", bild: "lernen", wirkung: { ovr: -1, abschluss: true } },
+      { label: "Nebenher machen", bild: "lernen", wirkung: { ovr: -1, trainerschein: true } },
       { label: "Später, erst spielen", bild: "platz", wirkung: {} },
     ] },
   { key: "abschiedsspiel", titel: "Ein Verein von früher fragt an", text: "Dein Jugendverein will dich zurück — als Aushängeschild, nicht als Verstärkung.",
@@ -1265,7 +1330,7 @@ export const ROLLEN_NAME = { stamm: "Stammspieler", rotation: "Rotation", kader:
 /* „1.6" ist englisch — im Spiel steht „1,6". */
 export const faktorText = (f) => String(Math.round(f * 100) / 100).replace(".", ",");
 
-export function folgen(vorher, nachher, w, verletzt) {
+export function folgen(vorher, nachher, w, ausfall, grund = "verletzt") {
   const liste = [];
   if (nachher.ovr !== vorher.ovr)
     liste.push({ text: `Stärke ${vorher.ovr} → ${nachher.ovr}`, art: nachher.ovr > vorher.ovr ? "gut" : "schlecht" });
@@ -1274,7 +1339,12 @@ export function folgen(vorher, nachher, w, verletzt) {
       text: `Rolle im Team: ${ROLLEN_NAME[vorher.rolle]} → ${ROLLEN_NAME[nachher.rolle]}`,
       art: nachher.rolle === "stamm" ? "gut" : "schlecht",
     });
-  if (verletzt) liste.push({ text: "Du fällst die kommende Saison verletzt aus", art: "schlecht" });
+  if (ausfall) liste.push({
+    text: grund === "gesperrt"
+      ? "Du bist die kommende Saison gesperrt"
+      : "Du fällst die kommende Saison verletzt aus",
+    art: "schlecht",
+  });
   /* Nur, was der Verein spielt — und mit dem richtigen Artikel: „die Pokal" und
      „die Europapokal" standen so im Spiel. */
   const hat = wettbewerbe(vorher.verein);
@@ -1295,7 +1365,8 @@ export function folgen(vorher, nachher, w, verletzt) {
     });
     liste.push({ text: `In der Auswahl bist du gesetzt (berufen ab ${berufungAb(nachher)} statt ${NATIONALELF_AB})`, art: "gut" });
   }
-  if (w.abschluss) liste.push({ text: "Der Schulabschluss ist in der Tasche", art: "gut" });
+  if (w.abschluss) liste.push({ text: "Der Schulabschluss ist in der Tasche — er öffnet später den Trainerschein", art: "gut" });
+  if (w.trainerschein) liste.push({ text: "Der Trainerschein ist gemacht", art: "gut" });
   if (!liste.length) liste.push({ text: "Es bleibt alles, wie es war", art: "neutral" });
   return liste;
 }
@@ -1317,14 +1388,19 @@ export function entscheide(k, option, zufall) {
     if (typeof w.verbandswechsel === "string") naechster.land = w.verbandswechsel;
   }
   if (w.abschluss) naechster.abschluss = true;
-  const verletzt = w.verletzt ?? 0;
+  if (w.trainerschein) naechster.trainerschein = true;
+  /* Ein Ausfall ist ein Ausfall — die Saison ist weg, egal warum. Der Grund reist
+     trotzdem mit, weil die Zeitleiste ihn anzeigt. */
+  const ausfall = (w.verletzt ?? 0) + (w.gesperrt ?? 0);
+  const grund = w.gesperrt ? "gesperrt" : "verletzt";
   return {
     karriere: naechster,
     gelungen,
     gewagt,
     mod: { liga: w.liga ?? 1, pokal: w.pokal ?? 1, europa: w.europa ?? 1 },
-    verletzt,
-    folgen: folgen(k, naechster, w, verletzt),
+    ausfall,
+    grund,
+    folgen: folgen(k, naechster, w, ausfall, grund),
   };
 }
 

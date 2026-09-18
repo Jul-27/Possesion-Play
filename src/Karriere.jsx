@@ -395,6 +395,7 @@ function wirkungsText(w, verein) {
   if (w.ovr) teile.push(`${w.ovr > 0 ? "+" : ""}${w.ovr} Stärke`);
   if (w.rolle) teile.push({ stamm: "Stammplatz", rotation: "Rotation", kader: "nur im Kader" }[w.rolle]);
   if (w.verletzt) teile.push(`${w.verletzt} Saison verletzt`);
+  if (w.gesperrt) teile.push(`${w.gesperrt} Saison gesperrt`);
   for (const [feld, name] of [["liga", "Meisterschaft"], ["pokal", "Pokal"], ["europa", "Europapokal"]]) {
     const f = w[feld];
     if (f === undefined || f === 1 || !hat[feld]) continue;
@@ -402,6 +403,7 @@ function wirkungsText(w, verein) {
   }
   if (w.verbandswechsel) teile.push("neuer Verband");
   if (w.abschluss) teile.push("Schulabschluss");
+  if (w.trainerschein) teile.push("Trainerschein");
   return teile.length ? teile.join(" · ") : "nichts ändert sich";
 }
 
@@ -542,7 +544,9 @@ export default function Karriere({ onLeave }) {
   const sperrUhr = useRef(null);
   const zufallRef = useRef(null);
   const modRef = useRef({ liga: 1, pokal: 1, europa: 1 });
-  const verletztRef = useRef(0);
+  /* Wie viele Saisons der Spieler noch aussetzt — und warum. Der Grund steht
+     dabei, weil die Zeitleiste „verletzt" von „gesperrt" unterscheidet. */
+  const ausfallRef = useRef({ saisons: 0, grund: "verletzt" });
   const letzteRef = useRef([]);
   const seitAngebotRef = useRef(0);
   const ereignisZahlRef = useRef(0);
@@ -589,7 +593,7 @@ export default function Karriere({ onLeave }) {
     const neu = K.neueKarriere({ name: name.trim() || "Namenlos", land, nummer, pos, fuss, tempo, seed });
     zufallRef.current = K.rng(K.hashStr(`${neu.name}|${seed}`));
     modRef.current = { liga: 1, pokal: 1, europa: 1 };
-    verletztRef.current = 0;
+    ausfallRef.current = { saisons: 0, grund: "verletzt" };
     letzteRef.current = [];
     seitAngebotRef.current = 0;
     ereignisZahlRef.current = 0;
@@ -629,15 +633,15 @@ export default function Karriere({ onLeave }) {
          Zeitleiste stand ein Einerschritt (28, 29) mitten zwischen Zweierschritten.
          Das Jahr vergeht jetzt. Fortschritt bringt es keinen; der altersbedingte
          Abbau kommt trotzdem, denn der hört im Krankenstand nicht auf. */
-      if (verletztRef.current > 0) {
-        verletztRef.current--;
+      if (ausfallRef.current.saisons > 0) {
+        ausfallRef.current.saisons--;
         ausgefallen++;
         const alterVorher = k2.alter;
         k2.alter += 1;
         const ab = K.wachstumGanz(k2, verein.stufe, zufall);
         if (ab.zuwachs < 0) { k2.rest = ab.rest; k2.ovr = K.grenze(k2.ovr + ab.zuwachs, K.OVR_MIN, K.OVR_MAX); }
         zeilen.push({ alter: alterVorher, verein: verein.name, key: verein.key, lg: verein.lg, ovr: k2.ovr,
-          spiele: 0, tore: 0, vorlagen: 0, gegentore: 0, westen: 0, titel: [], verletzt: true });
+          spiele: 0, tore: 0, vorlagen: 0, gegentore: 0, westen: 0, titel: [], aus: ausfallRef.current.grund });
         continue;
       }
       const l = K.saisonLeistung(k2, verein.stufe, zufall);
@@ -672,7 +676,8 @@ export default function Karriere({ onLeave }) {
          und ohne sie stünde ein Aufsteiger ohne Gegner da. */
       const w = K.ligaWechsel(verein, zufall, welt.ligen);
       if (w.richtung) {
-        ereignisse.push(`${verein.name} ${w.richtung === "auf" ? "steigt auf" : "steigt ab"}`);
+        ereignisse.push({ art: w.richtung, verein: verein.name, key: verein.key,
+          von: verein.liga.name, nach: w.verein.liga.name });
         if (w.richtung === "auf") k2.aufgestiegenMit = verein.key;
         verein = w.verein;
       }
@@ -712,11 +717,12 @@ export default function Karriere({ onLeave }) {
     clearTimeout(sperrUhr.current);
     setSperre(true);
     sperrUhr.current = setTimeout(() => setSperre(false), K.sperrDauer(k2.ovr - basis.ovr));
-    setMeldung([...neueTitel.map((t) => `🏆 ${TITEL_NAME[t] || t}`), ...ereignisse.map((e) => `↕ ${e}`)]);
+    setMeldung([...neueTitel.map((t) => ({ art: "titel", titel: t })), ...ereignisse]);
     /* DIE SAISON HATTE KEINEN MOMENT. Man klickte, und die Tabelle rechts hatte eine
        Zeile mehr — 66 Spiele, 13 Tore, 15 Vorlagen liefen unsichtbar vorbei. Jetzt
        steht die Bilanz über der nächsten Entscheidung. */
-    setSaison({ saisons, bis: k2.alter, verein: verein.name, spiele, tore, vorlagen, gegentore, westen, verletzt: ausgefallen });
+    setSaison({ saisons, bis: k2.alter, verein: verein.name, spiele, tore, vorlagen, gegentore, westen,
+      ausfall: ausgefallen, grund: ausfallRef.current.grund });
     /* Jeder Titel bekommt seinen Moment — auch wenn in einem Schritt mehrere fallen.
        Doppelte werden zusammengefasst, sonst liefe dieselbe Trophaee zweimal. */
     if (neueTitel.length) { setFeier([...new Set(neueTitel)]); play("win"); }
@@ -786,7 +792,10 @@ export default function Karriere({ onLeave }) {
 
   function waehleOption(option, r) {
     modRef.current = r.mod;
-    verletztRef.current += r.verletzt;
+    /* Der Grund wird nur mitgeschrieben, wenn es wirklich einen Ausfall gibt —
+       sonst überschriebe die nächste harmlose Entscheidung die Sperre mit
+       „verletzt". */
+    if (r.ausfall) ausfallRef.current = { saisons: ausfallRef.current.saisons + r.ausfall, grund: r.grund };
     play(r.gelungen ? "ok" : "err");
     setKarte((v) => ({ ...v, folge: { option, ergebnis: r } }));
     /* DIE KACHEL BLIEB AUF DEM ALTEN WERT. Die Folge sagte „Stärke 70 → 73", die
@@ -934,7 +943,7 @@ export default function Karriere({ onLeave }) {
                     <td>
                       <span className="kaZeilenWappen"><Emblem def={defVon({ key: z.key, name: z.verein })} /></span>
                       {z.verein} <small>{z.lg}</small>
-                      {z.verletzt ? <small className="kaAus">verletzt</small> : null}
+                      {z.aus ? <small className="kaAus">{z.aus}</small> : null}
                       {z.titel.length ? <em>{z.titel.map((t, n) => <Trophaee key={n} titel={t} groesse={16} titelText={TITEL_NAME[t] || t} />)}</em> : null}
                     </td>
                     <td><span className="kaRatingMarke">{z.ovr}</span></td>
@@ -1015,6 +1024,13 @@ export default function Karriere({ onLeave }) {
       <div className="kaOvr" data-rang={K.rangVon(k.ovr)}>
         <small>RATING</small><b><Zaehler wert={k.ovr} warten={K.ZAEHLER_WARTEN} /></b>
       </div>
+      {/* DAS ALTER STAND NUR IN DER KOPFLEISTE DES MODUS und in der Zeitleiste —
+          dort, wo man beim Entscheiden nicht hinsieht. Es gehört neben das Rating:
+          Mit 19 heisst dieselbe Entscheidung etwas anderes als mit 33. */}
+      <div className="kaAlter">
+        <small>ALTER</small><b><Zaehler wert={k.alter} warten={K.ZAEHLER_WARTEN} dauer={520} /></b>
+        <i>von {K.ALTERSGRENZE}</i>
+      </div>
       {k.verein && <span className="kaWappen"><Emblem def={defVon(k.verein)} /></span>}
       <div className="kaWer">
         <b>#{k.nummer} {k.name}</b>
@@ -1059,10 +1075,10 @@ export default function Karriere({ onLeave }) {
               {saison.saisons === 1 ? "Eine Saison" : `${saison.saisons} Saisons`} bei {saison.verein}
               {/* Ohne diesen Zusatz stünde bei einer durchverletzten Spielzeit nur
                   „0 Spiele" da, und niemand wüsste, warum. */}
-              {saison.verletzt > 0 && (
+              {saison.ausfall > 0 && (
                 <i className="kaSaisonAus">
-                  {saison.verletzt === saison.saisons ? "verletzt ausgefallen"
-                    : `${saison.verletzt} Saison verletzt`}
+                  {saison.ausfall < saison.saisons ? `${saison.ausfall} Saison ${saison.grund}`
+                    : saison.grund === "gesperrt" ? "durchgehend gesperrt" : "verletzt ausgefallen"}
                 </i>
               )}
             </span>
@@ -1088,7 +1104,25 @@ export default function Karriere({ onLeave }) {
         )}
 
         {meldung.length > 0 && (
-          <div className="kaMeldung">{meldung.map((m, i) => <span key={i}>{m}</span>)}</div>
+          <div className="kaMeldung">
+            {meldung.map((m, i) => m.art === "titel" ? (
+              <span key={i} className="kaMeldungTitel">
+                <Trophaee titel={m.titel} groesse={20} titelText={TITEL_NAME[m.titel]} />
+                {TITEL_NAME[m.titel] || m.titel}
+              </span>
+            ) : (
+              /* AUF- UND ABSTIEG WAREN EINE TEXTZEILE mit einem Pfeil davor. Dabei
+                 ist das der Moment, der die nächsten Jahre bestimmt: eine andere
+                 Liga, andere Gegner, andere Titel. Jetzt mit Wappen, Richtung und
+                 beiden Ligen. */
+              <span key={i} className={"kaMeldungLiga " + m.art}>
+                <span className="kaMeldungWappen"><Emblem def={defVon({ key: m.key, name: m.verein })} /></span>
+                <b>{m.verein}</b>
+                <i>{m.art === "auf" ? "steigt auf" : "steigt ab"}</i>
+                <small>{m.von} → {m.nach}</small>
+              </span>
+            ))}
+          </div>
         )}
 
         {karte?.art === "jugend" && (
@@ -1231,6 +1265,8 @@ export default function Karriere({ onLeave }) {
               stationen={stationen}
               national={k.national}
               torwart={torwart}
+              abschluss={!!k.abschluss}
+              trainerschein={!!k.trainerschein}
               datum={new Date().toLocaleDateString("de-DE")}
             />
 
