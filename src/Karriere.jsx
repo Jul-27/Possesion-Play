@@ -403,6 +403,7 @@ function wirkungsText(w, verein) {
   }
   if (w.verbandswechsel) teile.push("neuer Verband");
   if (w.abschluss) teile.push("Schulabschluss");
+  if (w.trainerschein) teile.push("Trainerschein");
   return teile.length ? teile.join(" · ") : "nichts ändert sich";
 }
 
@@ -1264,6 +1265,8 @@ export default function Karriere({ onLeave }) {
               stationen={stationen}
               national={k.national}
               torwart={torwart}
+              abschluss={!!k.abschluss}
+              trainerschein={!!k.trainerschein}
               datum={new Date().toLocaleDateString("de-DE")}
             />
 

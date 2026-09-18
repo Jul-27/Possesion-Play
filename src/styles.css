@@ -1363,6 +1363,14 @@ body::after {
 .ukRating small { display: block; font-size: 9px; letter-spacing: .18em; text-transform: uppercase; opacity: .78; }
 .ukRating b { font-family: 'Barlow Condensed', sans-serif; font-size: 38px; line-height: 1.05; }
 .ukRating em { display: block; font-style: normal; font-size: 11px; font-weight: 700; opacity: .8; }
+/* Was neben dem Platz entstanden ist: Schulabschluss, Trainerschein. Keine
+   Trophäen, deshalb auch kein Gold — nur zwei ruhige Marken unter den Zahlen. */
+.ukBrief { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
+.ukBrief span {
+  padding: 3px 9px; border-radius: 999px; font-size: 10px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+  border: 1px solid rgba(255,255,255,.22); color: var(--kaLeise, #8CA89A);
+}
 .ukPokale { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
 .ukPokal { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 62px; }
 .ukPokal small { font-size: 9px; text-align: center; color: var(--kaLeise, #8CA89A); line-height: 1.25; }

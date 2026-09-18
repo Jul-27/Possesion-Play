@@ -36,7 +36,7 @@ function Zahl({ wert, name }) {
 export default function UrkundeKarriere({
   name, nummer, position, land, gesamt = {}, hoechste = 0, marktwert = "",
   titel = [], auszeichnungen = [], stationen = [], national = null, datum = "",
-  torwart = false,
+  torwart = false, abschluss = false, trainerschein = false,
 }) {
   const nationalTitel = titel.filter((t) => NATIONAL.has(t.key));
   const bdo = titel.find((t) => t.key === "BDO");
@@ -75,6 +75,16 @@ export default function UrkundeKarriere({
             <small>Bestwert</small><b>{hoechste}</b>
             {marktwert ? <em>{marktwert}</em> : null}
           </div>
+          {/* WAS NEBEN DEM PLATZ ENTSTANDEN IST. Der Schulabschluss kostete mit
+              zwanzig einen Punkt Stärke und tauchte danach nirgends wieder auf —
+              nicht einmal hier. Jetzt steht er da, und der Trainerschein, den er
+              erst möglich macht, daneben. */}
+          {(abschluss || trainerschein) && (
+            <p className="ukBrief">
+              {abschluss ? <span>Schulabschluss</span> : null}
+              {trainerschein ? <span>Trainerschein</span> : null}
+            </p>
+          )}
         </section>
 
         <section className="ukFeld">
