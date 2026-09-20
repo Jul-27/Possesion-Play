@@ -250,7 +250,7 @@ test("Wirkungen greifen und bleiben in den Grenzen", () => {
   const rolle = K.entscheide(k, { label: "x", wirkung: { rolle: "rotation" } }, zufall);
   assert.equal(rolle.karriere.rolle, "rotation");
   const mod = K.entscheide(k, { label: "x", wirkung: { liga: 2, europa: 0.5 } }, zufall);
-  assert.deepEqual(mod.mod, { liga: 2, pokal: 1, europa: 0.5 });
+  assert.deepEqual(mod.mod, { liga: 2, pokal: 1, europa: 0.5, klasse: 1 });
 });
 
 /* Jede Karte muss spielbar sein: mindestens zwei Optionen, jede mit Beschriftung,
@@ -1193,9 +1193,13 @@ test("die Karten sind an die Lage gebunden", () => {
   assert.ok(!jung.includes("knie"), "mit siebzehn meldet sich kein Knie");
   assert.ok(!jung.includes("trainerschein"));
 
-  const alt = moeglich(basis({ alter: 34, ovr: 74, verein: { stufe: 3, liga: { land: "GER", stufe: 1 } } }));
+  const alt = moeglich(basis({ alter: 34, ovr: 74, abschluss: true, verein: { stufe: 3, liga: { land: "GER", stufe: 1 } } }));
   assert.ok(alt.includes("knie") && alt.includes("trainerschein"), "mit 34 schon");
   assert.ok(!alt.includes("internat") && !alt.includes("debuet"));
+  /* Der Trainerschein setzt den Schulabschluss voraus — wer mit zwanzig nur
+     gespielt hat, bekommt die Karte nie zu sehen. */
+  const ohneSchule = moeglich(basis({ alter: 34, ovr: 74, verein: { stufe: 3, liga: { land: "GER", stufe: 1 } } }));
+  assert.ok(!ohneSchule.includes("trainerschein"), "ohne Abschluss kein Schein");
 
   const feld = moeglich(basis({ alter: 26, pos: "ST" }));
   assert.ok(!feld.includes("patzer"), "ein Stürmer patzt nicht beim Abschlag");
@@ -1319,6 +1323,408 @@ test("jede Option trägt ein Bildmotiv", () => {
   const ohne = [];
   for (const e of K.EREIGNISSE) for (const o of e.optionen) if (!o.bild) ohne.push(`${e.key}/${o.label}`);
   assert.deepEqual(ohne, [], "Option ohne Motiv");
+});
+
+/* ── Leere Kacheln, Gruppe für Gruppe ──────────────────────────────────────────
+   Eine sichere Kachel mit `wirkung: {}` zeigt im Spiel „nichts ändert sich". Dann
+   ist die Rechnung immer dieselbe: Die Wette daneben hat einen Erwartungswert über
+   null, das Ablehnen keinen — es gibt nichts zu entscheiden.
+
+   Alle vierzig Karten sind durchgegangen, die Liste ist leer, und sie soll leer
+   bleiben. Kommt eine neue Karte mit einer leeren sicheren Kachel dazu, schlägt
+   die Prüfung an.
+
+   Eine WETTE mit leerem Gelingen ist etwas anderes und bleibt erlaubt: Bei „Auf die
+   Zähne beissen" heisst der gute Ausgang, dass nichts passiert. Das ist eine
+   Aussage, keine Lücke. */
+const KACHELN_OHNE_WIRKUNG = [];
+
+test("keine sichere Kachel ohne Wirkung", () => {
+  const leer = [];
+  for (const e of K.EREIGNISSE)
+    for (const o of e.optionen)
+      if (o.chance === undefined && !Object.keys(o.wirkung).length) leer.push(`${e.key}/${o.label}`);
+  assert.deepEqual(leer.sort(), [...KACHELN_OHNE_WIRKUNG].sort());
+});
+
+test("die drei Trainingskarten sind drei verschiedene Wetten", () => {
+  const drei = ["ernaehrung", "extraschicht", "trainer"].map((k) => K.EREIGNISSE.find((e) => e.key === k));
+  for (const e of drei) {
+    const [wette, sicher] = e.optionen;
+    assert.ok(wette.chance > 0 && wette.chance < 1, `${e.key}: keine Wette`);
+    assert.ok(Object.keys(sicher.wirkung).length, `${e.key}: sichere Kachel ist leer`);
+    assert.equal(sicher.chance, undefined, `${e.key}: die zweite Kachel soll sicher sein`);
+  }
+  /* Jede trägt ein eigenes Risiko: die kleine Wette, die grosse (eine Saison weg),
+     und die, die nicht die Stärke, sondern den Platz in der Elf betrifft. */
+  const [ern, extra, trainer] = drei;
+  assert.equal(extra.optionen[0].sonst.verletzt, 1);
+  assert.equal(trainer.optionen[0].wirkung.rolle, "stamm");
+  assert.equal(ern.optionen[0].sonst.verletzt, undefined);
+  assert.equal(ern.optionen[0].wirkung.rolle, undefined);
+});
+
+test("das Präparat kostet eine Sperre, keine Verletzung", () => {
+  const karte = K.EREIGNISSE.find((e) => e.key === "mittel");
+  const [nehmen, lassen] = karte.optionen;
+  assert.equal(nehmen.wirkung.ovr, 5);
+  assert.equal(nehmen.sonst.ovr, -2);
+  assert.equal(nehmen.sonst.gesperrt, 1);
+  assert.equal(nehmen.sonst.verletzt, undefined, "eine Sperre ist keine Verletzung");
+  /* Sauber bleiben ist nicht gratis — sonst wäre die moralische Wahl keine. */
+  assert.ok(Object.keys(lassen.wirkung).length, "„Finger weg\" darf nicht leer sein");
+});
+
+test("eine Sperre fällt aus wie eine Verletzung, heisst aber anders", () => {
+  const k = { ovr: 70, rolle: "stamm", alter: 24, land: "GER", verein: null };
+  const sperre = K.entscheide(k, { label: "x", chance: 1, wirkung: { gesperrt: 1 } }, () => 0);
+  assert.equal(sperre.ausfall, 1);
+  assert.equal(sperre.grund, "gesperrt");
+  const texte = sperre.folgen.map((f) => f.text);
+  assert.ok(texte.some((t) => t.includes("gesperrt")), texte.join(" | "));
+  assert.ok(!texte.some((t) => t.includes("verletzt")), texte.join(" | "));
+
+  const riss = K.entscheide(k, { label: "x", wirkung: { verletzt: 2 } }, () => 0);
+  assert.equal(riss.ausfall, 2);
+  assert.equal(riss.grund, "verletzt");
+  assert.ok(riss.folgen.some((f) => f.text.includes("verletzt")));
+
+  /* Ohne Ausfall gibt es keinen Grund zu nennen. */
+  const nichts = K.entscheide(k, { label: "x", wirkung: { ovr: 1 } }, () => 0);
+  assert.equal(nichts.ausfall, 0);
+});
+
+/* ── Gruppe 2 ──────────────────────────────────────────────────────────────── */
+
+test("Pfiffe kommen nur nach einer Saison, die dazu passt", () => {
+  const karte = K.EREIGNISSE.find((e) => e.key === "pfiffe");
+  const zeile = (ovr, titel = [], spiele = 30) => ({ ovr, titel, spiele });
+  const bau = (verlauf) => ({ alter: 25, ovr: 70, verlauf });
+
+  /* Gespielt, nichts gewonnen, Wert gefallen — die Pfiffe passen. */
+  assert.equal(karte.wenn(bau([zeile(72), zeile(70)])), true);
+  /* Wert gestiegen: kein Grund zu pfeifen. */
+  assert.equal(karte.wenn(bau([zeile(68), zeile(72)])), false);
+  /* Titel gewonnen: erst recht nicht. */
+  assert.equal(karte.wenn(bau([zeile(72), zeile(70, ["MBL"])])), false);
+  /* Kaum gespielt: dann pfeift niemand nach dir. */
+  assert.equal(karte.wenn(bau([zeile(72), zeile(70, [], 3)])), false);
+  /* Erste Saison: es gibt noch keinen Trend. */
+  assert.equal(karte.wenn(bau([zeile(70)])), false);
+  assert.equal(karte.wenn({ alter: 25, ovr: 70, verlauf: [] }), false);
+});
+
+test("ratingTrend vergleicht die beiden letzten Zeilen", () => {
+  assert.equal(K.ratingTrend({ verlauf: [{ ovr: 60 }, { ovr: 64 }] }), 4);
+  assert.equal(K.ratingTrend({ verlauf: [{ ovr: 64 }, { ovr: 60 }] }), -4);
+  assert.equal(K.ratingTrend({ verlauf: [{ ovr: 64 }] }), 0);
+  assert.equal(K.ratingTrend({}), 0);
+});
+
+test("Auskurieren ist nicht mehr die dumme Wahl", () => {
+  const [auskurieren, beissen] = K.EREIGNISSE.find((e) => e.key === "verletzung").optionen;
+  assert.equal(auskurieren.verletzt, undefined);
+  assert.equal(auskurieren.wirkung.verletzt, 1);
+  assert.ok(auskurieren.wirkung.ovr > 0, "die Reha muss etwas zurückgeben");
+  /* Und die Gegenseite kostet weiterhin mehr, wenn sie schiefgeht. */
+  assert.equal(beissen.sonst.verletzt, 1);
+  assert.ok(beissen.sonst.ovr < 0);
+});
+
+test("wer im Endspiel abbricht, kostet die Mannschaft den Titel", () => {
+  const [spielen] = K.EREIGNISSE.find((e) => e.key === "endspiel").optionen;
+  for (const feld of ["liga", "pokal", "europa"]) {
+    assert.ok(spielen.wirkung[feld] > 1, `${feld}: Gelingen muss helfen`);
+    assert.ok(spielen.sonst[feld] < 1, `${feld}: der Rückschlag muss auch die Mannschaft treffen`);
+  }
+});
+
+test("der Elfmeter kommt nur, wo es einen Pokal gibt", () => {
+  const karte = K.EREIGNISSE.find((e) => e.key === "elfmeter");
+  assert.equal(karte.wenn({ verein: { lg: "BL", liga: { land: "GER", stufe: 1 } } }), true);
+  /* Saudi-Arabien führt in diesem Spiel keinen Pokal — dort verspräche die Karte
+     einen Titel, den es nicht gibt. */
+  assert.equal(karte.wenn({ verein: { lg: "SAU", liga: { land: "SA", stufe: 1 } } }), false);
+  /* Und in der zweiten Liga genauso wenig — dort gibt es keinen Pokaltitel. */
+  assert.equal(karte.wenn({ verein: { lg: "BL2", liga: { land: "GER", stufe: 2 } } }), false);
+  /* Und beide Kacheln sagen etwas. */
+  for (const o of karte.optionen) assert.ok(Object.keys(o.wirkung).length, o.label);
+});
+
+test("der Schulabschluss öffnet den Trainerschein und ist nicht dasselbe", () => {
+  const schule = K.EREIGNISSE.find((e) => e.key === "schule");
+  const schein = K.EREIGNISSE.find((e) => e.key === "trainerschein");
+  /* Zwei verschiedene Dinge, zwei verschiedene Felder. Vorher setzten beide
+     Karten `abschluss`, und der Trainerschein trug sich als Schulabschluss ein. */
+  assert.equal(schule.optionen[0].wirkung.abschluss, true);
+  assert.equal(schule.optionen[0].wirkung.trainerschein, undefined);
+  assert.equal(schein.optionen[0].wirkung.trainerschein, true);
+  assert.equal(schein.optionen[0].wirkung.abschluss, undefined);
+
+  /* Ohne Abschluss kein Schein — mit ihm schon, und nur einmal. */
+  assert.equal(schein.wenn({ alter: 34, abschluss: false }), false);
+  assert.equal(schein.wenn({ alter: 34, abschluss: true }), true);
+  assert.equal(schein.wenn({ alter: 34, abschluss: true, trainerschein: true }), false);
+  assert.equal(schein.wenn({ alter: 30, abschluss: true }), false);
+
+  /* Und die Schulkarte verschwindet, sobald der Abschluss da ist. */
+  assert.equal(schule.wenn({ alter: 18, abschluss: false }), true);
+  assert.equal(schule.wenn({ alter: 18, abschluss: true }), false);
+});
+
+test("entscheide trägt Abschluss und Schein getrennt ein", () => {
+  const k = { ovr: 70, rolle: "stamm", alter: 20, land: "GER", verein: null };
+  const a = K.entscheide(k, { label: "x", wirkung: { abschluss: true } }, () => 0);
+  assert.equal(a.karriere.abschluss, true);
+  assert.equal(a.karriere.trainerschein, undefined);
+  const b = K.entscheide({ ...k, abschluss: true }, { label: "x", wirkung: { trainerschein: true } }, () => 0);
+  assert.equal(b.karriere.trainerschein, true);
+  assert.ok(b.folgen.some((f) => f.text.includes("Trainerschein")));
+});
+
+/* ── Gruppe 3 und der Rückhalt ─────────────────────────────────────────────── */
+
+/* Ein grober, aber wirksamer Maßstab: Wie viel bringt eine Kachel im Schnitt, wenn
+   man Stärke, Rolle und Titelaussicht in eine Zahl zwingt? Er taugt nicht, um
+   Karten fein auszubalancieren — aber er zeigt die Karten, bei denen eine Kachel
+   die andere in JEDER Hinsicht schlägt. Genau die sind keine Entscheidung. */
+/* Eine Rolle in einer Wirkung ist eine ZUWEISUNG, kein Zuwachs — wohin sie führt,
+   hängt davon ab, wo man herkommt. Gemessen wird sie darum gegen die Mitte:
+   Stammplatz ist ein Gewinn, Rotation neutral, „nur im Kader" ein Verlust. */
+const ROLLE_WERT = { stamm: 2, rotation: 0, kader: -2 };
+function kachelWert(o) {
+  const teil = (w) => {
+    if (!w) return 0;
+    let x = w.ovr ?? 0;
+    if (w.rolle) x += ROLLE_WERT[w.rolle];
+    for (const f of ["liga", "pokal", "europa"]) if (w[f]) x += (w[f] - 1) * 3;
+    x -= (w.verletzt ?? 0) * 6;
+    x -= (w.gesperrt ?? 0) * 6;
+    x += (w.schutz ?? 0) * 1.5;
+    if (w.klasse) x += (w.klasse - 1) * 4;   // Auf- oder Abstieg wiegt schwer
+    /* Abschluss und Trainerschein kosten in der Laufbahn und zahlen danach — auf
+       der Urkunde und, im Fall des Abschlusses, als Voraussetzung. Ohne diesen
+       Posten meldet das Maß beide Karten als schief, obwohl sie es nicht sind. */
+    if (w.abschluss || w.trainerschein) x += 1;
+    return x;
+  };
+  if (o.chance === undefined) return teil(o.wirkung);
+  return o.chance * teil(o.wirkung) + (1 - o.chance) * teil(o.sonst);
+}
+
+const EREIGNISSE_MIT_ZWEI = K.EREIGNISSE.filter((e) => e.optionen.length === 2);
+
+/* Bei diesen Karten IST die Schieflage der Inhalt. „Ein Anruf, den man nicht
+   annimmt" bietet Geld für eine gelbe Karte zur richtigen Minute — dass Auflegen
+   die richtige Antwort ist, soll man nicht abwägen müssen. Eine solche Karte
+   auszubalancieren hiesse, sie kaputtzumachen. */
+const ABSICHTLICH_SCHIEF = new Set(["wetten"]);
+
+test("keine Karte, bei der eine Kachel die andere deutlich schlägt", () => {
+  /* Zwei Punkte Abstand sind der Rahmen, in dem eine Karte noch eine Wahl ist.
+     Darüber hinaus gibt es keinen Grund mehr, die schwächere zu nehmen. */
+  const schief = [];
+  for (const e of EREIGNISSE_MIT_ZWEI.filter((x) => !ABSICHTLICH_SCHIEF.has(x.key))) {
+    const [a, b] = e.optionen.map(kachelWert);
+    if (Math.abs(a - b) > 2) schief.push(`${e.key} (${a.toFixed(2)} gegen ${b.toFixed(2)})`);
+  }
+  assert.deepEqual(schief, [], `eine Kachel dominiert: ${schief.join(", ")}`);
+});
+
+test("der Ausrüster ist wieder eine Wette", () => {
+  const [ja, nein] = K.EREIGNISSE.find((e) => e.key === "ausruester").optionen;
+  /* Vorher gewann „Unterschreiben" im besten Fall genau das, was „Absagen" sicher
+     gab — es gab keinen Grund, jemals zu unterschreiben. */
+  assert.ok(ja.wirkung.ovr > nein.wirkung.ovr, "der gute Ausgang muss die sichere Wahl schlagen");
+  assert.ok(ja.sonst.ovr < 0, "und der schlechte muss wehtun");
+});
+
+test("Abwarten und Zuschauen kosten jetzt auch etwas", () => {
+  const bank = K.EREIGNISSE.find((e) => e.key === "bank");
+  assert.ok(bank.optionen[1].sonst.ovr < 0, "Im Training antworten war ohne Risiko");
+  const wechsel = K.EREIGNISSE.find((e) => e.key === "trainerwechsel");
+  assert.equal(wechsel.optionen[1].chance, undefined, "Abwarten ist jetzt die sichere Kachel");
+  assert.ok(Object.keys(wechsel.optionen[1].wirkung).length);
+  const debuet = K.EREIGNISSE.find((e) => e.key === "debuet");
+  assert.equal(debuet.optionen[0].sonst.rolle, "kader", "ein missratenes Debüt kostet Ansehen");
+});
+
+test("Rückhalt fängt genau einen Rückschlag ab und ist dann weg", () => {
+  const k = { ovr: 70, rolle: "stamm", alter: 24, land: "GER", verein: null };
+  const wette = { label: "x", chance: 0.5, wirkung: { ovr: 3 }, sonst: { ovr: -5, verletzt: 1 } };
+  const misslingt = () => 0.99, gelingt = () => 0.01;
+
+  /* Ohne Polster trifft der Rückschlag voll. */
+  const ohne = K.entscheide(k, wette, misslingt);
+  assert.equal(ohne.abgefangen, false);
+  assert.equal(ohne.karriere.ovr, 65);
+  assert.equal(ohne.ausfall, 1);
+
+  /* Mit Polster bleibt alles stehen — und das Polster ist verbraucht. */
+  const mit = K.entscheide({ ...k, schutz: 1 }, wette, misslingt);
+  assert.equal(mit.abgefangen, true);
+  assert.equal(mit.gelungen, false, "schiefgegangen ist es trotzdem");
+  assert.equal(mit.karriere.ovr, 70);
+  assert.equal(mit.ausfall, 0);
+  assert.equal(mit.karriere.schutz, 0);
+  assert.ok(mit.folgen.some((f) => f.text.includes("Rückhalt")));
+
+  /* Beim zweiten Rückschlag hilft es nicht mehr. */
+  const zweiter = K.entscheide(mit.karriere, wette, misslingt);
+  assert.equal(zweiter.abgefangen, false);
+  assert.equal(zweiter.karriere.ovr, 65);
+
+  /* Ein gelungener Einsatz verbraucht nichts. */
+  const heil = K.entscheide({ ...k, schutz: 1 }, wette, gelingt);
+  assert.equal(heil.abgefangen, false);
+  assert.equal(heil.karriere.schutz, 1);
+  assert.equal(heil.karriere.ovr, 73);
+});
+
+test("Rückhalt schützt nicht vor dem Preis einer sicheren Wahl", () => {
+  /* „Finger weg" kostet einen Punkt. Das ist kein Rückschlag, sondern der Preis —
+     wer ihn wegpolstert, nimmt der moralischen Entscheidung ihr Gewicht. */
+  const k = { ovr: 70, rolle: "stamm", alter: 24, land: "GER", verein: null, schutz: 1 };
+  const r = K.entscheide(k, { label: "x", wirkung: { ovr: -1 } }, () => 0.99);
+  assert.equal(r.abgefangen, false);
+  assert.equal(r.karriere.ovr, 69);
+  assert.equal(r.karriere.schutz, 1);
+});
+
+test("der Familienberater ist der einzige, der Rückhalt gibt", () => {
+  const geber = [];
+  for (const e of K.EREIGNISSE)
+    for (const o of e.optionen)
+      if (o.wirkung.schutz || o.sonst?.schutz) geber.push(`${e.key}/${o.label}`);
+  assert.deepEqual(geber, ["berater/Beim Familienberater bleiben"]);
+});
+
+test("die Binde nützt der Mannschaft, auch wenn ein anderer sie trägt", () => {
+  const [, lassen] = K.EREIGNISSE.find((e) => e.key === "binde").optionen;
+  assert.ok(lassen.wirkung.liga > 1 && lassen.wirkung.pokal > 1);
+  assert.equal(lassen.wirkung.ovr, undefined, "persönlich gewinnt man nichts");
+});
+
+/* ── Gruppe 4: der Kampf um die Liga ───────────────────────────────────────── */
+
+test("der Klassenfaktor bewegt Auf- und Abstieg wirklich", () => {
+  const zweite = { key: "x", staerke: 60, stufe: 1, lg: "BL2", liga: { key: "BL2", land: "GER", stufe: 2, name: "2. Bundesliga" } };
+  const erste = { key: "y", staerke: 60, stufe: 1, lg: "BL", liga: { key: "BL", land: "GER", stufe: 1, name: "Bundesliga" } };
+
+  /* Aufstieg: die Grundchance auf dieser Rufstufe ist 0,04. Mit Faktor 1,8 reicht
+     eine Ziehung von 0,05 — ohne ihn nicht. */
+  assert.equal(K.ligaWechsel(zweite, () => 0.05).richtung, null);
+  assert.equal(K.ligaWechsel(zweite, () => 0.05, undefined, 1.8).richtung, "auf");
+  /* Und unter eins wird es schwerer: 0,03 ginge sonst durch. */
+  assert.equal(K.ligaWechsel(zweite, () => 0.03).richtung, "auf");
+  assert.equal(K.ligaWechsel(zweite, () => 0.03, undefined, 0.75).richtung, null);
+
+  /* Abstieg: Grundgefahr 0,16 auf dieser Rufstufe, geteilt durch den Faktor. */
+  assert.equal(K.ligaWechsel(erste, () => 0.1).richtung, "ab");
+  assert.equal(K.ligaWechsel(erste, () => 0.1, undefined, 1.8).richtung, null);
+  assert.equal(K.ligaWechsel(erste, () => 0.19, undefined, 0.75).richtung, "ab");
+
+  /* Ohne Schwesterliga gibt es nichts zu bewegen. */
+  const allein = { ...erste, liga: { key: "SAU", land: "SA", stufe: 1, name: "Saudi Pro League" } };
+  assert.equal(K.ligaWechsel(allein, () => 0, undefined, 3).richtung, null);
+});
+
+test("der Klassenfaktor wird genannt, wie er beim Verein ankommt", () => {
+  const zweite = { liga: { land: "GER", stufe: 2 } };
+  const erste = { liga: { land: "GER", stufe: 1 } };
+  assert.equal(K.klasseText(1.8, zweite), "Aussicht auf den Aufstieg ×1,8");
+  assert.equal(K.klasseText(0.8, zweite), "Aussicht auf den Aufstieg auf 80 %");
+  assert.equal(K.klasseText(1.8, erste), "Abstiegsgefahr auf 56 %");
+  assert.equal(K.klasseText(0.75, erste), "Abstiegsgefahr ×1,33");
+  /* Kein Faktor, kein Verein, keine Schwesterliga: kein Satz. */
+  assert.equal(K.klasseText(1, erste), null);
+  assert.equal(K.klasseText(1.8, null), null);
+  assert.equal(K.klasseText(1.8, { liga: { land: "SA", stufe: 1 } }), null);
+});
+
+test("Abstiegskampf und Aufstiegsrennen berühren die Tabelle", () => {
+  for (const key of ["abstiegskampf", "aufstiegsrennen"]) {
+    const e = K.EREIGNISSE.find((x) => x.key === key);
+    const mit = e.optionen.filter((o) => o.wirkung.klasse || o.sonst?.klasse);
+    assert.equal(mit.length, 2, `${key}: beide Kacheln müssen die Tabelle bewegen`);
+    const [a, b] = e.optionen;
+    assert.ok(a.wirkung.klasse > 1, `${key}: die mutige Kachel muss helfen`);
+    assert.ok(b.wirkung.klasse < 1, `${key}: die bequeme Kachel muss kosten`);
+  }
+  /* Und keine von beiden erscheint, wo es gar keine Schwesterliga gibt. */
+  const ab = K.EREIGNISSE.find((x) => x.key === "abstiegskampf");
+  assert.equal(ab.wenn({ verein: { stufe: 1, liga: { key: "SAU", land: "SA", stufe: 1 } } }), false);
+  assert.equal(ab.wenn({ verein: { stufe: 1, liga: { key: "BL", land: "GER", stufe: 1 } } }), true);
+});
+
+test("entscheide reicht den Klassenfaktor weiter", () => {
+  const verein = { liga: { land: "GER", stufe: 1 } };
+  const k = { ovr: 70, rolle: "stamm", alter: 28, land: "GER", verein };
+  const r = K.entscheide(k, { label: "x", wirkung: { klasse: 1.8 } }, () => 0);
+  assert.equal(r.mod.klasse, 1.8);
+  assert.ok(r.folgen.some((f) => f.text.includes("Abstiegsgefahr")), r.folgen.map((f) => f.text).join(" | "));
+  /* Ohne Faktor steht dort eine schlichte Eins — ligaWechsel rechnet damit. */
+  assert.equal(K.entscheide(k, { label: "x", wirkung: { ovr: 1 } }, () => 0).mod.klasse, 1);
+});
+
+test("die Titelverteidigung kommt nur, wo es einen Titel zu verteidigen gibt", () => {
+  const karte = K.EREIGNISSE.find((e) => e.key === "titelverteidigung");
+  const nachTitel = (verein) => karte.wenn({ verein, verlauf: [{ ovr: 80, titel: ["WM"] }] });
+  assert.equal(nachTitel({ lg: "BL", liga: { land: "GER", stufe: 1 } }), true);
+  /* Weltmeister geworden, aber bei einem Zweitligisten: Dort gibt es weder eine
+     Meisterschaft noch einen Pokal zu verteidigen. */
+  assert.equal(nachTitel({ lg: "BL2", liga: { land: "GER", stufe: 2 } }), false);
+});
+
+/* ── Gruppe 5 ──────────────────────────────────────────────────────────────── */
+
+test("die trotzige Kachel hat die höhere Decke", () => {
+  /* Bei Sprache und Heimweh stand 35 bzw. 45 Prozent auf einen Punkt gegen 70 bis
+     75 Prozent auf zwei — die zweite Kachel war nur Dekoration. Wer den harten Weg
+     geht, muss dafür mehr gewinnen können als der, der den bequemen nimmt. */
+  for (const key of ["sprache", "heimweh"]) {
+    const [leicht, hart] = K.EREIGNISSE.find((e) => e.key === key).optionen;
+    assert.ok(hart.chance < leicht.chance, `${key}: der harte Weg muss unwahrscheinlicher sein`);
+    assert.ok(hart.wirkung.ovr > leicht.wirkung.ovr, `${key}: dafür muss er mehr bringen`);
+  }
+});
+
+test("das Knie zu operieren lohnt sich wieder", () => {
+  const [op, spritzen] = K.EREIGNISSE.find((e) => e.key === "knie").optionen;
+  assert.equal(op.wirkung.verletzt, 1);
+  /* Die Operation kostet sicher eine Saison. Gäbe sie weniger zurück als das
+     Durchspritzen im Schnitt kostet, wäre die vernünftige Wahl, ein kaputtes Knie
+     nicht behandeln zu lassen. */
+  const spritzenSchaden = (1 - spritzen.chance) * Math.abs(spritzen.sonst.ovr);
+  assert.ok(op.wirkung.ovr >= spritzenSchaden - 1, `Operation gibt nur ${op.wirkung.ovr} zurück`);
+});
+
+test("das Richtige ist bei der Kinderstation auch das Bessere", () => {
+  const [zusagen, absagen] = K.EREIGNISSE.find((e) => e.key === "stiftung").optionen;
+  assert.ok(zusagen.chance * zusagen.wirkung.ovr > (absagen.wirkung.ovr ?? 0),
+    "Absagen darf nicht das bessere Geschäft sein");
+});
+
+test("das Abschiedsspiel verspricht nichts, was der Verein nicht spielt", () => {
+  const karte = K.EREIGNISSE.find((e) => e.key === "abschiedsspiel");
+  const alt = (verein) => karte.wenn({ alter: 34, vereine: ["a", "b", "c"], verein });
+  assert.equal(alt({ lg: "BL", liga: { land: "GER", stufe: 1 } }), true);
+  assert.equal(alt({ lg: "BL2", liga: { land: "GER", stufe: 2 } }), false);
+});
+
+test("alle vierzig Karten sind durchgegangen", () => {
+  /* Der Schlusspunkt der fünf Gruppen: keine leere sichere Kachel, jede Karte mit
+     zwei Optionen, jede Option mit Beschriftung und Motiv. */
+  assert.equal(K.EREIGNISSE.length, 40);
+  assert.deepEqual(KACHELN_OHNE_WIRKUNG, []);
+  for (const e of K.EREIGNISSE) {
+    assert.equal(e.optionen.length, 2, e.key);
+    for (const o of e.optionen) {
+      assert.ok(o.label && o.bild, `${e.key}: Kachel ohne Beschriftung oder Motiv`);
+      assert.ok(Object.keys(o.wirkung).length || o.chance !== undefined,
+        `${e.key}/${o.label}: sichere Kachel ohne Wirkung`);
+    }
+  }
 });
 
 test("alle Motive gibt es auch als Datei", async () => {
