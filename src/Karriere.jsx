@@ -404,6 +404,7 @@ function wirkungsText(w, verein) {
   if (w.verbandswechsel) teile.push("neuer Verband");
   if (w.abschluss) teile.push("Schulabschluss");
   if (w.trainerschein) teile.push("Trainerschein");
+  if (w.schutz) teile.push(w.schutz === 1 ? "Rückhalt" : `${w.schutz}× Rückhalt`);
   return teile.length ? teile.join(" · ") : "nichts ändert sich";
 }
 
@@ -498,6 +499,7 @@ function Ereigniskarte({ ereignis, verein, bewerte, onFertig, folge, onWeiter, g
         {gesperrt ? "Die Saison läuft noch ein …"
           : !wahl ? "Wähle — bei einer Wette entscheidet danach der Zufall."
           : !steht ? "Es entscheidet sich …"
+          : wahl.ergebnis.abgefangen ? "Es ist schiefgegangen — dein Rückhalt hat es abgefangen."
           : wahl.ergebnis.gewagt ? (wahl.ergebnis.gelungen ? "Es ist aufgegangen." : "Es ist schiefgegangen.")
           : "Entschieden."}
       </p>
@@ -1050,6 +1052,13 @@ export default function Karriere({ onLeave }) {
         </small>
       </div>
       <div className="kaWert"><b>{K.werteText(K.marktwert(k.ovr))}</b><small>Marktwert</small></div>
+      {/* Der Rückhalt muss sichtbar sein, sonst ist er keine Währung: Wer nicht
+          weiss, dass er ein Polster hat, wägt es auch nicht ab. */}
+      {(k.schutz ?? 0) > 0 && (
+        <span className="kaSchutz" title="Fängt den nächsten misslungenen Einsatz ab">
+          Rückhalt{k.schutz > 1 ? ` ×${k.schutz}` : ""}
+        </span>
+      )}
     </div>
   );
 

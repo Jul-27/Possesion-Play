@@ -888,7 +888,22 @@ export function verbandsAngebot(k, zufall) {
 
    Die Felder von `wirkung`: ovr (sofortiger Zuwachs), rolle (neue Rolle im Team),
    liga/pokal/europa (Faktor auf die Titelchance dieser Saison), verletzt und
-   gesperrt (Saisons ohne Spiel).
+   gesperrt (Saisons ohne Spiel), schutz (Rückhalt).
+
+   ── RÜCKHALT ────────────────────────────────────────────────────────────────
+   Eine sichere Kachel konnte lange nur eines: einen Punkt Stärke geben. Damit
+   sah jede ruhige Entscheidung im Spiel gleich aus, egal ob es um einen Berater,
+   ein Interview oder die Ernährung ging — dreimal „+1 Stärke".
+
+   `schutz` ist der zweite Hebel. Er gibt ein Polster, das den NÄCHSTEN
+   misslungenen Einsatz abfängt: Der Rückschlag tritt nicht ein, das Polster ist
+   danach verbraucht. Er wirkt nur gegen eine Wette, nicht gegen den Preis einer
+   sicheren Wahl — wer „Finger weg" sagt und dafür einen Punkt zahlt, zahlt ihn.
+
+   Ursprünglich sollte der zweite Hebel „diese Saison kann dich keine Verletzung
+   treffen" heissen. Das wäre ein leeres Versprechen gewesen: Eine Saison
+   verletzt hier niemanden von selbst, Verletzungen kommen ausschliesslich aus
+   diesen Karten. Der Schutz muss also an der Karte ansetzen, nicht an der Saison.
 
    Verletzt und gesperrt kosten mechanisch dasselbe — die Saison ist weg. Sie
    stehen trotzdem getrennt da, weil sie im Lebenslauf nicht dasselbe sind: Ein
@@ -953,8 +968,8 @@ export const EREIGNISSE = [
     ] },
   { key: "extraschicht", titel: "Extraschichten", text: "Du könntest nach dem Training bleiben. Mehr Arbeit, weniger Erholung.",
     optionen: [
-      { label: "Jeden Abend länger", bild: "training", chance: 0.55, wirkung: { ovr: 4 }, sonst: { ovr: -1, verletzt: 1 } },
-      { label: "Normal trainieren", bild: "platz", wirkung: { ovr: 1, liga: 1.2, pokal: 1.2, europa: 1.2 } },
+      { label: "Jeden Abend länger", bild: "training", chance: 0.7, wirkung: { ovr: 4 }, sonst: { ovr: -1, verletzt: 1 } },
+      { label: "Normal trainieren", bild: "platz", wirkung: { ovr: 1, liga: 1.2 } },
     ] },
   { key: "trainer", titel: "Privattrainer", text: "Ein Individualtrainer bietet sich an. Er arbeitet genau an dem, was der Trainer an dir vermisst.",
     optionen: [
@@ -1022,9 +1037,9 @@ export const EREIGNISSE = [
   { key: "endspiel", titel: "Verletzt vor dem Endspiel", text: "Kurz vor dem wichtigsten Spiel deiner Saison zwickt es.",
     wenn: (k) => (k.verein?.stufe ?? 0) >= 3,
     optionen: [
-      { label: "Spielen", bild: "platz", chance: 0.8, wirkung: { liga: 1.6, europa: 1.6, pokal: 1.6 },
-        sonst: { ovr: -2, liga: 0.6, europa: 0.6, pokal: 0.6 } },
-      { label: "Aussetzen", bild: "medizin", wirkung: { liga: 0.6, europa: 0.6, pokal: 0.6 } },
+      { label: "Spielen", bild: "platz", chance: 0.55, wirkung: { liga: 1.5, europa: 1.5, pokal: 1.5 },
+        sonst: { ovr: -2, liga: 0.7, europa: 0.7, pokal: 0.7 } },
+      { label: "Aussetzen", bild: "medizin", wirkung: { ovr: 1, liga: 0.85, europa: 0.85, pokal: 0.85 } },
     ] },
   /* Nur dort, wo es einen Pokal zu gewinnen gibt — beide Kacheln sprechen von ihm. */
   { key: "elfmeter", titel: "Elfmeter in der Nachspielzeit", text: "Alle schauen dich an. Übernimmst du?",
@@ -1074,14 +1089,19 @@ export const EREIGNISSE = [
   { key: "debuet", titel: "Der Trainer ruft dich", text: "Zwei Ausfälle, und plötzlich stehst du im Kader der Profis. Eine Halbzeit, mehr wird es nicht.",
     wenn: (k) => k.alter <= 21 && k.rolle !== "stamm",
     optionen: [
-      { label: "Alles riskieren", bild: "platz", chance: 0.45, wirkung: { ovr: 4, rolle: "rotation" }, sonst: { ovr: -1 } },
+      /* Ein missratenes Debüt kostet Ansehen, nicht nur einen Punkt: Vorher brachte
+         „Alles riskieren" im Schnitt +1,25 UND die bessere Rolle, während das
+         vorsichtige Spiel auf +0,75 kam — es gab nichts abzuwägen. */
+      { label: "Alles riskieren", bild: "platz", chance: 0.45, wirkung: { ovr: 4, rolle: "rotation" }, sonst: { ovr: -1, rolle: "kader" } },
       { label: "Kein Risiko eingehen", bild: "bank", chance: 0.75, wirkung: { ovr: 1 }, sonst: {} },
     ] },
   { key: "berater", titel: "Ein Berater umwirbt dich", text: "Er verspricht dir die großen Vereine. Sein Anteil ist happig, seine Verbindungen sind es auch.",
     wenn: (k) => k.alter <= 23,
     optionen: [
       { label: "Unterschreiben", bild: "vertrag", chance: 0.6, wirkung: { ovr: 2 }, sonst: { ovr: -2 } },
-      { label: "Beim Familienberater bleiben", bild: "familie", wirkung: {} },
+      /* Der Rückhalt im Wortsinn — jemand, der einen kennt, seit man vierzehn ist,
+         fängt den nächsten Rückschlag ab. */
+      { label: "Beim Familienberater bleiben", bild: "familie", wirkung: { schutz: 1 } },
     ] },
 
   /* Rolle und Stellung im Verein. */
@@ -1089,26 +1109,38 @@ export const EREIGNISSE = [
     wenn: (k) => k.rolle === "kader",
     optionen: [
       { label: "Ihn zur Rede stellen", bild: "kabine", chance: 0.5, wirkung: { rolle: "rotation" }, sonst: { ovr: -2 } },
-      { label: "Im Training antworten", bild: "training", chance: 0.4, wirkung: { rolle: "rotation", ovr: 2 }, sonst: {} },
+      /* Warten kostet, wenn es nicht klappt. Vorher war diese Kachel 40 Prozent auf
+         eine bessere Rolle UND zwei Punkte, bei null Risiko — niemand stellte den
+         Trainer zur Rede, weil es dafür keinen Grund gab. */
+      { label: "Im Training antworten", bild: "training", chance: 0.4, wirkung: { rolle: "rotation", ovr: 2 }, sonst: { ovr: -1 } },
     ] },
   { key: "binde", titel: "Die Binde", text: "Der Kapitän hat aufgehört. Die Mannschaft sieht dich an.",
     wenn: (k) => k.alter >= 27 && k.rolle === "stamm" && (k.verein?.stufe ?? 0) >= 2,
     optionen: [
       { label: "Übernehmen", bild: "kabine", chance: 0.65, wirkung: { ovr: 2, liga: 1.3, pokal: 1.3 }, sonst: { ovr: -1 } },
-      { label: "Einem anderen lassen", bild: "platz", wirkung: {} },
+      /* Der Richtige bekommt die Binde, die Mannschaft läuft besser — du persönlich
+         gewinnst nichts. Das spiegelt die andere Kachel: dort beides, hier nur das
+         eine. */
+      { label: "Einem anderen lassen", bild: "platz", wirkung: { liga: 1.2, pokal: 1.2 } },
     ] },
   { key: "trainerwechsel", titel: "Neuer Trainer", text: "Der Verein entlässt den Trainer. Der Neue bringt eigene Vorstellungen mit — und eigene Spieler.",
     wenn: (k) => k.alter >= 20,
     optionen: [
       { label: "Sich anbieten", bild: "kabine", chance: 0.55, wirkung: { rolle: "stamm", ovr: 1 }, sonst: { rolle: "rotation" } },
-      { label: "Abwarten", bild: "bank", chance: 0.5, wirkung: {}, sonst: { rolle: "rotation" } },
+      /* Beide Kacheln hatten denselben schlechten Ausgang, aber nur eine einen
+         guten — Abwarten war nie richtig. Jetzt ist es die sichere Wahl: kein
+         Sprung, aber auch kein Absturz. */
+      { label: "Abwarten", bild: "bank", wirkung: { ovr: 1 } },
     ] },
 
   /* Spitzenverein. */
   { key: "ausruester", titel: "Ein Ausrüster klopft an", text: "Werbetermine, Fototage, eigener Schuh. Es zahlt sich aus und kostet Trainingszeit.",
     wenn: (k) => k.ovr >= 80,
     optionen: [
-      { label: "Unterschreiben", bild: "geld", chance: 0.5, wirkung: { ovr: 1 }, sonst: { ovr: -2 } },
+      /* DIESE KARTE WAR KEINE. Unterschreiben gewann im besten Fall genau das, was
+         Absagen sicher gab, und konnte zwei Punkte verlieren — es gab keinen Grund,
+         jemals zu unterschreiben. */
+      { label: "Unterschreiben", bild: "geld", chance: 0.55, wirkung: { ovr: 3 }, sonst: { ovr: -2 } },
       { label: "Absagen", bild: "training", wirkung: { ovr: 1 } },
     ] },
   { key: "dreifach", titel: "Drei Wettbewerbe", text: "Liga, Pokal, Europa — und dazwischen kaum ein freier Mittwoch.",
@@ -1121,7 +1153,7 @@ export const EREIGNISSE = [
     wenn: (k) => k.ovr >= 78,
     optionen: [
       { label: "Klartext reden", bild: "presse", chance: 0.45, wirkung: { ovr: 2 }, sonst: { rolle: "rotation" } },
-      { label: "Nichts sagen", bild: "kabine", wirkung: {} },
+      { label: "Nichts sagen", bild: "kabine", wirkung: { ovr: 1 } },
     ] },
 
   /* Nach einem Titel. */
@@ -1144,7 +1176,7 @@ export const EREIGNISSE = [
       && torBeitrag(k) < 0.14 && posDaten(k.pos).gruppe !== "TOR" && posDaten(k.pos).gruppe !== "ABW",
     optionen: [
       { label: "Zum Sportpsychologen", bild: "ruhe", chance: 0.65, wirkung: { ovr: 3 }, sonst: { ovr: -1 } },
-      { label: "Da muss man durch", bild: "training", chance: 0.4, wirkung: { ovr: 2 }, sonst: { ovr: -3 } },
+      { label: "Da muss man durch", bild: "training", chance: 0.5, wirkung: { ovr: 4 }, sonst: { ovr: -2 } },
     ] },
   { key: "abstiegskampf", titel: "Der Abstiegskampf", text: "Neun Spiele, sechs Punkte Rückstand. Es geht um die Liga.",
     wenn: (k) => (k.verein?.stufe ?? 9) <= 2 && (k.verein?.liga?.stufe ?? 2) === 1,
@@ -1185,7 +1217,7 @@ export const EREIGNISSE = [
   { key: "turnierpause", titel: "Turnier statt Urlaub", text: "Ein ganzer Sommer mit der Auswahl. Erholung gibt es dann eben nicht.",
     wenn: (k) => k.ovr >= berufungAb(k) + 4,
     optionen: [
-      { label: "Hinfahren", bild: "reise", chance: 0.5, wirkung: { ovr: 2 }, sonst: { ovr: -1, verletzt: 1 } },
+      { label: "Hinfahren", bild: "reise", chance: 0.6, wirkung: { ovr: 5 }, sonst: { ovr: -1, verletzt: 1 } },
       { label: "Absagen und regenerieren", bild: "ruhe", wirkung: { ovr: 1, liga: 1.2 } },
     ] },
 
@@ -1330,8 +1362,10 @@ export const ROLLEN_NAME = { stamm: "Stammspieler", rotation: "Rotation", kader:
 /* „1.6" ist englisch — im Spiel steht „1,6". */
 export const faktorText = (f) => String(Math.round(f * 100) / 100).replace(".", ",");
 
-export function folgen(vorher, nachher, w, ausfall, grund = "verletzt") {
+export function folgen(vorher, nachher, w, ausfall, grund = "verletzt", abgefangen = false) {
   const liste = [];
+  /* Zuerst, weil es erklärt, warum darunter nichts Schlimmes steht. */
+  if (abgefangen) liste.push({ text: "Es ging schief — dein Rückhalt hat es abgefangen", art: "gut" });
   if (nachher.ovr !== vorher.ovr)
     liste.push({ text: `Stärke ${vorher.ovr} → ${nachher.ovr}`, art: nachher.ovr > vorher.ovr ? "gut" : "schlecht" });
   if (nachher.rolle !== vorher.rolle)
@@ -1367,6 +1401,7 @@ export function folgen(vorher, nachher, w, ausfall, grund = "verletzt") {
   }
   if (w.abschluss) liste.push({ text: "Der Schulabschluss ist in der Tasche — er öffnet später den Trainerschein", art: "gut" });
   if (w.trainerschein) liste.push({ text: "Der Trainerschein ist gemacht", art: "gut" });
+  if (w.schutz) liste.push({ text: "Du hast Rückhalt — der nächste Rückschlag geht an dir vorbei", art: "gut" });
   if (!liste.length) liste.push({ text: "Es bleibt alles, wie es war", art: "neutral" });
   return liste;
 }
@@ -1377,8 +1412,14 @@ export function entscheide(k, option, zufall) {
      wählt, hat nichts gewonnen — die Folge darf dort nicht „Es geht auf" heissen. */
   const gewagt = option.chance !== undefined;
   const gelungen = gewagt ? zufall() < option.chance : true;
-  const w = gelungen ? option.wirkung : (option.sonst || {});
+  /* Der Rückhalt fängt genau einen misslungenen Einsatz ab und ist danach weg.
+     Der Zufall wird trotzdem gezogen — die Karte zeigt ja, dass es schiefging;
+     nur die Folge bleibt aus. */
+  const abgefangen = !gelungen && (k.schutz ?? 0) > 0;
+  const w = gelungen ? option.wirkung : (abgefangen ? {} : (option.sonst || {}));
   const naechster = { ...k };
+  if (abgefangen) naechster.schutz = (k.schutz ?? 0) - 1;
+  if (w.schutz) naechster.schutz = (naechster.schutz ?? 0) + w.schutz;
   if (w.ovr) naechster.ovr = grenze(k.ovr + w.ovr, OVR_MIN, OVR_MAX);
   if (w.rolle) naechster.rolle = w.rolle;
   /* DER WECHSEL WECHSELT JETZT WIRKLICH. Vorher stand hier nur das Merkmal, und
@@ -1400,7 +1441,8 @@ export function entscheide(k, option, zufall) {
     mod: { liga: w.liga ?? 1, pokal: w.pokal ?? 1, europa: w.europa ?? 1 },
     ausfall,
     grund,
-    folgen: folgen(k, naechster, w, ausfall, grund),
+    abgefangen,
+    folgen: folgen(k, naechster, w, ausfall, grund, abgefangen),
   };
 }
 

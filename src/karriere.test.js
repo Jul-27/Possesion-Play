@@ -1330,7 +1330,7 @@ test("jede Option trägt ein Bildmotiv", () => {
    ist die Rechnung immer dieselbe: Die Wette daneben hat einen Erwartungswert über
    null, das Ablehnen keinen — es gibt nichts zu entscheiden.
 
-   Die Karten werden in Gruppen zu acht durchgegangen; Gruppe 1 und 2 sind durch.
+   Die Karten werden in Gruppen zu acht durchgegangen; Gruppe 1 bis 3 sind durch.
    Diese Liste ist der Rest, und sie darf nur schrumpfen. Kommt eine neue leere
    Kachel dazu, schlägt die Prüfung an, und wer eine Gruppe abarbeitet, streicht
    ihre Zeilen hier.
@@ -1339,9 +1339,6 @@ test("jede Option trägt ein Bildmotiv", () => {
    Zähne beissen" heisst der gute Ausgang, dass nichts passiert. Das ist eine
    Aussage, keine Lücke. */
 const KACHELN_OHNE_WIRKUNG = [
-  "berater/Beim Familienberater bleiben",
-  "binde/Einem anderen lassen",
-  "medien/Nichts sagen",
   "trainerschein/Später, erst spielen",
   "abschiedsspiel/Noch nicht",
   "stiftung/Die Saison ist zu eng",
@@ -1488,6 +1485,124 @@ test("entscheide trägt Abschluss und Schein getrennt ein", () => {
   const b = K.entscheide({ ...k, abschluss: true }, { label: "x", wirkung: { trainerschein: true } }, () => 0);
   assert.equal(b.karriere.trainerschein, true);
   assert.ok(b.folgen.some((f) => f.text.includes("Trainerschein")));
+});
+
+/* ── Gruppe 3 und der Rückhalt ─────────────────────────────────────────────── */
+
+/* Ein grober, aber wirksamer Maßstab: Wie viel bringt eine Kachel im Schnitt, wenn
+   man Stärke, Rolle und Titelaussicht in eine Zahl zwingt? Er taugt nicht, um
+   Karten fein auszubalancieren — aber er zeigt die Karten, bei denen eine Kachel
+   die andere in JEDER Hinsicht schlägt. Genau die sind keine Entscheidung. */
+/* Eine Rolle in einer Wirkung ist eine ZUWEISUNG, kein Zuwachs — wohin sie führt,
+   hängt davon ab, wo man herkommt. Gemessen wird sie darum gegen die Mitte:
+   Stammplatz ist ein Gewinn, Rotation neutral, „nur im Kader" ein Verlust. */
+const ROLLE_WERT = { stamm: 2, rotation: 0, kader: -2 };
+function kachelWert(o) {
+  const teil = (w) => {
+    if (!w) return 0;
+    let x = w.ovr ?? 0;
+    if (w.rolle) x += ROLLE_WERT[w.rolle];
+    for (const f of ["liga", "pokal", "europa"]) if (w[f]) x += (w[f] - 1) * 3;
+    x -= (w.verletzt ?? 0) * 6;
+    x -= (w.gesperrt ?? 0) * 6;
+    x += (w.schutz ?? 0) * 1.5;
+    return x;
+  };
+  if (o.chance === undefined) return teil(o.wirkung);
+  return o.chance * teil(o.wirkung) + (1 - o.chance) * teil(o.sonst);
+}
+
+const EREIGNISSE_MIT_ZWEI = K.EREIGNISSE.filter((e) => e.optionen.length === 2);
+
+/* Bei diesen Karten IST die Schieflage der Inhalt. „Ein Anruf, den man nicht
+   annimmt" bietet Geld für eine gelbe Karte zur richtigen Minute — dass Auflegen
+   die richtige Antwort ist, soll man nicht abwägen müssen. Eine solche Karte
+   auszubalancieren hiesse, sie kaputtzumachen. */
+const ABSICHTLICH_SCHIEF = new Set(["wetten"]);
+
+test("keine Karte, bei der eine Kachel die andere deutlich schlägt", () => {
+  /* Zwei Punkte Abstand sind der Rahmen, in dem eine Karte noch eine Wahl ist.
+     Darüber hinaus gibt es keinen Grund mehr, die schwächere zu nehmen. */
+  const schief = [];
+  for (const e of EREIGNISSE_MIT_ZWEI.filter((x) => !ABSICHTLICH_SCHIEF.has(x.key))) {
+    const [a, b] = e.optionen.map(kachelWert);
+    if (Math.abs(a - b) > 2) schief.push(`${e.key} (${a.toFixed(2)} gegen ${b.toFixed(2)})`);
+  }
+  assert.deepEqual(schief, [], `eine Kachel dominiert: ${schief.join(", ")}`);
+});
+
+test("der Ausrüster ist wieder eine Wette", () => {
+  const [ja, nein] = K.EREIGNISSE.find((e) => e.key === "ausruester").optionen;
+  /* Vorher gewann „Unterschreiben" im besten Fall genau das, was „Absagen" sicher
+     gab — es gab keinen Grund, jemals zu unterschreiben. */
+  assert.ok(ja.wirkung.ovr > nein.wirkung.ovr, "der gute Ausgang muss die sichere Wahl schlagen");
+  assert.ok(ja.sonst.ovr < 0, "und der schlechte muss wehtun");
+});
+
+test("Abwarten und Zuschauen kosten jetzt auch etwas", () => {
+  const bank = K.EREIGNISSE.find((e) => e.key === "bank");
+  assert.ok(bank.optionen[1].sonst.ovr < 0, "Im Training antworten war ohne Risiko");
+  const wechsel = K.EREIGNISSE.find((e) => e.key === "trainerwechsel");
+  assert.equal(wechsel.optionen[1].chance, undefined, "Abwarten ist jetzt die sichere Kachel");
+  assert.ok(Object.keys(wechsel.optionen[1].wirkung).length);
+  const debuet = K.EREIGNISSE.find((e) => e.key === "debuet");
+  assert.equal(debuet.optionen[0].sonst.rolle, "kader", "ein missratenes Debüt kostet Ansehen");
+});
+
+test("Rückhalt fängt genau einen Rückschlag ab und ist dann weg", () => {
+  const k = { ovr: 70, rolle: "stamm", alter: 24, land: "GER", verein: null };
+  const wette = { label: "x", chance: 0.5, wirkung: { ovr: 3 }, sonst: { ovr: -5, verletzt: 1 } };
+  const misslingt = () => 0.99, gelingt = () => 0.01;
+
+  /* Ohne Polster trifft der Rückschlag voll. */
+  const ohne = K.entscheide(k, wette, misslingt);
+  assert.equal(ohne.abgefangen, false);
+  assert.equal(ohne.karriere.ovr, 65);
+  assert.equal(ohne.ausfall, 1);
+
+  /* Mit Polster bleibt alles stehen — und das Polster ist verbraucht. */
+  const mit = K.entscheide({ ...k, schutz: 1 }, wette, misslingt);
+  assert.equal(mit.abgefangen, true);
+  assert.equal(mit.gelungen, false, "schiefgegangen ist es trotzdem");
+  assert.equal(mit.karriere.ovr, 70);
+  assert.equal(mit.ausfall, 0);
+  assert.equal(mit.karriere.schutz, 0);
+  assert.ok(mit.folgen.some((f) => f.text.includes("Rückhalt")));
+
+  /* Beim zweiten Rückschlag hilft es nicht mehr. */
+  const zweiter = K.entscheide(mit.karriere, wette, misslingt);
+  assert.equal(zweiter.abgefangen, false);
+  assert.equal(zweiter.karriere.ovr, 65);
+
+  /* Ein gelungener Einsatz verbraucht nichts. */
+  const heil = K.entscheide({ ...k, schutz: 1 }, wette, gelingt);
+  assert.equal(heil.abgefangen, false);
+  assert.equal(heil.karriere.schutz, 1);
+  assert.equal(heil.karriere.ovr, 73);
+});
+
+test("Rückhalt schützt nicht vor dem Preis einer sicheren Wahl", () => {
+  /* „Finger weg" kostet einen Punkt. Das ist kein Rückschlag, sondern der Preis —
+     wer ihn wegpolstert, nimmt der moralischen Entscheidung ihr Gewicht. */
+  const k = { ovr: 70, rolle: "stamm", alter: 24, land: "GER", verein: null, schutz: 1 };
+  const r = K.entscheide(k, { label: "x", wirkung: { ovr: -1 } }, () => 0.99);
+  assert.equal(r.abgefangen, false);
+  assert.equal(r.karriere.ovr, 69);
+  assert.equal(r.karriere.schutz, 1);
+});
+
+test("der Familienberater ist der einzige, der Rückhalt gibt", () => {
+  const geber = [];
+  for (const e of K.EREIGNISSE)
+    for (const o of e.optionen)
+      if (o.wirkung.schutz || o.sonst?.schutz) geber.push(`${e.key}/${o.label}`);
+  assert.deepEqual(geber, ["berater/Beim Familienberater bleiben"]);
+});
+
+test("die Binde nützt der Mannschaft, auch wenn ein anderer sie trägt", () => {
+  const [, lassen] = K.EREIGNISSE.find((e) => e.key === "binde").optionen;
+  assert.ok(lassen.wirkung.liga > 1 && lassen.wirkung.pokal > 1);
+  assert.equal(lassen.wirkung.ovr, undefined, "persönlich gewinnt man nichts");
 });
 
 test("alle Motive gibt es auch als Datei", async () => {
