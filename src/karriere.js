@@ -1245,20 +1245,26 @@ export const EREIGNISSE = [
     wenn: (k) => !!k.verein && !!k.land && k.verein.liga.land !== k.land,
     optionen: [
       { label: "Jeden Morgen Unterricht", bild: "lernen", chance: 0.75, wirkung: { ovr: 2 }, sonst: {} },
-      { label: "Das regelt der Platz", bild: "platz", chance: 0.35, wirkung: { ovr: 1 }, sonst: { rolle: "rotation" } },
+      /* Vorher 35 Prozent auf einen Punkt gegen 75 Prozent auf zwei — die Kachel war
+         nur da. Wer die Sprache auf dem Platz lernt, lernt sie langsamer, aber bei
+         denen, auf die es ankommt. */
+      { label: "Das regelt der Platz", bild: "platz", chance: 0.35, wirkung: { ovr: 3 }, sonst: { rolle: "rotation" } },
     ] },
   { key: "heimweh", titel: "Heimweh", text: "Es läuft sportlich, aber es ist weit weg. Die Familie fragt, wann du zurückkommst.",
     wenn: (k) => !!k.verein && !!k.land && k.verein.liga.land !== k.land && k.alter <= 25,
     optionen: [
       { label: "Die Familie nachholen", bild: "familie", chance: 0.7, wirkung: { ovr: 2 }, sonst: { ovr: -1 } },
-      { label: "Durchhalten", bild: "reise", chance: 0.45, wirkung: { ovr: 1 }, sonst: { ovr: -2 } },
+      { label: "Durchhalten", bild: "reise", chance: 0.45, wirkung: { ovr: 3 }, sonst: { ovr: -2 } },
     ] },
 
   /* Spät. */
   { key: "knie", titel: "Das Knie meldet sich", text: "Nicht schlimm, sagt der Arzt. Aber es meldet sich jetzt jeden Montag.",
     wenn: (k) => k.alter >= 30,
     optionen: [
-      { label: "Operieren lassen", bild: "medizin", wirkung: { verletzt: 1, ovr: 2 } },
+      /* Vorher war die vernuenftige Wahl, das kaputte Knie NICHT behandeln zu lassen:
+         Die Operation kostete sicher eine Saison und gab zwei Punkte, das Durch-
+         spritzen im Schnitt weniger. Jetzt holt sie mehr zurueck. */
+      { label: "Operieren lassen", bild: "medizin", wirkung: { verletzt: 1, ovr: 3 } },
       { label: "Mit Spritzen durch die Saison", bild: "risiko", chance: 0.5, wirkung: {}, sonst: { ovr: -4 } },
     ] },
   /* DER SCHULABSCHLUSS HAT ENDLICH EINEN ZWECK. Er kostete mit zwanzig einen Punkt
@@ -1274,13 +1280,15 @@ export const EREIGNISSE = [
     wenn: (k) => k.alter >= 32 && !!k.abschluss && !k.trainerschein,
     optionen: [
       { label: "Nebenher machen", bild: "lernen", wirkung: { ovr: -1, trainerschein: true } },
-      { label: "Später, erst spielen", bild: "platz", wirkung: {} },
+      { label: "Später, erst spielen", bild: "platz", wirkung: { ovr: 1 } },
     ] },
   { key: "abschiedsspiel", titel: "Ein Verein von früher fragt an", text: "Dein Jugendverein will dich zurück — als Aushängeschild, nicht als Verstärkung.",
-    wenn: (k) => k.alter >= 33 && k.vereine.length >= 3,
+    /* Dieselbe Luecke wie bei der Titelverteidigung: Die Zusage verspricht
+       Meisterschaft und Pokal, ohne zu pruefen, ob der Verein sie ueberhaupt spielt. */
+    wenn: (k) => { const w = wettbewerbe(k.verein); return k.alter >= 33 && k.vereine.length >= 3 && (w.liga || w.pokal); },
     optionen: [
       { label: "Zusagen", bild: "nachwuchs", wirkung: { ovr: -1, liga: 1.2, pokal: 1.2 } },
-      { label: "Noch nicht", bild: "platz", wirkung: {} },
+      { label: "Noch nicht", bild: "platz", wirkung: { ovr: 1 } },
     ] },
 
   /* Umfeld. */
@@ -1293,8 +1301,10 @@ export const EREIGNISSE = [
   { key: "stiftung", titel: "Eine Kinderstation fragt an", text: "Einmal im Monat vorbeikommen, ohne Kameras. Es kostet freie Tage.",
     wenn: (k) => k.alter >= 24,
     optionen: [
-      { label: "Zusagen", bild: "familie", chance: 0.8, wirkung: { ovr: 1 }, sonst: {} },
-      { label: "Die Saison ist zu eng", bild: "reise", wirkung: {} },
+      /* Mit nur einem Punkt bei achtzig Prozent waere Absagen das bessere Geschaeft
+         gewesen. Das Richtige soll hier auch das Bessere sein — knapp. */
+      { label: "Zusagen", bild: "familie", chance: 0.8, wirkung: { ovr: 2 }, sonst: {} },
+      { label: "Die Saison ist zu eng", bild: "reise", wirkung: { ovr: 1 } },
     ] },
 ];
 

@@ -1330,21 +1330,16 @@ test("jede Option trägt ein Bildmotiv", () => {
    ist die Rechnung immer dieselbe: Die Wette daneben hat einen Erwartungswert über
    null, das Ablehnen keinen — es gibt nichts zu entscheiden.
 
-   Die Karten werden in Gruppen zu acht durchgegangen; Gruppe 1 bis 3 sind durch.
-   Diese Liste ist der Rest, und sie darf nur schrumpfen. Kommt eine neue leere
-   Kachel dazu, schlägt die Prüfung an, und wer eine Gruppe abarbeitet, streicht
-   ihre Zeilen hier.
+   Alle vierzig Karten sind durchgegangen, die Liste ist leer, und sie soll leer
+   bleiben. Kommt eine neue Karte mit einer leeren sicheren Kachel dazu, schlägt
+   die Prüfung an.
 
    Eine WETTE mit leerem Gelingen ist etwas anderes und bleibt erlaubt: Bei „Auf die
    Zähne beissen" heisst der gute Ausgang, dass nichts passiert. Das ist eine
    Aussage, keine Lücke. */
-const KACHELN_OHNE_WIRKUNG = [
-  "trainerschein/Später, erst spielen",
-  "abschiedsspiel/Noch nicht",
-  "stiftung/Die Saison ist zu eng",
-];
+const KACHELN_OHNE_WIRKUNG = [];
 
-test("keine sichere Kachel ohne Wirkung ausser den bekannten", () => {
+test("keine sichere Kachel ohne Wirkung", () => {
   const leer = [];
   for (const e of K.EREIGNISSE)
     for (const o of e.optionen)
@@ -1507,6 +1502,10 @@ function kachelWert(o) {
     x -= (w.gesperrt ?? 0) * 6;
     x += (w.schutz ?? 0) * 1.5;
     if (w.klasse) x += (w.klasse - 1) * 4;   // Auf- oder Abstieg wiegt schwer
+    /* Abschluss und Trainerschein kosten in der Laufbahn und zahlen danach — auf
+       der Urkunde und, im Fall des Abschlusses, als Voraussetzung. Ohne diesen
+       Posten meldet das Maß beide Karten als schief, obwohl sie es nicht sind. */
+    if (w.abschluss || w.trainerschein) x += 1;
     return x;
   };
   if (o.chance === undefined) return teil(o.wirkung);
@@ -1675,6 +1674,57 @@ test("die Titelverteidigung kommt nur, wo es einen Titel zu verteidigen gibt", (
   /* Weltmeister geworden, aber bei einem Zweitligisten: Dort gibt es weder eine
      Meisterschaft noch einen Pokal zu verteidigen. */
   assert.equal(nachTitel({ lg: "BL2", liga: { land: "GER", stufe: 2 } }), false);
+});
+
+/* ── Gruppe 5 ──────────────────────────────────────────────────────────────── */
+
+test("die trotzige Kachel hat die höhere Decke", () => {
+  /* Bei Sprache und Heimweh stand 35 bzw. 45 Prozent auf einen Punkt gegen 70 bis
+     75 Prozent auf zwei — die zweite Kachel war nur Dekoration. Wer den harten Weg
+     geht, muss dafür mehr gewinnen können als der, der den bequemen nimmt. */
+  for (const key of ["sprache", "heimweh"]) {
+    const [leicht, hart] = K.EREIGNISSE.find((e) => e.key === key).optionen;
+    assert.ok(hart.chance < leicht.chance, `${key}: der harte Weg muss unwahrscheinlicher sein`);
+    assert.ok(hart.wirkung.ovr > leicht.wirkung.ovr, `${key}: dafür muss er mehr bringen`);
+  }
+});
+
+test("das Knie zu operieren lohnt sich wieder", () => {
+  const [op, spritzen] = K.EREIGNISSE.find((e) => e.key === "knie").optionen;
+  assert.equal(op.wirkung.verletzt, 1);
+  /* Die Operation kostet sicher eine Saison. Gäbe sie weniger zurück als das
+     Durchspritzen im Schnitt kostet, wäre die vernünftige Wahl, ein kaputtes Knie
+     nicht behandeln zu lassen. */
+  const spritzenSchaden = (1 - spritzen.chance) * Math.abs(spritzen.sonst.ovr);
+  assert.ok(op.wirkung.ovr >= spritzenSchaden - 1, `Operation gibt nur ${op.wirkung.ovr} zurück`);
+});
+
+test("das Richtige ist bei der Kinderstation auch das Bessere", () => {
+  const [zusagen, absagen] = K.EREIGNISSE.find((e) => e.key === "stiftung").optionen;
+  assert.ok(zusagen.chance * zusagen.wirkung.ovr > (absagen.wirkung.ovr ?? 0),
+    "Absagen darf nicht das bessere Geschäft sein");
+});
+
+test("das Abschiedsspiel verspricht nichts, was der Verein nicht spielt", () => {
+  const karte = K.EREIGNISSE.find((e) => e.key === "abschiedsspiel");
+  const alt = (verein) => karte.wenn({ alter: 34, vereine: ["a", "b", "c"], verein });
+  assert.equal(alt({ lg: "BL", liga: { land: "GER", stufe: 1 } }), true);
+  assert.equal(alt({ lg: "BL2", liga: { land: "GER", stufe: 2 } }), false);
+});
+
+test("alle vierzig Karten sind durchgegangen", () => {
+  /* Der Schlusspunkt der fünf Gruppen: keine leere sichere Kachel, jede Karte mit
+     zwei Optionen, jede Option mit Beschriftung und Motiv. */
+  assert.equal(K.EREIGNISSE.length, 40);
+  assert.deepEqual(KACHELN_OHNE_WIRKUNG, []);
+  for (const e of K.EREIGNISSE) {
+    assert.equal(e.optionen.length, 2, e.key);
+    for (const o of e.optionen) {
+      assert.ok(o.label && o.bild, `${e.key}: Kachel ohne Beschriftung oder Motiv`);
+      assert.ok(Object.keys(o.wirkung).length || o.chance !== undefined,
+        `${e.key}/${o.label}: sichere Kachel ohne Wirkung`);
+    }
+  }
 });
 
 test("alle Motive gibt es auch als Datei", async () => {
