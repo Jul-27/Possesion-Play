@@ -868,6 +868,8 @@ body::after {
 .gtopStufe { font-family: 'DM Mono', monospace; font-size: 10.5px; font-weight: 500; letter-spacing: .06em;
   color: var(--teal); border: 1px solid rgba(34,211,238,.35); border-radius: 999px; padding: 2px 8px; flex: none; }
 .gtopBar { flex: 1; height: 4px; border-radius: 2px; background: rgba(148,178,208,.14); overflow: hidden; min-width: 40px; }
+.ppRoot.karriere .gtopBar { background: rgba(18,38,30,.12); }
+.ppRoot.karriere .gtopStufe { color: var(--kaAkzent); border-color: rgba(11,107,58,.35); }
 .gtopBar i { display: block; height: 100%; background: var(--acc); }
 .gtopStufeName { font-size: 11px; color: var(--muted); flex: none; }
 .gtopSerie { display: inline-flex; align-items: center; gap: 3px; flex: none;
@@ -1168,7 +1170,7 @@ body::after {
 .kaSchutz {
   align-self: center; padding: 4px 10px; border-radius: 999px; white-space: nowrap;
   font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
-  color: #9FD9B4; background: rgba(63,125,74,.18); border: 1px solid rgba(159,217,180,.35);
+  color: #12673A; background: rgba(11,107,58,.09); border: 1px solid rgba(11,107,58,.30);
 }
 .kaWer { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .kaWer b { font-size: 15px; }
@@ -1177,8 +1179,8 @@ body::after {
 /* Vitrine: Titel als kleine Marken, damit eine volle Vitrine etwas hermacht. */
 .kaVitrine { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px 0; }
 .kaTitel {
-  font-size: 11.5px; padding: 3px 9px; border-radius: 999px; background: rgba(250,204,21,.12);
-  border: 1px solid rgba(250,204,21,.3); color: var(--gold);
+  font-size: 11.5px; padding: 3px 9px; border-radius: 999px; background: rgba(138,98,16,.10);
+  border: 1px solid rgba(138,98,16,.30); color: var(--gold);
 }
 .kaLeer { font-size: 12px; color: var(--muted); }
 
@@ -1189,15 +1191,15 @@ body::after {
    rot nach unten — dieselbe Sprache wie bei den Folgen einer Entscheidung. */
 .kaMeldungLiga {
   display: inline-flex; align-items: center; gap: 8px; padding: 7px 11px;
-  border-radius: 10px; background: rgba(255,255,255,.04); border: 1px solid var(--line);
+  border-radius: 10px; background: rgba(18,38,30,.04); border: 1px solid var(--line);
 }
 .kaMeldungLiga .kaMeldungWappen .emblem { width: 22px; height: 22px; }
 .kaMeldungLiga b { font-size: 12.5px; color: var(--text); }
 .kaMeldungLiga i { font-style: normal; font-weight: 700; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
 .kaMeldungLiga small { color: var(--muted); font-size: 11.5px; }
-.kaMeldungLiga.auf { border-color: rgba(74,222,128,.45); }
+.kaMeldungLiga.auf { border-color: rgba(25,122,70,.45); }
 .kaMeldungLiga.auf i { color: var(--win); }
-.kaMeldungLiga.ab { border-color: rgba(251,113,133,.45); }
+.kaMeldungLiga.ab { border-color: rgba(179,38,30,.45); }
 .kaMeldungLiga.ab i { color: var(--rose); }
 /* Das Alter neben dem Rating: gleiche Bauart, ruhiger. */
 .kaAlter {
@@ -1258,13 +1260,13 @@ body::after {
 /* Ein Ausgang ist im Ruhezustand blass — er ist eine Möglichkeit, kein Ergebnis. */
 .kaAusgang {
   font-size: 12px; padding: 7px 9px; border-radius: 9px; color: var(--muted);
-  background: rgba(255,255,255,.03); border: 1px solid var(--line-soft);
+  background: rgba(18,38,30,.035); border: 1px solid var(--line-soft);
   transition: background .12s, color .12s, border-color .12s, transform .12s;
 }
 .kaAusgang.leuchtet { transform: translateX(2px); }
-.kaAusgang.gut.leuchtet { color: var(--win); border-color: rgba(74,222,128,.55); background: rgba(74,222,128,.12); }
-.kaAusgang.schlecht.leuchtet { color: var(--rose); border-color: rgba(251,113,133,.55); background: rgba(251,113,133,.12); }
-.kaAusgang.neutral.leuchtet { color: var(--text); border-color: var(--line); background: rgba(255,255,255,.07); }
+.kaAusgang.gut.leuchtet { color: var(--win); border-color: rgba(25,122,70,.55); background: rgba(25,122,70,.12); }
+.kaAusgang.schlecht.leuchtet { color: var(--rose); border-color: rgba(179,38,30,.5); background: rgba(179,38,30,.10); }
+.kaAusgang.neutral.leuchtet { color: var(--text); border-color: var(--line); background: rgba(18,38,30,.07); }
 /* Stehengeblieben: kräftiger als im Sprung, damit man das Ende sieht. */
 .kaAusgang.steht { transform: none; font-weight: 700; box-shadow: 0 0 0 1px currentColor inset; }
 .kaKachelFuss { font-size: 12px; color: var(--muted); margin: 10px 0 0; min-height: 1.3em; }
@@ -1294,9 +1296,9 @@ body::after {
    Die Zeilen müssen dabei so knapp sein, dass 25 Jahre plus Kopf, Kurve und
    Auswahl ohne Scrollen in die Spalte passen. */
 .kaLeiste tbody tr.leer td, .kaLeiste tbody tr.naechste td { height: 17px; padding-block: 0; }
-.kaLeiste tbody tr.leer td:first-child { color: var(--line); }
+.kaLeiste tbody tr.leer td:first-child { color: rgba(18,38,30,.32); }
 .kaLeiste tbody tr.naechste td:first-child { color: var(--gold); }
-.kaLeiste tbody tr.naechste { background: rgba(245,179,1,.05); }
+.kaLeiste tbody tr.naechste { background: rgba(11,107,58,.06); }
 .kaLeiste tbody tr.leer td:not(:first-child) { border-bottom-color: transparent; }
 .kaAus { color: var(--rose) !important; }
 /* Die Auswahl als Abschluss der Tabelle. */
@@ -1310,7 +1312,7 @@ body::after {
    dann auf 0 stehen bliebe, wäre unsichtbar statt unauffällig. */
 .kaLeiste tbody tr.neu { animation: kaZeileNeu 1.5s ease-out; }
 @keyframes kaZeileNeu {
-  0% { background: rgba(245,179,1,.30); transform: translateX(10px); }
+  0% { background: rgba(11,107,58,.22); transform: translateX(10px); }
   100% { background: transparent; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) { .kaLeiste tbody tr.neu { animation: none; } }
@@ -1336,12 +1338,12 @@ body::after {
    Wappen hineinpassen und nichts mehr verzerrt, wenn die Spalte schmaler wird. */
 .ukKarriere {
   margin-top: 16px; padding: 18px; border-radius: 18px;
-  background: rgba(4,16,12,.55); border: 1px solid var(--kaRand, rgba(140,200,170,.16));
+  background: var(--kaKarteHoch, #FAF8F3); border: 1px solid var(--kaRand, rgba(18,38,30,.13));
 }
 .ukKopf { display: grid; grid-template-columns: 1.7fr 1fr 1fr; gap: 12px; }
 .ukFeld {
   position: relative; padding: 14px 15px; border-radius: 14px;
-  background: var(--kaKarte, rgba(18,40,32,.72)); border: 1px solid var(--kaRand, rgba(140,200,170,.16));
+  background: var(--kaKarte, #FFFFFF); border: 1px solid var(--kaRand, rgba(18,38,30,.13));
 }
 .ukFeld h4 {
   margin: 0 0 8px; font-size: 10px; font-weight: 600; letter-spacing: .22em;
@@ -1470,15 +1472,15 @@ body::after {
 /* Das Spielfeld: Positionen dort, wo sie stehen. */
 .kaFeld {
   position: relative; aspect-ratio: 3 / 4; border-radius: 12px;
-  background: linear-gradient(170deg, rgba(34,197,94,.14), rgba(16,120,70,.10));
+  background: linear-gradient(170deg, rgba(11,107,58,.10), rgba(11,107,58,.05));
   border: 1px solid var(--line); overflow: hidden;
 }
-.kaFeldLinien { position: absolute; inset: 0; width: 100%; height: 100%; color: rgba(190,230,205,.28); }
+.kaFeldLinien { position: absolute; inset: 0; width: 100%; height: 100%; color: rgba(11,107,58,.28); }
 .kaFeldPos {
   position: absolute; transform: translate(-50%, -50%);
   padding: 5px 8px; border-radius: 8px; cursor: pointer;
   font-size: 11.5px; font-weight: 800; letter-spacing: .02em;
-  background: rgba(9,16,13,.72); border: 1px solid rgba(190,230,205,.3); color: #DDEBE2;
+  background: #FFFFFF; border: 1px solid rgba(18,38,30,.22); color: var(--kaText);
   font-family: 'Archivo', sans-serif; transition: transform .12s, background .15s, border-color .15s;
 }
 .kaFeldPos:hover { border-color: var(--teal); transform: translate(-50%, -50%) scale(1.08); }
@@ -1520,8 +1522,8 @@ body::after {
 
 .kaRatingMarke {
   display: inline-block; min-width: 30px; padding: 2px 7px; border-radius: 999px;
-  background: rgba(240,169,59,.16); border: 1px solid rgba(240,169,59,.42);
-  color: #F0A93B; font-weight: 800; font-variant-numeric: tabular-nums; font-size: 12px;
+  background: rgba(138,98,16,.10); border: 1px solid rgba(138,98,16,.34);
+  color: #7A560E; font-weight: 800; font-variant-numeric: tabular-nums; font-size: 12px;
 }
 
 /* Bilder im Karriere-Modus. Jedes ist eine Zugabe: Fehlt die Datei, faellt das
@@ -1613,15 +1615,19 @@ body::after {
    Feier offen, Trophaee da, Name mit Deckkraft 0. Es ist dieselbe Falle wie beim
    Zaehler und den verzoegerten Bildern.
    Animiert wird deshalb nur noch die Bewegung; die Deckkraft bleibt unberuehrt. */
+/* DIE FEIER BLEIBT DUNKEL, AUCH WENN DER MODUS HELL IST. Sie legt sich als
+   Vorhang über den Bildschirm (rgba(4,8,12,.82)) — ihre Schrift darf deshalb
+   nicht aus den Modus-Tokens kommen. Tat sie es, stand der Titelname nach dem
+   Wechsel auf Papier in Dunkelgrün auf schwarzem Grund und war weg. */
 .kaFeierName {
-  font-size: 26px; font-weight: 800; text-align: center; color: var(--text);
+  font-size: 26px; font-weight: 800; text-align: center; color: #F2F6F4;
   animation: kaFeierText .4s .3s backwards;
 }
-.kaFeierUnten { font-size: 13px; color: var(--muted); animation: kaFeierText .4s .45s backwards; }
+.kaFeierUnten { font-size: 13px; color: #A9BAB2; animation: kaFeierText .4s .45s backwards; }
 @keyframes kaFeierText { from { transform: translateY(8px); } to { transform: none; } }
 .kaFeierPunkte { display: flex; gap: 6px; margin-top: 4px; }
 .kaFeierPunkt { width: 7px; height: 7px; border-radius: 50%; background: rgba(148,178,208,.3); }
-.kaFeierPunkt.an { background: var(--gold); }
+.kaFeierPunkt.an { background: #FACC15; }
 
 @media (prefers-reduced-motion: reduce) {
   .kaFeier, .kaFeierPokal, .kaFeierPokal::after, .kaFeierName, .kaFeierUnten { animation: none; }
@@ -1668,63 +1674,106 @@ body::after {
   font-size: 17px; font-weight: 800;
 }
 .kaFolgeKopf.gut { border-color: rgba(52,211,153,.45); background: rgba(52,211,153,.09); }
-.kaFolgeKopf.gut .kaFolgeZeichen { background: rgba(52,211,153,.2); color: #34D399; }
+.kaFolgeKopf.gut .kaFolgeZeichen { background: rgba(25,122,70,.14); color: #157038; }
 .kaFolgeKopf.schlecht { border-color: rgba(248,113,113,.45); background: rgba(248,113,113,.09); }
-.kaFolgeKopf.schlecht .kaFolgeZeichen { background: rgba(248,113,113,.2); color: #F87171; }
-.kaFolgeKopf.neutral .kaFolgeZeichen { background: rgba(255,255,255,.09); color: var(--muted); }
+.kaFolgeKopf.schlecht .kaFolgeZeichen { background: rgba(179,38,30,.14); color: #A81F18; }
+.kaFolgeKopf.neutral .kaFolgeZeichen { background: rgba(18,38,30,.08); color: var(--muted); }
 
 .kaFolgen { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 7px; }
 .kaFolgen li {
   position: relative; padding: 9px 12px 9px 30px; border-radius: 11px; font-size: 13.5px;
-  background: rgba(255,255,255,.04); border: 1px solid var(--line);
+  background: rgba(18,38,30,.04); border: 1px solid var(--line);
 }
 .kaFolgen li::before { position: absolute; left: 12px; font-weight: 800; }
-.kaFolgen li.gut { color: #A7F3D0; } .kaFolgen li.gut::before { content: "▲"; color: #34D399; font-size: 10px; }
-.kaFolgen li.schlecht { color: #FECACA; } .kaFolgen li.schlecht::before { content: "▼"; color: #F87171; font-size: 10px; }
+.kaFolgen li.gut { color: #12673A; } .kaFolgen li.gut::before { content: "▲"; color: #157038; font-size: 10px; }
+.kaFolgen li.schlecht { color: #9B1C16; } .kaFolgen li.schlecht::before { content: "▼"; color: #A81F18; font-size: 10px; }
 .kaFolgen li.neutral { color: var(--muted); } .kaFolgen li.neutral::before { content: "–"; color: var(--muted); }
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   KARRIERE — ein eigenes Gesicht
+   KARRIERE — ein eigenes Gesicht: die Sportzeitung
 
-   Der Modus lief bisher in der Haus-CI: Archivo, Türkis, Indigo, dieselben Kacheln
-   wie überall. Für ein Quiz ist das richtig, für einen Laufbahn-Simulator nicht —
-   der soll sich anfühlen wie ein Managerspiel und nicht wie ein weiteres Rätsel.
+   Der Modus lief zuerst in der Haus-CI (Archivo, Türkis, Indigo), dann in einer
+   dunkelgrünen Nacht mit Milchglaskarten und Bernstein als Akzent. Beides ging vom
+   selben Gedanken aus: Ein Laufbahn-Simulator soll sich nicht anfühlen wie ein
+   weiteres Rätsel.
 
-   Was sich ändert: eine schmale, sportliche Schrift für Überschriften, Namen und
-   Zahlen; ein Rasen-Dunkelgrün statt der blauen Nacht; Bernstein als einzige
-   Akzentfarbe. Die Tokens gelten NUR innerhalb von .karriere, damit kein anderer
-   Modus etwas davon abbekommt.
+   JETZT IST ES PAPIER. Heller Grund, dunkle Schrift, dünne Linien statt Kästen,
+   ein tiefes Grün als einziger Akzent — ein Spielbericht, keine TV-Grafik. Drei
+   Gründe:
+
+   1. Zahlen. Der Modus ist zur Hälfte Tabelle: fünfundzwanzig Zeilen Laufbahn,
+      Spiele, Tore, Vorlagen, Stärkewerte. Dunkle Ziffern auf hellem Grund liest
+      man schneller, und der Unterschied zwischen 63 und 68 fällt auf.
+   2. Wappen und Pokale. Beide sind für hellen Grund gemacht — die Wappen kommen
+      als Logos mit weissen Rändern, die Trophäen sind silbern und golden. Auf
+      Dunkelgrün mussten sie sich behaupten, auf Papier stehen sie einfach da.
+   3. Die Nebenschrift war grenzwertig. #8CA89A auf #071410 ist gerade noch
+      lesbar; dieselbe Information dunkel auf hell ist es mühelos.
+
+   Dazu die Aufräumarbeiten, die auch ein dunkles Gesicht gebraucht hätte: Karten
+   sind dicht statt durchscheinend, die Akzentlinie liegt nur noch auf der Karte,
+   auf der man entscheidet, und die Laufbahn tritt sichtbar einen Schritt zurück.
+
+   ── WARUM AUCH DIE HAUS-TOKENS HIER STEHEN ──────────────────────────────────
+   Ein Grossteil der Regeln unter .kaXyz liest --text, --muted, --bg-2, --line,
+   --teal, --gold — die Tokens des dunklen Hauses. Sie hier neu zu setzen ist die
+   einzige Änderung, die ALLE davon auf einmal erreicht; die Alternative wäre,
+   zweihundert Regeln einzeln zu überschreiben und beim nächsten Umbau die Hälfte
+   davon zu vergessen. Sie gelten NUR innerhalb von .karriere.
    ══════════════════════════════════════════════════════════════════════════════ */
 .ppRoot.karriere {
-  --kaGrund: #071410;
-  --kaTief: #04100C;
-  --kaKarte: rgba(18, 40, 32, .72);
-  --kaKarteHoch: rgba(26, 54, 43, .9);
-  --kaRand: rgba(140, 200, 170, .16);
-  --kaRandHell: rgba(140, 200, 170, .34);
-  --kaText: #E8F3ED;
-  --kaLeise: #8CA89A;
-  --kaAkzent: #F5B301;
-  --kaGut: #4ADE80;
-  --kaSchlecht: #FB7185;
+  --kaGrund: #F5F2EB;                    /* Zeitungspapier, leicht warm */
+  --kaTief: #EBE6DB;
+  --kaKarte: #FFFFFF;
+  --kaKarteHoch: #FAF8F3;
+  --kaRand: rgba(18, 38, 30, .13);
+  --kaRandHell: rgba(18, 38, 30, .30);
+  --kaText: #14201B;
+  --kaLeise: #5E6F67;
+  --kaAkzent: #0B6B3A;                   /* tiefes Grün statt Bernstein */
+  --kaGut: #197A46;
+  --kaSchlecht: #B3261E;
+
+  /* Die Haus-Tokens, neu belegt — siehe oben. */
+  --text: var(--kaText);
+  --muted: var(--kaLeise);
+  --bg-2: #FAF8F3;
+  --bg-3: #F1EDE4;
+  --line: var(--kaRand);
+  --line-soft: rgba(18, 38, 30, .08);
+  --brd: var(--kaRand);
+  --glass: #FFFFFF;
+  --glass-2: #FFFFFF;
+  --teal: #0B6B3A;
+  --teal-d: #08512C;
+  --gold: #8A6210;
+  --win: #197A46;
+  --rose: #B3261E;
+  --turf: transparent;
+  --shadow: 0 10px 28px -14px rgba(18, 38, 30, .30);
+  --acc: linear-gradient(135deg, #0B6B3A, #0E8548);
+
   color: var(--kaText);
-  background:
-    radial-gradient(120% 60% at 50% -10%, rgba(74, 222, 128, .10), transparent 60%),
-    linear-gradient(180deg, var(--kaGrund) 0%, var(--kaTief) 100%);
+  background: linear-gradient(180deg, var(--kaGrund) 0%, var(--kaTief) 100%);
 }
-/* Die Rasenstreifen sind der eine Effekt, den dieser Modus haben darf — sehr
-   schwach, sonst wird daraus wieder TV-Grafik. */
-.ppRoot.karriere::before {
-  background-image: repeating-linear-gradient(90deg, rgba(255,255,255,.014) 0 44px, transparent 44px 88px);
-  opacity: 1;
-}
+/* Die Rasenstreifen waren der eine Effekt, den der dunkle Modus haben durfte. Auf
+   Papier gibt es sie nicht: Ein Spielbericht hat keine Rasenstruktur. */
+.ppRoot.karriere::before { background-image: none; opacity: 0; }
+/* Dichte Karten mit echtem Schatten statt Milchglas. Das Milchglas kam aus dem
+   dunklen Haus und ergibt auf hellem Grund nur eine graue Trübung. */
 .ppRoot.karriere .panel {
   background: var(--kaKarte); border-color: var(--kaRand);
-  backdrop-filter: blur(14px) saturate(1.1);
+  backdrop-filter: none; box-shadow: 0 2px 12px rgba(18, 38, 30, .07);
 }
-.ppRoot.karriere .panel::before {
-  background: linear-gradient(90deg, transparent, rgba(245,179,1,.55), transparent);
+/* DIE AKZENTLINIE NUR NOCH AUF DER ENTSCHEIDUNG. Vorher trug sie jede Karte, und
+   damit sahen Entscheidung und Laufbahn gleich wichtig aus. */
+.ppRoot.karriere .panel::before { display: none; }
+.ppRoot.karriere .kaAktion::before {
+  display: block;
+  background: linear-gradient(90deg, transparent, rgba(11, 107, 58, .55), transparent);
 }
+/* Und die Laufbahn tritt einen Schritt zurück: dieselbe Karte, nur nicht weiss. */
+.ppRoot.karriere .kaLaufbahn { background: var(--kaKarteHoch); box-shadow: none; }
 .ppRoot.karriere h2,
 .ppRoot.karriere h3,
 .ppRoot.karriere .kaSchmal {
@@ -1735,7 +1784,7 @@ body::after {
 .ppRoot.karriere h3 { font-size: 15px; font-weight: 600; letter-spacing: .14em; color: var(--kaLeise); }
 .ppRoot.karriere .kaLeer { color: var(--kaLeise); }
 .ppRoot.karriere .btn.primary {
-  background: linear-gradient(160deg, #F5B301, #D98A02); color: #1B1401;
+  background: linear-gradient(160deg, #0E8548, #0B6B3A); color: #FFFFFF;
   border: none; font-weight: 800; letter-spacing: .04em;
 }
 
@@ -1762,7 +1811,7 @@ body::after {
 .ppRoot.karriere .kaWert b { color: var(--kaAkzent); font-size: 16px; }
 .ppRoot.karriere .kaKopf { border-bottom-color: var(--kaRand); }
 .ppRoot.karriere .kaTitel {
-  background: rgba(245,179,1,.12); border-color: rgba(245,179,1,.32); color: var(--kaAkzent);
+  background: rgba(11,107,58,.10); border-color: rgba(11,107,58,.28); color: var(--kaAkzent);
 }
 
 /* ── Vereinskacheln ─────────────────────────────────────────────────────────
@@ -1774,13 +1823,13 @@ body::after {
 .ppRoot.karriere .kaVerein {
   display: flex; flex-direction: column; align-items: center; gap: 10px;
   padding: 18px 14px 16px; border-radius: 18px; cursor: pointer;
-  background: linear-gradient(180deg, var(--kaKarteHoch), rgba(10,26,20,.9));
+  background: linear-gradient(180deg, #FFFFFF, var(--kaKarteHoch));
   border: 1px solid var(--kaRand); color: var(--kaText);
   transition: border-color .16s, transform .16s, box-shadow .16s;
 }
 .ppRoot.karriere .kaVerein:hover {
   border-color: var(--kaAkzent); transform: translateY(-3px);
-  box-shadow: 0 16px 34px -18px rgba(245,179,1,.7);
+  box-shadow: 0 14px 30px -18px rgba(11,107,58,.55);
 }
 .ppRoot.karriere .kaVereinAnlass {
   font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 600;
@@ -1800,7 +1849,7 @@ body::after {
    man sich einlässt. */
 .ppRoot.karriere .kaOption {
   gap: 8px; padding: 15px 16px; border-radius: 16px;
-  background: linear-gradient(180deg, var(--kaKarteHoch), rgba(10,26,20,.85));
+  background: linear-gradient(180deg, #FFFFFF, var(--kaKarteHoch));
   border: 1px solid var(--kaRand); color: var(--kaText);
 }
 .ppRoot.karriere .kaOption:hover { border-color: var(--kaAkzent); transform: translateY(-2px); }
@@ -1811,9 +1860,9 @@ body::after {
 .kaQuote { display: flex; align-items: center; gap: 10px; }
 .kaQuoteBalken {
   flex: 1; height: 8px; border-radius: 999px; overflow: hidden;
-  background: rgba(251,113,133,.28);
+  background: rgba(179,38,30,.20);
 }
-.kaQuoteBalken i { display: block; height: 100%; background: linear-gradient(90deg, #22C55E, #4ADE80); }
+.kaQuoteBalken i { display: block; height: 100%; background: linear-gradient(90deg, #12793F, #1BA45A); }
 .kaQuoteZahl {
   font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700;
   color: var(--kaGut); min-width: 38px; text-align: right;
@@ -1826,7 +1875,7 @@ body::after {
 }
 .ppRoot.karriere .kaEntscheidung > p { color: var(--kaLeise); font-size: 14px; }
 .ppRoot.karriere .kaLeiste th { color: var(--kaLeise); border-bottom-color: var(--kaRand); }
-.ppRoot.karriere .kaLeiste td { border-bottom-color: rgba(140,200,170,.09); }
+.ppRoot.karriere .kaLeiste td { border-bottom-color: rgba(18,38,30,.07); }
 .ppRoot.karriere .kaLaufbahn > h3 { color: var(--kaLeise); }
 
 /* Auf dem Telefon bricht die Kopfzeile um: Bei 375 Pixeln lief der Marktwert sonst
@@ -1854,17 +1903,17 @@ body::after {
 .ppRoot.karriere .kaPos.an,
 .ppRoot.karriere .kaFussKnopf.an,
 .ppRoot.karriere .kaFeldPos.an {
-  background: linear-gradient(160deg, #F5B301, #D98A02); border-color: transparent; color: #1B1401;
+  background: linear-gradient(160deg, #0E8548, #0B6B3A); border-color: transparent; color: #FFFFFF;
 }
-.ppRoot.karriere .kaWahl.an { border-color: var(--kaAkzent); background: rgba(245,179,1,.10); }
-.ppRoot.karriere .kaLand.an { background: rgba(245,179,1,.10); border-color: var(--kaAkzent); }
+.ppRoot.karriere .kaWahl.an { border-color: var(--kaAkzent); background: rgba(11,107,58,.08); }
+.ppRoot.karriere .kaLand.an { background: rgba(11,107,58,.08); border-color: var(--kaAkzent); }
 .ppRoot.karriere .kaWahl,
 .ppRoot.karriere .kaLand,
 .ppRoot.karriere .kaPos,
 .ppRoot.karriere .kaFussKnopf,
 .ppRoot.karriere .kaFeldreihe input,
 .ppRoot.karriere .kaLandSuche {
-  background: rgba(10, 26, 20, .7); border-color: var(--kaRand); color: var(--kaText);
+  background: var(--kaKarteHoch); border-color: var(--kaRand); color: var(--kaText);
 }
 .ppRoot.karriere .kaWahl b { font-family: 'Barlow Condensed', sans-serif; font-size: 17px; }
 .ppRoot.karriere .kaWahl small,
@@ -1876,7 +1925,7 @@ body::after {
 .kaSaison {
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
   padding: 12px 16px; margin: 4px 0 12px; border-radius: 14px;
-  background: rgba(245,179,1,.07); border: 1px solid rgba(245,179,1,.22);
+  background: rgba(11,107,58,.06); border: 1px solid rgba(11,107,58,.20);
 }
 .kaSaisonKopf {
   font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 600;
@@ -1925,7 +1974,7 @@ body::after {
 /* ── Trophäen ───────────────────────────────────────────────────────────────
    Gezeichnet statt fotografiert, eine Form je Wettbewerb (src/Trophaeen.jsx).
    Vorher trug jeder Titel dasselbe Wappenzeichen in anderer Farbe. */
-.trophaee { display: block; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,.45)); }
+.trophaee { display: block; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(18,38,30,.28)); }
 .ppRoot.karriere .kaVitrine { gap: 10px; align-items: flex-end; }
 .ppRoot.karriere .kaTitel {
   display: flex; flex-direction: column; align-items: center; gap: 3px;
