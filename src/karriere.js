@@ -398,12 +398,21 @@ export function mitLiga(verein, liga) {
 }
 
 /** Steigt der Verein auf oder ab? Liefert { verein, richtung }. */
-export function ligaWechsel(verein, zufall, ligen = WELT_LIGEN) {
+/* `klasse` ist der Einfluss einer Entscheidung auf die Tabelle — immer zugunsten
+   des Vereins gelesen: über eins heisst bessere Aussicht auf den Aufstieg und
+   geringere Abstiegsgefahr, unter eins das Gegenteil.
+
+   ES GAB IHN NICHT, UND DAS WAR DER FEHLER. „Der Abstiegskampf" und „Das
+   Aufstiegsrennen" erzählten vom Kampf um die Liga, aber keine ihrer Kacheln
+   berührte ihn: Man wählte zwischen drei Punkten Stärke und einem, und ob der
+   Verein oben blieb, entschied hinterher ein Würfel, der von der Entscheidung
+   nichts wusste. Eine Karte, die nach etwas fragt, muss es auch bewegen. */
+export function ligaWechsel(verein, zufall, ligen = WELT_LIGEN, klasse = 1) {
   const andere = schwesterLiga(verein.liga, ligen);
   if (!andere) return { verein, richtung: null };
-  if (verein.liga.stufe === 2 && zufall() < (AUFSTIEG_CHANCE[verein.stufe] ?? 0))
+  if (verein.liga.stufe === 2 && zufall() < (AUFSTIEG_CHANCE[verein.stufe] ?? 0) * klasse)
     return { verein: mitLiga(verein, andere), richtung: "auf" };
-  if (verein.liga.stufe === 1 && zufall() < (ABSTIEG_CHANCE[verein.stufe] ?? 0))
+  if (verein.liga.stufe === 1 && zufall() < (ABSTIEG_CHANCE[verein.stufe] ?? 0) / klasse)
     return { verein: mitLiga(verein, andere), richtung: "ab" };
   return { verein, richtung: null };
 }
@@ -1158,7 +1167,10 @@ export const EREIGNISSE = [
 
   /* Nach einem Titel. */
   { key: "titelverteidigung", titel: "Alle erwarten die Wiederholung", text: "Ihr habt geliefert. Jetzt ist genau das die Erwartung, nicht mehr die Hoffnung.",
-    wenn: (k) => letzteTitel(k).length > 0,
+    /* Beide Kacheln sprechen von Meisterschaft und Pokal. Nach einem Titel mit der
+       Auswahl kann man aber bei einem Verein stehen, der weder das eine noch das
+       andere spielt — dann verspricht die Karte nichts. */
+    wenn: (k) => { const w = wettbewerbe(k.verein); return letzteTitel(k).length > 0 && (w.liga || w.pokal); },
     optionen: [
       { label: "Den Druck annehmen", bild: "pokal", chance: 0.5, wirkung: { liga: 1.5, pokal: 1.3 }, sonst: { ovr: -2 } },
       { label: "Ruhe bewahren", bild: "ruhe", wirkung: { ovr: 1 } },
@@ -1179,18 +1191,23 @@ export const EREIGNISSE = [
       { label: "Da muss man durch", bild: "training", chance: 0.5, wirkung: { ovr: 4 }, sonst: { ovr: -2 } },
     ] },
   { key: "abstiegskampf", titel: "Der Abstiegskampf", text: "Neun Spiele, sechs Punkte Rückstand. Es geht um die Liga.",
-    wenn: (k) => (k.verein?.stufe ?? 9) <= 2 && (k.verein?.liga?.stufe ?? 2) === 1,
+    wenn: (k) => (k.verein?.stufe ?? 9) <= 2 && (k.verein?.liga?.stufe ?? 2) === 1
+      && !!k.verein?.liga && !!schwesterLiga(k.verein.liga),
     optionen: [
-      { label: "Vorangehen", bild: "platz", chance: 0.5, wirkung: { ovr: 3 }, sonst: { ovr: -2, verletzt: 1 } },
-      { label: "Die Saison abhaken", bild: "bank", wirkung: { ovr: -1 } },
+      { label: "Vorangehen", bild: "platz", chance: 0.5, wirkung: { ovr: 3, klasse: 1.8 }, sonst: { ovr: -2, verletzt: 1 } },
+      /* Wer abhakt, arbeitet an sich und lässt die Mannschaft allein — das ist die
+         eigentliche Entscheidung dieser Karte, nicht ein Punkt Stärke hin oder her. */
+      { label: "Die Saison abhaken", bild: "bank", wirkung: { ovr: 1, klasse: 0.75 } },
     ] },
   { key: "aufstiegsrennen", titel: "Das Aufstiegsrennen", text: "Zweite Liga, dritter Platz, fünf Spieltage. Jetzt entscheidet sich das Jahr.",
-    wenn: (k) => (k.verein?.liga?.stufe ?? 1) === 2,
+    wenn: (k) => (k.verein?.liga?.stufe ?? 1) === 2
+      && !!k.verein?.liga && !!schwesterLiga(k.verein.liga),
     optionen: [
-      /* Ohne Meisterschaftsfaktor: In der zweiten Liga gibt es keinen Titel, auf
-         den er wirken könnte — er stand hier und versprach nichts. */
-      { label: "Alles auf diese Saison", bild: "platz", chance: 0.55, wirkung: { ovr: 3 }, sonst: { ovr: -1 } },
-      { label: "Auf die eigene Entwicklung schauen", bild: "training", wirkung: { ovr: 1 } },
+      /* Kein Meisterschaftsfaktor: In der zweiten Liga gibt es keinen Titel, auf den
+         er wirken könnte. Der Aufstieg ist hier der Titel — und `klasse` ist der
+         Hebel darauf. */
+      { label: "Alles auf diese Saison", bild: "platz", chance: 0.5, wirkung: { ovr: 3, klasse: 1.8 }, sonst: { ovr: -1 } },
+      { label: "Auf die eigene Entwicklung schauen", bild: "training", wirkung: { ovr: 2, klasse: 0.8 } },
     ] },
 
   /* Torwart. */
@@ -1198,7 +1215,7 @@ export const EREIGNISSE = [
     wenn: (k) => posDaten(k.pos).gruppe === "TOR",
     optionen: [
       { label: "Im nächsten Spiel antworten", bild: "platz", chance: 0.55, wirkung: { ovr: 3 }, sonst: { ovr: -3, rolle: "rotation" } },
-      { label: "Um eine Pause bitten", bild: "ruhe", wirkung: { rolle: "rotation" } },
+      { label: "Um eine Pause bitten", bild: "ruhe", wirkung: { rolle: "rotation", ovr: 1 } },
     ] },
   { key: "elfmeterschiessen", titel: "Elfmeterschießen", text: "Pokalhalbfinale, es steht unentschieden nach Verlängerung. Jetzt bist du dran.",
     wenn: (k) => posDaten(k.pos).gruppe === "TOR" && (k.verein?.stufe ?? 0) >= 2 && wettbewerbe(k.verein).pokal,
@@ -1212,7 +1229,9 @@ export const EREIGNISSE = [
     wenn: (k) => k.ovr >= berufungAb(k) && (k.national?.spiele ?? 0) === 0,
     optionen: [
       { label: "Alles darauf ausrichten", bild: "verband", chance: 0.6, wirkung: { ovr: 2 }, sonst: { ovr: -1 } },
-      { label: "Den Verein nicht vernachlässigen", bild: "platz", wirkung: { liga: 1.2 } },
+      /* Der Ligafaktor allein hinge in der zweiten Liga in der Luft — dort gibt es
+         keinen Meistertitel, und die Kachel stünde leer da. */
+      { label: "Den Verein nicht vernachlässigen", bild: "platz", wirkung: { ovr: 1, liga: 1.2 } },
     ] },
   { key: "turnierpause", titel: "Turnier statt Urlaub", text: "Ein ganzer Sommer mit der Auswahl. Erholung gibt es dann eben nicht.",
     wenn: (k) => k.ovr >= berufungAb(k) + 4,
@@ -1362,6 +1381,26 @@ export const ROLLEN_NAME = { stamm: "Stammspieler", rotation: "Rotation", kader:
 /* „1.6" ist englisch — im Spiel steht „1,6". */
 export const faktorText = (f) => String(Math.round(f * 100) / 100).replace(".", ",");
 
+/** Wie sich ein Klassenfaktor liest — je nachdem, worum es bei diesem Verein
+ *  überhaupt gehen kann. In der zweiten Liga geht es um den Aufstieg, in der
+ *  ersten um den Abstieg; wo es keine Schwesterliga gibt, geht es um nichts, und
+ *  dann steht auch nichts da. */
+export function klasseText(klasse, verein) {
+  if (!klasse || klasse === 1 || !verein?.liga) return null;
+  if (!schwesterLiga(verein.liga)) return null;
+  if (verein.liga.stufe === 2) {
+    return klasse > 1
+      ? `Aussicht auf den Aufstieg ×${faktorText(klasse)}`
+      : `Aussicht auf den Aufstieg auf ${Math.round(klasse * 100)} %`;
+  }
+  if (verein.liga.stufe === 1) {
+    return klasse > 1
+      ? `Abstiegsgefahr auf ${Math.round(100 / klasse)} %`
+      : `Abstiegsgefahr ×${faktorText(1 / klasse)}`;
+  }
+  return null;
+}
+
 export function folgen(vorher, nachher, w, ausfall, grund = "verletzt", abgefangen = false) {
   const liste = [];
   /* Zuerst, weil es erklärt, warum darunter nichts Schlimmes steht. */
@@ -1399,6 +1438,8 @@ export function folgen(vorher, nachher, w, ausfall, grund = "verletzt", abgefang
     });
     liste.push({ text: `In der Auswahl bist du gesetzt (berufen ab ${berufungAb(nachher)} statt ${NATIONALELF_AB})`, art: "gut" });
   }
+  const klasse = klasseText(w.klasse, vorher.verein);
+  if (klasse) liste.push({ text: klasse, art: w.klasse > 1 ? "gut" : "schlecht" });
   if (w.abschluss) liste.push({ text: "Der Schulabschluss ist in der Tasche — er öffnet später den Trainerschein", art: "gut" });
   if (w.trainerschein) liste.push({ text: "Der Trainerschein ist gemacht", art: "gut" });
   if (w.schutz) liste.push({ text: "Du hast Rückhalt — der nächste Rückschlag geht an dir vorbei", art: "gut" });
@@ -1438,7 +1479,7 @@ export function entscheide(k, option, zufall) {
     karriere: naechster,
     gelungen,
     gewagt,
-    mod: { liga: w.liga ?? 1, pokal: w.pokal ?? 1, europa: w.europa ?? 1 },
+    mod: { liga: w.liga ?? 1, pokal: w.pokal ?? 1, europa: w.europa ?? 1, klasse: w.klasse ?? 1 },
     ausfall,
     grund,
     abgefangen,

@@ -250,7 +250,7 @@ test("Wirkungen greifen und bleiben in den Grenzen", () => {
   const rolle = K.entscheide(k, { label: "x", wirkung: { rolle: "rotation" } }, zufall);
   assert.equal(rolle.karriere.rolle, "rotation");
   const mod = K.entscheide(k, { label: "x", wirkung: { liga: 2, europa: 0.5 } }, zufall);
-  assert.deepEqual(mod.mod, { liga: 2, pokal: 1, europa: 0.5 });
+  assert.deepEqual(mod.mod, { liga: 2, pokal: 1, europa: 0.5, klasse: 1 });
 });
 
 /* Jede Karte muss spielbar sein: mindestens zwei Optionen, jede mit Beschriftung,
@@ -1506,6 +1506,7 @@ function kachelWert(o) {
     x -= (w.verletzt ?? 0) * 6;
     x -= (w.gesperrt ?? 0) * 6;
     x += (w.schutz ?? 0) * 1.5;
+    if (w.klasse) x += (w.klasse - 1) * 4;   // Auf- oder Abstieg wiegt schwer
     return x;
   };
   if (o.chance === undefined) return teil(o.wirkung);
@@ -1603,6 +1604,77 @@ test("die Binde nützt der Mannschaft, auch wenn ein anderer sie trägt", () => 
   const [, lassen] = K.EREIGNISSE.find((e) => e.key === "binde").optionen;
   assert.ok(lassen.wirkung.liga > 1 && lassen.wirkung.pokal > 1);
   assert.equal(lassen.wirkung.ovr, undefined, "persönlich gewinnt man nichts");
+});
+
+/* ── Gruppe 4: der Kampf um die Liga ───────────────────────────────────────── */
+
+test("der Klassenfaktor bewegt Auf- und Abstieg wirklich", () => {
+  const zweite = { key: "x", staerke: 60, stufe: 1, lg: "BL2", liga: { key: "BL2", land: "GER", stufe: 2, name: "2. Bundesliga" } };
+  const erste = { key: "y", staerke: 60, stufe: 1, lg: "BL", liga: { key: "BL", land: "GER", stufe: 1, name: "Bundesliga" } };
+
+  /* Aufstieg: die Grundchance auf dieser Rufstufe ist 0,04. Mit Faktor 1,8 reicht
+     eine Ziehung von 0,05 — ohne ihn nicht. */
+  assert.equal(K.ligaWechsel(zweite, () => 0.05).richtung, null);
+  assert.equal(K.ligaWechsel(zweite, () => 0.05, undefined, 1.8).richtung, "auf");
+  /* Und unter eins wird es schwerer: 0,03 ginge sonst durch. */
+  assert.equal(K.ligaWechsel(zweite, () => 0.03).richtung, "auf");
+  assert.equal(K.ligaWechsel(zweite, () => 0.03, undefined, 0.75).richtung, null);
+
+  /* Abstieg: Grundgefahr 0,16 auf dieser Rufstufe, geteilt durch den Faktor. */
+  assert.equal(K.ligaWechsel(erste, () => 0.1).richtung, "ab");
+  assert.equal(K.ligaWechsel(erste, () => 0.1, undefined, 1.8).richtung, null);
+  assert.equal(K.ligaWechsel(erste, () => 0.19, undefined, 0.75).richtung, "ab");
+
+  /* Ohne Schwesterliga gibt es nichts zu bewegen. */
+  const allein = { ...erste, liga: { key: "SAU", land: "SA", stufe: 1, name: "Saudi Pro League" } };
+  assert.equal(K.ligaWechsel(allein, () => 0, undefined, 3).richtung, null);
+});
+
+test("der Klassenfaktor wird genannt, wie er beim Verein ankommt", () => {
+  const zweite = { liga: { land: "GER", stufe: 2 } };
+  const erste = { liga: { land: "GER", stufe: 1 } };
+  assert.equal(K.klasseText(1.8, zweite), "Aussicht auf den Aufstieg ×1,8");
+  assert.equal(K.klasseText(0.8, zweite), "Aussicht auf den Aufstieg auf 80 %");
+  assert.equal(K.klasseText(1.8, erste), "Abstiegsgefahr auf 56 %");
+  assert.equal(K.klasseText(0.75, erste), "Abstiegsgefahr ×1,33");
+  /* Kein Faktor, kein Verein, keine Schwesterliga: kein Satz. */
+  assert.equal(K.klasseText(1, erste), null);
+  assert.equal(K.klasseText(1.8, null), null);
+  assert.equal(K.klasseText(1.8, { liga: { land: "SA", stufe: 1 } }), null);
+});
+
+test("Abstiegskampf und Aufstiegsrennen berühren die Tabelle", () => {
+  for (const key of ["abstiegskampf", "aufstiegsrennen"]) {
+    const e = K.EREIGNISSE.find((x) => x.key === key);
+    const mit = e.optionen.filter((o) => o.wirkung.klasse || o.sonst?.klasse);
+    assert.equal(mit.length, 2, `${key}: beide Kacheln müssen die Tabelle bewegen`);
+    const [a, b] = e.optionen;
+    assert.ok(a.wirkung.klasse > 1, `${key}: die mutige Kachel muss helfen`);
+    assert.ok(b.wirkung.klasse < 1, `${key}: die bequeme Kachel muss kosten`);
+  }
+  /* Und keine von beiden erscheint, wo es gar keine Schwesterliga gibt. */
+  const ab = K.EREIGNISSE.find((x) => x.key === "abstiegskampf");
+  assert.equal(ab.wenn({ verein: { stufe: 1, liga: { key: "SAU", land: "SA", stufe: 1 } } }), false);
+  assert.equal(ab.wenn({ verein: { stufe: 1, liga: { key: "BL", land: "GER", stufe: 1 } } }), true);
+});
+
+test("entscheide reicht den Klassenfaktor weiter", () => {
+  const verein = { liga: { land: "GER", stufe: 1 } };
+  const k = { ovr: 70, rolle: "stamm", alter: 28, land: "GER", verein };
+  const r = K.entscheide(k, { label: "x", wirkung: { klasse: 1.8 } }, () => 0);
+  assert.equal(r.mod.klasse, 1.8);
+  assert.ok(r.folgen.some((f) => f.text.includes("Abstiegsgefahr")), r.folgen.map((f) => f.text).join(" | "));
+  /* Ohne Faktor steht dort eine schlichte Eins — ligaWechsel rechnet damit. */
+  assert.equal(K.entscheide(k, { label: "x", wirkung: { ovr: 1 } }, () => 0).mod.klasse, 1);
+});
+
+test("die Titelverteidigung kommt nur, wo es einen Titel zu verteidigen gibt", () => {
+  const karte = K.EREIGNISSE.find((e) => e.key === "titelverteidigung");
+  const nachTitel = (verein) => karte.wenn({ verein, verlauf: [{ ovr: 80, titel: ["WM"] }] });
+  assert.equal(nachTitel({ lg: "BL", liga: { land: "GER", stufe: 1 } }), true);
+  /* Weltmeister geworden, aber bei einem Zweitligisten: Dort gibt es weder eine
+     Meisterschaft noch einen Pokal zu verteidigen. */
+  assert.equal(nachTitel({ lg: "BL2", liga: { land: "GER", stufe: 2 } }), false);
 });
 
 test("alle Motive gibt es auch als Datei", async () => {

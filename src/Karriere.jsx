@@ -401,6 +401,8 @@ function wirkungsText(w, verein) {
     if (f === undefined || f === 1 || !hat[feld]) continue;
     teile.push(`${name} ${f > 1 ? "×" + K.faktorText(f) : f === 0.5 ? "halbiert" : `auf ${Math.round(f * 100)} %`}`);
   }
+  const klasse = K.klasseText(w.klasse, verein);
+  if (klasse) teile.push(klasse);
   if (w.verbandswechsel) teile.push("neuer Verband");
   if (w.abschluss) teile.push("Schulabschluss");
   if (w.trainerschein) teile.push("Trainerschein");
@@ -545,7 +547,7 @@ export default function Karriere({ onLeave }) {
   const [sperre, setSperre] = useState(false);
   const sperrUhr = useRef(null);
   const zufallRef = useRef(null);
-  const modRef = useRef({ liga: 1, pokal: 1, europa: 1 });
+  const modRef = useRef({ liga: 1, pokal: 1, europa: 1, klasse: 1 });
   /* Wie viele Saisons der Spieler noch aussetzt — und warum. Der Grund steht
      dabei, weil die Zeitleiste „verletzt" von „gesperrt" unterscheidet. */
   const ausfallRef = useRef({ saisons: 0, grund: "verletzt" });
@@ -594,7 +596,7 @@ export default function Karriere({ onLeave }) {
     const seed = Date.now() >>> 0;
     const neu = K.neueKarriere({ name: name.trim() || "Namenlos", land, nummer, pos, fuss, tempo, seed });
     zufallRef.current = K.rng(K.hashStr(`${neu.name}|${seed}`));
-    modRef.current = { liga: 1, pokal: 1, europa: 1 };
+    modRef.current = { liga: 1, pokal: 1, europa: 1, klasse: 1 };
     ausfallRef.current = { saisons: 0, grund: "verletzt" };
     letzteRef.current = [];
     seitAngebotRef.current = 0;
@@ -676,7 +678,9 @@ export default function Karriere({ onLeave }) {
          später „Aus der Zweiten" überhaupt zutreffen. */
       /* welt.ligen statt der Standardliste: Nur diese Kopien tragen das Titelfeld,
          und ohne sie stünde ein Aufsteiger ohne Gegner da. */
-      const w = K.ligaWechsel(verein, zufall, welt.ligen);
+      /* Der Klassenfaktor aus der Entscheidung wirkt hier — sonst erzählte „Der
+         Abstiegskampf" von der Liga und änderte nichts an ihr. */
+      const w = K.ligaWechsel(verein, zufall, welt.ligen, modRef.current.klasse);
       if (w.richtung) {
         ereignisse.push({ art: w.richtung, verein: verein.name, key: verein.key,
           von: verein.liga.name, nach: w.verein.liga.name });
@@ -684,7 +688,7 @@ export default function Karriere({ onLeave }) {
         verein = w.verein;
       }
     }
-    modRef.current = { liga: 1, pokal: 1, europa: 1 };
+    modRef.current = { liga: 1, pokal: 1, europa: 1, klasse: 1 };
 
     const titel = { ...k2.titel };
     for (const t of neueTitel) titel[t] = (titel[t] || 0) + 1;
