@@ -1837,3 +1837,40 @@ test("der Verbandswechsel nennt die alte Schwelle als Vergleich, nicht eine fest
   assert.ok(zeile, r.folgen.map((f) => f.text).join(" | "));
   assert.match(zeile.text, new RegExp(`berufen ab ${K.berufungsSchwelle("PL") - K.VERBAND_BONUS} statt ${K.BERUFUNG_A}`));
 });
+
+/* ── Kein leerer Stammplatz ───────────────────────────────────────────────── */
+
+test("wer schon Stammspieler ist, gewinnt bei keiner Karte nur den Stammplatz", () => {
+  /* Für einen Stammspieler ist „Stammplatz" kein Gewinn. Eine Wette, deren guter
+     Ausgang nur daraus besteht, hätte für ihn keine Seite nach oben. Geprüft wird
+     jede Karte, die einem gewöhnlichen Stammspieler begegnen kann. */
+  const verlauf = [{ ovr: 70, titel: [], spiele: 30 }, { ovr: 69, titel: [], spiele: 30 }];
+  const k = { alter: 25, ovr: 69, rolle: "stamm", land: "GER", pos: "ST", vereine: ["A", "B", "C"], verlauf,
+    verein: { key: "X", stufe: 3, lg: "BL", liga: { key: "BL", land: "GER", stufe: 1 } }, national: { spiele: 3 } };
+  const hohl = [];
+  for (const e of K.EREIGNISSE) {
+    let passt;
+    try { passt = !e.wenn || e.wenn(k); } catch { passt = false; }
+    if (!passt) continue;
+    for (const o of e.optionen) {
+      const gewinn = Object.keys(o.wirkung).filter((f) => !(f === "rolle" && o.wirkung.rolle === "stamm"));
+      if (o.wirkung.rolle === "stamm" && !gewinn.length) hohl.push(`${e.key}/${o.label}`);
+    }
+  }
+  assert.deepEqual(hohl, []);
+});
+
+test("Konkurrenz und Talent kommen nur, wenn man einen Platz zu verteidigen hat", () => {
+  const verein = { key: "X", stufe: 3, lg: "BL", liga: { key: "BL", land: "GER", stufe: 1 } };
+  for (const key of ["konkurrenz", "talent"]) {
+    const e = K.EREIGNISSE.find((x) => x.key === key);
+    assert.equal(e.wenn({ rolle: "stamm", verein }), true, key);
+    assert.equal(e.wenn({ rolle: "rotation", verein }), false, key);
+  }
+});
+
+test("für einen Stammspieler ist Sich-Anbieten wieder eine echte Wahl", () => {
+  const [anbieten, abwarten] = K.EREIGNISSE.find((e) => e.key === "trainerwechsel").optionen;
+  /* Stammplatz zählt für ihn nicht; es bleibt die Stärke. */
+  assert.ok(anbieten.wirkung.ovr > abwarten.wirkung.ovr, "der Mutige muss mehr gewinnen können");
+});

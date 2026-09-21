@@ -385,11 +385,14 @@ const prozent = (p) => `${Math.round(p * 100)} %`;
    bei Al-Hilal stand sonst „Pokal ×1.5" für einen Pokal, den es dort nicht gibt.
    Und sie nennt Faktoren, wie sie sind: „halbiert" stand vorher für JEDEN Wert unter
    eins, auch für 0,6 und 0,4. */
-function wirkungsText(w, verein) {
+/* `rolle` ist die heutige Rolle des Spielers. Eine Wirkung, die ihm genau die gibt,
+   ist keine — „Stammplatz" stand vorher auch bei einem, der längst Stammspieler war,
+   als Gewinn auf der Kachel. */
+function wirkungsText(w, verein, rolle) {
   const teile = [];
   const hat = K.wettbewerbe(verein);
   if (w.ovr) teile.push(`${w.ovr > 0 ? "+" : ""}${w.ovr} Stärke`);
-  if (w.rolle) teile.push({ stamm: "Stammplatz", rotation: "Rotation", kader: "nur im Kader" }[w.rolle]);
+  if (w.rolle && w.rolle !== rolle) teile.push({ stamm: "Stammplatz", rotation: "Rotation", kader: "nur im Kader" }[w.rolle]);
   if (w.verletzt) teile.push(`${w.verletzt} Saison verletzt`);
   if (w.gesperrt) teile.push(`${w.gesperrt} Saison gesperrt`);
   for (const [feld, name] of [["liga", "Meisterschaft"], ["pokal", "Pokal"], ["europa", "Europapokal"]]) {
@@ -421,7 +424,12 @@ function wirkungsText(w, verein) {
    In einem verdeckten Tab ruht rAF. Der Lauf bliebe dann mitten im Sprung stehen
    und die Laufbahn hinge. setTimeout läuft weiter; zusätzlich springt der Lauf
    sofort ans Ende, wenn die Seite beim Klick schon verdeckt ist. */
-function Ereigniskarte({ ereignis, verein, bewerte, onFertig, folge, onWeiter, gesperrt }) {
+function Ereigniskarte({ ereignis, verein, rolle, bewerte, onFertig, folge, onWeiter, gesperrt }) {
+  /* Die Rolle, WIE SIE BEIM ZIEHEN DER KARTE WAR. Nach der Wahl ändert sie sich sofort
+     — und ohne diesen Stand schriebe sich die Kachel unter dem Ergebnis um: Wer den
+     Kampf um seinen Platz verliert, sähe auf der Gewinnkachel plötzlich „Stammplatz"
+     auftauchen, das vorher nicht dastand. */
+  const [rolleBeimZiehen] = useState(rolle);
   const [wahl, setWahl] = useState(null);      // { i, ergebnis }
   const [feld, setFeld] = useState(null);      // welches Ausgangsfeld gerade leuchtet
   const [steht, setSteht] = useState(false);   // Lauf beendet
@@ -460,9 +468,9 @@ function Ereigniskarte({ ereignis, verein, bewerte, onFertig, folge, onWeiter, g
         {ereignis.optionen.map((o, i) => {
           const gewaehlt = wahl?.i === i;
           const ausgaenge = o.chance === undefined
-            ? [{ art: "neutral", text: wirkungsText(o.wirkung, verein) }]
-            : [{ art: "gut", text: wirkungsText(o.wirkung, verein) },
-               { art: "schlecht", text: wirkungsText(o.sonst, verein) }];
+            ? [{ art: "neutral", text: wirkungsText(o.wirkung, verein, rolleBeimZiehen) }]
+            : [{ art: "gut", text: wirkungsText(o.wirkung, verein, rolleBeimZiehen) },
+               { art: "schlecht", text: wirkungsText(o.sonst, verein, rolleBeimZiehen) }];
           return (
             <button key={i} type="button"
               className={"kaKachel" + (gewaehlt ? " gewaehlt" : "") + (wahl && !gewaehlt ? " matt" : "")}
@@ -1170,6 +1178,7 @@ export default function Karriere({ onLeave }) {
             key={karte.ereignis.key + (karte.verein?.key || "")}
             ereignis={karte.ereignis}
             verein={karte.verein ?? k.verein}
+            rolle={k.rolle}
             bewerte={bewerteOption}
             gesperrt={sperre}
             onFertig={waehleOption}

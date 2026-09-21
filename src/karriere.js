@@ -1098,16 +1098,25 @@ export const EREIGNISSE = [
       { label: "Auf die Liga", bild: "platz", wirkung: { liga: 2, europa: 0.5 } },
       { label: "Auf Europa", bild: "pokal", wirkung: { europa: 2, liga: 0.5 } },
     ] },
+  /* „Für DEINEN Platz" — die Karte setzt voraus, dass man einen hat. Vorher konnte
+     sie auch einen Ergänzungsspieler treffen, und dann ging es um einen Platz, den
+     er gar nicht besass. */
   { key: "konkurrenz", titel: "Konkurrenz auf deiner Position", text: "Der Verein holt jemanden für deinen Platz.",
+    wenn: (k) => k.rolle === "stamm",
     optionen: [
       { label: "Kampf annehmen", bild: "training", chance: 0.5, wirkung: { rolle: "stamm", ovr: 2 }, sonst: { rolle: "rotation" } },
       { label: "Sich fügen", bild: "bank", wirkung: { rolle: "rotation" } },
     ] },
   { key: "talent", titel: "Ein Talent drängt nach", text: "Ein Sechzehnjähriger trainiert bei euch mit und ist nah dran.",
-    wenn: (k) => { const w = wettbewerbe(k.verein); return w.liga || w.pokal; },
+    /* Der Junge drängt auf DEINEN Platz — also nur, wenn man einen hat. Und wer ihn
+       verteidigt, gewinnt dabei etwas: Vorher war der gute Ausgang nur „Stammplatz",
+       und für einen, der Stammspieler schon ist, hiess das: nichts. Die Wette hatte
+       dann keine Seite nach oben — im Durchspielen am 21.09.2026 ging sie auf, und
+       die Folge lautete „Es bleibt alles, wie es war". */
+    wenn: (k) => { const w = wettbewerbe(k.verein); return (w.liga || w.pokal) && k.rolle === "stamm"; },
     optionen: [
       { label: "Ihn unter die Fittiche nehmen", bild: "nachwuchs", wirkung: { liga: 1.3, pokal: 1.3 } },
-      { label: "Ihm keinen Raum lassen", bild: "kabine", chance: 0.6, wirkung: { rolle: "stamm" }, sonst: { rolle: "rotation", ovr: -1 } },
+      { label: "Ihm keinen Raum lassen", bild: "kabine", chance: 0.6, wirkung: { ovr: 1 }, sonst: { rolle: "rotation", ovr: -1 } },
     ] },
   /* PFIFFE KAMEN AUS DEM NICHTS. Die Karte hatte keine Bedingung und traf damit auch
      einen, der gerade Meister geworden war und dreissig Tore geschossen hatte. Jetzt
@@ -1228,7 +1237,10 @@ export const EREIGNISSE = [
   { key: "trainerwechsel", titel: "Neuer Trainer", text: "Der Verein entlässt den Trainer. Der Neue bringt eigene Vorstellungen mit — und eigene Spieler.",
     wenn: (k) => k.alter >= 20,
     optionen: [
-      { label: "Sich anbieten", bild: "kabine", chance: 0.55, wirkung: { rolle: "stamm", ovr: 1 }, sonst: { rolle: "rotation" } },
+      /* Für einen Stammspieler war das vorher schlechter als Abwarten: gewonnen +1,
+         verloren die Rolle — gegen +1 sicher. Wer sich dem Neuen anbietet und ihn
+         überzeugt, gewinnt jetzt mehr als der, der den Kopf einzieht. */
+      { label: "Sich anbieten", bild: "kabine", chance: 0.55, wirkung: { rolle: "stamm", ovr: 2 }, sonst: { rolle: "rotation" } },
       /* Beide Kacheln hatten denselben schlechten Ausgang, aber nur eine einen
          guten — Abwarten war nie richtig. Jetzt ist es die sichere Wahl: kein
          Sprung, aber auch kein Absturz. */
