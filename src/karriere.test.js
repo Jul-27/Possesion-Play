@@ -1607,26 +1607,65 @@ test("die Binde nützt der Mannschaft, auch wenn ein anderer sie trägt", () => 
 
 /* ── Gruppe 4: der Kampf um die Liga ───────────────────────────────────────── */
 
-test("der Klassenfaktor bewegt Auf- und Abstieg wirklich", () => {
-  const zweite = { key: "x", staerke: 60, stufe: 1, lg: "BL2", liga: { key: "BL2", land: "GER", stufe: 2, name: "2. Bundesliga" } };
-  const erste = { key: "y", staerke: 60, stufe: 1, lg: "BL", liga: { key: "BL", land: "GER", stufe: 1, name: "Bundesliga" } };
+test("der Klassenfaktor bewegt Auf- und Abstieg wirklich", async () => {
+  /* Mit echten Vereinen aus der echten Welt: Die Chance hängt jetzt am Feld der
+     Liga, und das gibt es nur für Vereine, die durch baueWelt gingen. */
+  const { VEREINS_STAERKE } = await import("./careerStaerke.js");
+  const w = K.baueWelt((x) => VEREINS_STAERKE[x.key] ?? NaN);
+  const zweite = w.vereine.find((x) => x.liga.key === "BL2" && x.stufe === 1);
+  const erste = w.vereine.find((x) => x.liga.key === "BL" && x.stufe === 1);
+  const auf = K.aufstiegsChance(zweite), ab = K.abstiegsChance(erste);
+  assert.ok(auf > 0 && auf < 0.5 && ab > 0 && ab < 0.5, `auf ${auf}, ab ${ab}`);
 
-  /* Aufstieg: die Grundchance auf dieser Rufstufe ist 0,04. Mit Faktor 1,8 reicht
-     eine Ziehung von 0,05 — ohne ihn nicht. */
-  assert.equal(K.ligaWechsel(zweite, () => 0.05).richtung, null);
-  assert.equal(K.ligaWechsel(zweite, () => 0.05, undefined, 1.8).richtung, "auf");
-  /* Und unter eins wird es schwerer: 0,03 ginge sonst durch. */
-  assert.equal(K.ligaWechsel(zweite, () => 0.03).richtung, "auf");
-  assert.equal(K.ligaWechsel(zweite, () => 0.03, undefined, 0.75).richtung, null);
+  /* Knapp über der Grundchance: ohne Faktor kein Aufstieg, mit 1,8 schon. */
+  const knapp = () => auf * 1.2;
+  assert.equal(K.ligaWechsel(zweite, knapp, w.ligen).richtung, null);
+  assert.equal(K.ligaWechsel(zweite, knapp, w.ligen, 1.8).richtung, "auf");
+  /* Unter eins wird es schwerer. */
+  assert.equal(K.ligaWechsel(zweite, () => auf * 0.9, w.ligen).richtung, "auf");
+  assert.equal(K.ligaWechsel(zweite, () => auf * 0.9, w.ligen, 0.75).richtung, null);
 
-  /* Abstieg: Grundgefahr 0,16 auf dieser Rufstufe, geteilt durch den Faktor. */
-  assert.equal(K.ligaWechsel(erste, () => 0.1).richtung, "ab");
-  assert.equal(K.ligaWechsel(erste, () => 0.1, undefined, 1.8).richtung, null);
-  assert.equal(K.ligaWechsel(erste, () => 0.19, undefined, 0.75).richtung, "ab");
+  /* Abstieg: die Gefahr geteilt durch den Faktor. */
+  assert.equal(K.ligaWechsel(erste, () => ab * 0.9, w.ligen).richtung, "ab");
+  assert.equal(K.ligaWechsel(erste, () => ab * 0.9, w.ligen, 1.8).richtung, null);
+  assert.equal(K.ligaWechsel(erste, () => ab * 1.2, w.ligen, 0.75).richtung, "ab");
 
   /* Ohne Schwesterliga gibt es nichts zu bewegen. */
-  const allein = { ...erste, liga: { key: "SAU", land: "SA", stufe: 1, name: "Saudi Pro League" } };
-  assert.equal(K.ligaWechsel(allein, () => 0, undefined, 3).richtung, null);
+  const allein = w.vereine.find((x) => x.liga.key === "MLS");
+  assert.equal(K.ligaWechsel(allein, () => 0, w.ligen, 3).richtung, null);
+});
+
+/* ── Jede Liga hat ihre Plätze ──────────────────────────────────────────────── */
+
+test("in jeder Liga steigen so viele ab und auf, wie es Plätze gibt", async () => {
+  /* Vorher würfelte jeder Verein für sich: Österreich 2,5 Absteiger je Saison bei
+     zehn Vereinen, LaLiga 0,3, aus der Championship 3,3 Aufsteiger. */
+  const { VEREINS_STAERKE } = await import("./careerStaerke.js");
+  const w = K.baueWelt((x) => VEREINS_STAERKE[x.key] ?? NaN);
+  for (const liga of w.ligen) {
+    const schwester = K.schwesterLiga(liga, w.ligen);
+    if (!schwester) continue;
+    const vs = w.vereine.filter((x) => x.liga.key === liga.key);
+    const erwartet = vs.reduce((a, x) => a + (liga.stufe === 1 ? K.abstiegsChance(x) : K.aufstiegsChance(x)), 0);
+    const plaetze = K.WECHSEL_PLAETZE[liga.land] ?? K.WECHSEL_PLAETZE_SONST;
+    /* Der Deckel kann eine Liga mit einem einzigen, klar schwächsten Verein etwas
+       unter ihre Plätze drücken — mehr als einen halben Platz aber nicht. */
+    assert.ok(erwartet <= plaetze + 1e-9 && erwartet >= plaetze - 0.6,
+      `${liga.key}: ${erwartet.toFixed(2)} je Saison bei ${plaetze} Plätzen`);
+  }
+});
+
+test("wer stark ist, steigt nicht ab; wer schwach ist, eher als andere", async () => {
+  const { VEREINS_STAERKE } = await import("./careerStaerke.js");
+  const w = K.baueWelt((x) => VEREINS_STAERKE[x.key] ?? NaN);
+  const bayern = w.vereine.find((x) => x.name.includes("Bayern"));
+  assert.equal(K.abstiegsChance(bayern), 0);
+  /* Innerhalb einer Liga fällt die Gefahr mit der Rufstufe, und keiner steigt sicher ab. */
+  for (const key of ["BL", "PL", "AT", "PT"]) {
+    const vs = w.vereine.filter((x) => x.liga.key === key).sort((a, b) => a.stufe - b.stufe);
+    for (let i = 1; i < vs.length; i++) assert.ok(K.abstiegsChance(vs[i]) <= K.abstiegsChance(vs[i - 1]), key);
+    for (const x of vs) assert.ok(K.abstiegsChance(x) <= K.WECHSEL_DECKEL, `${x.name}: ${K.abstiegsChance(x)}`);
+  }
 });
 
 test("der Klassenfaktor wird genannt, wie er beim Verein ankommt", () => {

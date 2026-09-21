@@ -334,9 +334,13 @@ export function baueWelt(staerkeVon, vereine = WELT_VEREINE, ligen = WELT_LIGEN)
      aus, und damit stimmt das Feld automatisch. */
   const summen = new Map();
   for (const v of out) {
-    const e = summen.get(v.liga.key) || { liga: 0, pokal: 0 };
+    const e = summen.get(v.liga.key) || { liga: 0, pokal: 0, ab: 0, auf: 0 };
     e.liga += LIGA_GEWICHT[v.stufe];
     e.pokal += POKAL_GEWICHT[v.stufe];
+    /* Die Felder für Auf- und Abstieg — dieselbe Idee wie bei den Titeln: Die Liga
+       kennt die Summe, der Verein nur sein Gewicht. */
+    if (v.liga.stufe === 1) e.ab += ABSTIEG_GEWICHT[v.stufe] ?? 0;
+    if (v.liga.stufe === 2) e.auf += AUFSTIEG_GEWICHT[v.stufe] ?? 0;
     summen.set(v.liga.key, e);
   }
   /* Das Europafeld ist EINE Summe über alle Erstligisten — es hängt trotzdem an der
@@ -354,7 +358,7 @@ export function baueWelt(staerkeVon, vereine = WELT_VEREINE, ligen = WELT_LIGEN)
   const mitFeld = ligen.map((l) => ({
     ...l,
     feld: {
-      ...(summen.get(l.key) || { liga: 0, pokal: 0 }),
+      ...(summen.get(l.key) || { liga: 0, pokal: 0, ab: 0, auf: 0 }),
       cl: l.stufe === 1 && EUROPA.has(l.land) ? clSumme : 0,
       el: l.stufe === 1 && EUROPA.has(l.land) ? elSumme : 0,
     },
@@ -383,9 +387,35 @@ export function titelAnteil(verein, art) {
    Gespielt wird nicht die Tabelle, sondern die Erwartung: Ein starker Zweitligist
    steigt oft auf, ein schwacher Erstligist oft ab. Die Rufstufe ist dabei an die
    Spielklasse gebunden (in der zweiten ist bei 2 Schluss), deshalb wird sie beim
-   Wechsel neu berechnet — ein Aufsteiger darf wachsen. */
-export const AUFSTIEG_CHANCE = [0.01, 0.04, 0.12];          // je Rufstufe, nur 2. Liga
-export const ABSTIEG_CHANCE = [0.34, 0.16, 0.06, 0.01, 0, 0]; // je Rufstufe, nur 1. Liga
+   Wechsel neu berechnet — ein Aufsteiger darf wachsen.
+
+   ── JEDE LIGA HAT IHRE PLÄTZE ────────────────────────────────────────────────
+   VORHER WÜRFELTE JEDER VEREIN FÜR SICH, mit einer festen Chance je Rufstufe. Das
+   ist derselbe Fehler, den die Meisterschaften schon einmal hatten: Wie viele
+   absteigen, hing daran, wie viele schwache Vereine zufällig in einer Liga stehen.
+   Nachgerechnet stiegen in Österreich 2,5 von 10 Vereinen je Saison ab und 0,2 auf,
+   in Portugal 3,5 ab und 0,2 auf, in LaLiga 0,3 ab, aus der Championship 3,3 auf.
+   Im Durchspielen am 21.09.2026 stieg ein Spieler deshalb mit drei Vereinen in Folge
+   ab.
+
+   JETZT HAT JEDE LIGA IHRE PLÄTZE — so viele, wie es dort wirklich gibt, mit einem
+   halben Platz für eine Relegation. Die Rufstufe verteilt sie nur noch: Die Chance
+   eines Vereins ist sein Gewicht geteilt durch die Summe seiner Liga, mal die Zahl
+   der Plätze. Die Summen hängen wie die Titelfelder an der Liga (siehe baueWelt).
+
+   Die Gewichte sind mit Absicht flach: Bayern steigt nie ab, ein Mittelfeldklub ab
+   und zu, der schwächste oft — aber nicht sicher. Deshalb auch der Deckel: Ohne ihn
+   stieg der schwächste Verein der Premier League zu 90 % je Saison ab, in einem
+   Schritt über zwei Saisons also fast sicher. */
+export const ABSTIEG_GEWICHT = [1.0, 0.6, 0.3, 0.1, 0.02, 0];   // je Rufstufe, 1. Liga
+export const AUFSTIEG_GEWICHT = [0.2, 0.5, 1.0];                // je Rufstufe, 2. Liga
+export const WECHSEL_DECKEL = 0.75;
+/* Auf- und Abstiegsplätze je Land, für beide Richtungen gleich. Ein halber Platz ist
+   eine Relegation, die man in der Hälfte der Fälle verliert. */
+export const WECHSEL_PLAETZE = { GER: 2.5, ENG: 3, ESP: 3, ITA: 3, FRA: 2.5, PRT: 2.5, NED: 2.5, AUT: 1 };
+/* Für ein Land, das eine zweite Liga bekommt, ohne hier eingetragen zu werden —
+   sonst stiege dort still nie jemand auf oder ab. */
+export const WECHSEL_PLAETZE_SONST = 2;
 
 /** Die andere Spielklasse desselben Landes — oder null, wo es keine gibt. */
 export function schwesterLiga(liga, ligen = WELT_LIGEN) {
@@ -410,12 +440,23 @@ export function mitLiga(verein, liga) {
 export function ligaWechsel(verein, zufall, ligen = WELT_LIGEN, klasse = 1) {
   const andere = schwesterLiga(verein.liga, ligen);
   if (!andere) return { verein, richtung: null };
-  if (verein.liga.stufe === 2 && zufall() < (AUFSTIEG_CHANCE[verein.stufe] ?? 0) * klasse)
+  if (verein.liga.stufe === 2 && zufall() < aufstiegsChance(verein) * klasse)
     return { verein: mitLiga(verein, andere), richtung: "auf" };
-  if (verein.liga.stufe === 1 && zufall() < (ABSTIEG_CHANCE[verein.stufe] ?? 0) / klasse)
+  if (verein.liga.stufe === 1 && zufall() < abstiegsChance(verein) / klasse)
     return { verein: mitLiga(verein, andere), richtung: "ab" };
   return { verein, richtung: null };
 }
+
+/* Die Chance je Saison, VOR dem Klassenfaktor einer Entscheidung. Ohne Feld — ein
+   Verein, der nicht durch baueWelt ging — gibt es keinen Wechsel: Eine Chance ohne
+   Feld wäre wieder eine, die für sich allein würfelt. */
+function wechselChance(verein, gewicht, summe) {
+  const plaetze = WECHSEL_PLAETZE[verein.liga.land] ?? WECHSEL_PLAETZE_SONST;
+  if (!summe || !plaetze) return 0;
+  return Math.min(WECHSEL_DECKEL, plaetze * (gewicht[verein.stufe] ?? 0) / summe);
+}
+export const abstiegsChance = (verein) => wechselChance(verein, ABSTIEG_GEWICHT, verein.liga.feld?.ab);
+export const aufstiegsChance = (verein) => wechselChance(verein, AUFSTIEG_GEWICHT, verein.liga.feld?.auf);
 
 /* ── Leihe ─────────────────────────────────────────────────────────────────────
    Der zweite Grund, warum es die zweite Spielklasse gibt. Ein Siebzehnjähriger bei
