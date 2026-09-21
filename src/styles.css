@@ -1206,11 +1206,17 @@ body::after {
   min-width: 74px; padding: 11px 10px 9px; border-radius: 16px; text-align: center;
   background: var(--bg-2); border: 1px solid var(--line);
 }
-.kaAlter small, .kaAlter i {
+.kaAlter small {
   display: block; font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase;
   color: var(--muted); font-style: normal;
 }
 .kaAlter b { font-family: 'Barlow Condensed', sans-serif; font-size: 34px; line-height: 1.05; }
+/* Nur noch das Alter, ohne „von 40" — die Kachel verlor damit eine Zeile und stand
+   sieben Pixel niedriger als das Rating daneben. Beide strecken sich jetzt auf die
+   Höhe der Kopfzeile und zentrieren ihren Inhalt. */
+.ppRoot.karriere .kaOvr, .ppRoot.karriere .kaAlter {
+  align-self: stretch; display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
 
 /* Die Entscheidungskarte — das Herz des Modus. */
 .kaEntscheidung h3 { font-size: 17px; margin: 6px 0 4px; }

@@ -1029,7 +1029,6 @@ export default function Karriere({ onLeave }) {
           Mit 19 heisst dieselbe Entscheidung etwas anderes als mit 33. */}
       <div className="kaAlter">
         <small>ALTER</small><b><Zaehler wert={k.alter} warten={K.ZAEHLER_WARTEN} dauer={520} /></b>
-        <i>von {K.ALTERSGRENZE}</i>
       </div>
       {k.verein && <span className="kaWappen"><Emblem def={defVon(k.verein)} /></span>}
       <div className="kaWer">
