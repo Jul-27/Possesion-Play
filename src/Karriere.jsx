@@ -1,13 +1,9 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CLUBS } from "./gameData.js";
 import { alleLaender, passtAufSuche, namenVon, EIGENE, flaggeVon } from "./laender.js";
 import { trikotVon, kontrast } from "./trikots.js";
-import { WELT_LIGEN, WELT_VEREINE } from "./careerWorld.js";
-import { baueZiehungen, baueKlassen, kader, DRAFT_AB_JAHR } from "./draft.js";
-import { teamStaerke } from "./saison.js";
+import { VEREINS_STAERKE } from "./careerStaerke.js";
 import * as K from "./karriere.js";
-import { loadPlayers } from "./playersStore.js";
-import { loadAppearances } from "./appearancesStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
 import DataStamp from "./DataStamp.jsx";
@@ -522,9 +518,21 @@ function Ereigniskarte({ ereignis, verein, bewerte, onFertig, folge, onWeiter, g
   );
 }
 
+/* DIE WELT STEHT FEST, BEVOR DER MODUS ÖFFNET. Bis zum 21.09.2026 wurde sie hier
+   bei jedem Öffnen aus 34.652 Spielern neu gerechnet: 22 Sekunden vom Klick bis zum
+   ersten Bildschirm, und weil die Rechnung in einem useMemo der Komponente hing,
+   bei JEDEM Betreten aufs Neue — nicht nur beim ersten. Dazu 5 MB Spielerdaten, die
+   nur für diese eine Zahl je Verein geladen wurden.
+
+   Jetzt rechnet sie der Datenabgleich einmal (data-pipeline/career_staerke.mjs,
+   Rechnung in vereinsStaerke.js), und hier wird nur noch eine Tabelle mit 388
+   Zahlen gelesen. Die Welt ist dieselbe — gegen die alte Rechnung verglichen, Verein
+   für Verein, bis auf die Stelle hinter dem Komma.
+
+   Gebaut wird sie ausserhalb der Komponente und damit genau einmal je Seitenaufruf. */
+const WELT = K.baueWelt((v) => VEREINS_STAERKE[v.key] ?? NaN);
+
 export default function Karriere({ onLeave }) {
-  const [players, setPlayers] = useState(null);
-  const [einsaetze, setEinsaetze] = useState(undefined);
   const [muted, setMuted] = useState(isMuted());
 
   // Anlage
@@ -557,38 +565,9 @@ export default function Karriere({ onLeave }) {
   const seitEreignisRef = useRef(Infinity);
 
   useEffect(() => () => clearTimeout(sperrUhr.current), []);
-  useEffect(() => { loadPlayers().then(setPlayers); }, []);
-  useEffect(() => { loadAppearances().then((e) => setEinsaetze(e || null)); }, []);
 
-  /* Die Welt einmal bauen: 362 Vereine, jeder mit einer Stärke aus seinen echten
-     Kadern — dieselbe Rechnung wie in der Traumelf. Daraus wird die Rufstufe.
-     Gemessen einige Sekunden, deshalb nur einmal je Sitzung. */
-  const welt = useMemo(() => {
-    if (!players || einsaetze === undefined) return null;
-    const jahre = Array.from({ length: 2026 - DRAFT_AB_JAHR + 1 }, (_, i) => DRAFT_AB_JAHR + i);
-    /* Die Klassen — also wie stark jeder Spieler war — brauchen Ziehungen je Liga.
-       Sie werden hier über die ganze Welt gebaut, damit ein Zweitligist an
-       derselben Skala gemessen wird wie Bayern. */
-    const ziehungen = [];
-    for (const liga of WELT_LIGEN) {
-      const vs = WELT_VEREINE.filter((v) => v.lg === liga.key);
-      if (vs.length) ziehungen.push(...baueZiehungen(players, vs, liga.key));
-    }
-    const klassen = baueKlassen(players, ziehungen, einsaetze);
-    const staerkeVon = (v) => {
-      const w = [];
-      for (const j of jahre) {
-        const kd = kader(players, v.key, j, 5);
-        if (kd.length >= 8) w.push(teamStaerke({ spieler: kd, jahr: j }, players, klassen));
-      }
-      if (!w.length) return NaN;
-      w.sort((a, b) => a - b);
-      return w[Math.floor(w.length / 2)];
-    };
-    return K.baueWelt(staerkeVon);
-  }, [players, einsaetze]);
-
-  const bereit = welt && welt.vereine.length > 0;
+  const welt = WELT;
+  const bereit = welt.vereine.length > 0;
 
   // ── Ablauf ─────────────────────────────────────────────────────────────────
 
