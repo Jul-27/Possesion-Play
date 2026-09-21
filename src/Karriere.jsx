@@ -1,13 +1,9 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CLUBS } from "./gameData.js";
 import { alleLaender, passtAufSuche, namenVon, EIGENE, flaggeVon } from "./laender.js";
 import { trikotVon, kontrast } from "./trikots.js";
-import { WELT_LIGEN, WELT_VEREINE } from "./careerWorld.js";
-import { baueZiehungen, baueKlassen, kader, DRAFT_AB_JAHR } from "./draft.js";
-import { teamStaerke } from "./saison.js";
+import { VEREINS_STAERKE } from "./careerStaerke.js";
 import * as K from "./karriere.js";
-import { loadPlayers } from "./playersStore.js";
-import { loadAppearances } from "./appearancesStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
 import DataStamp from "./DataStamp.jsx";
@@ -389,11 +385,18 @@ const prozent = (p) => `${Math.round(p * 100)} %`;
    bei Al-Hilal stand sonst „Pokal ×1.5" für einen Pokal, den es dort nicht gibt.
    Und sie nennt Faktoren, wie sie sind: „halbiert" stand vorher für JEDEN Wert unter
    eins, auch für 0,6 und 0,4. */
-function wirkungsText(w, verein) {
+/* `rolle` ist die heutige Rolle des Spielers. Eine Wirkung, die ihm genau die gibt,
+   ist keine — „Stammplatz" stand vorher auch bei einem, der längst Stammspieler war,
+   als Gewinn auf der Kachel. */
+/* `aufwaerts`: Ist das der gute Ausgang einer Wette? Dann kann eine Rolle nur
+   befördern, sonst nur herabstufen — dieselbe Regel wie in entscheide (rolleNach).
+   Angezeigt wird die Rolle, die WIRKLICH herauskäme, und nur, wenn sie sich ändert. */
+function wirkungsText(w, verein, rolle, aufwaerts = false) {
   const teile = [];
   const hat = K.wettbewerbe(verein);
   if (w.ovr) teile.push(`${w.ovr > 0 ? "+" : ""}${w.ovr} Stärke`);
-  if (w.rolle) teile.push({ stamm: "Stammplatz", rotation: "Rotation", kader: "nur im Kader" }[w.rolle]);
+  const neueRolle = K.rolleNach(rolle, w.rolle, aufwaerts);
+  if (w.rolle && neueRolle !== rolle) teile.push({ stamm: "Stammplatz", rotation: "Rotation", kader: "nur im Kader" }[neueRolle]);
   if (w.verletzt) teile.push(`${w.verletzt} Saison verletzt`);
   if (w.gesperrt) teile.push(`${w.gesperrt} Saison gesperrt`);
   for (const [feld, name] of [["liga", "Meisterschaft"], ["pokal", "Pokal"], ["europa", "Europapokal"]]) {
@@ -407,6 +410,8 @@ function wirkungsText(w, verein) {
   if (w.abschluss) teile.push("Schulabschluss");
   if (w.trainerschein) teile.push("Trainerschein");
   if (w.schutz) teile.push(w.schutz === 1 ? "Rückhalt" : `${w.schutz}× Rückhalt`);
+  /* Der Satz eines Ausgangs ohne Zahlen — siehe `text` in karriere.js. */
+  if (!teile.length && w.text) return w.text;
   return teile.length ? teile.join(" · ") : "nichts ändert sich";
 }
 
@@ -425,7 +430,12 @@ function wirkungsText(w, verein) {
    In einem verdeckten Tab ruht rAF. Der Lauf bliebe dann mitten im Sprung stehen
    und die Laufbahn hinge. setTimeout läuft weiter; zusätzlich springt der Lauf
    sofort ans Ende, wenn die Seite beim Klick schon verdeckt ist. */
-function Ereigniskarte({ ereignis, verein, bewerte, onFertig, folge, onWeiter, gesperrt }) {
+function Ereigniskarte({ ereignis, verein, rolle, bewerte, onFertig, folge, onWeiter, gesperrt }) {
+  /* Die Rolle, WIE SIE BEIM ZIEHEN DER KARTE WAR. Nach der Wahl ändert sie sich sofort
+     — und ohne diesen Stand schriebe sich die Kachel unter dem Ergebnis um: Wer den
+     Kampf um seinen Platz verliert, sähe auf der Gewinnkachel plötzlich „Stammplatz"
+     auftauchen, das vorher nicht dastand. */
+  const [rolleBeimZiehen] = useState(rolle);
   const [wahl, setWahl] = useState(null);      // { i, ergebnis }
   const [feld, setFeld] = useState(null);      // welches Ausgangsfeld gerade leuchtet
   const [steht, setSteht] = useState(false);   // Lauf beendet
@@ -464,9 +474,9 @@ function Ereigniskarte({ ereignis, verein, bewerte, onFertig, folge, onWeiter, g
         {ereignis.optionen.map((o, i) => {
           const gewaehlt = wahl?.i === i;
           const ausgaenge = o.chance === undefined
-            ? [{ art: "neutral", text: wirkungsText(o.wirkung, verein) }]
-            : [{ art: "gut", text: wirkungsText(o.wirkung, verein) },
-               { art: "schlecht", text: wirkungsText(o.sonst, verein) }];
+            ? [{ art: "neutral", text: wirkungsText(o.wirkung, verein, rolleBeimZiehen) }]
+            : [{ art: "gut", text: wirkungsText(o.wirkung, verein, rolleBeimZiehen, true) },
+               { art: "schlecht", text: wirkungsText(o.sonst, verein, rolleBeimZiehen) }];
           return (
             <button key={i} type="button"
               className={"kaKachel" + (gewaehlt ? " gewaehlt" : "") + (wahl && !gewaehlt ? " matt" : "")}
@@ -522,9 +532,21 @@ function Ereigniskarte({ ereignis, verein, bewerte, onFertig, folge, onWeiter, g
   );
 }
 
+/* DIE WELT STEHT FEST, BEVOR DER MODUS ÖFFNET. Bis zum 21.09.2026 wurde sie hier
+   bei jedem Öffnen aus 34.652 Spielern neu gerechnet: 22 Sekunden vom Klick bis zum
+   ersten Bildschirm, und weil die Rechnung in einem useMemo der Komponente hing,
+   bei JEDEM Betreten aufs Neue — nicht nur beim ersten. Dazu 5 MB Spielerdaten, die
+   nur für diese eine Zahl je Verein geladen wurden.
+
+   Jetzt rechnet sie der Datenabgleich einmal (data-pipeline/career_staerke.mjs,
+   Rechnung in vereinsStaerke.js), und hier wird nur noch eine Tabelle mit 388
+   Zahlen gelesen. Die Welt ist dieselbe — gegen die alte Rechnung verglichen, Verein
+   für Verein, bis auf die Stelle hinter dem Komma.
+
+   Gebaut wird sie ausserhalb der Komponente und damit genau einmal je Seitenaufruf. */
+const WELT = K.baueWelt((v) => VEREINS_STAERKE[v.key] ?? NaN);
+
 export default function Karriere({ onLeave }) {
-  const [players, setPlayers] = useState(null);
-  const [einsaetze, setEinsaetze] = useState(undefined);
   const [muted, setMuted] = useState(isMuted());
 
   // Anlage
@@ -557,38 +579,9 @@ export default function Karriere({ onLeave }) {
   const seitEreignisRef = useRef(Infinity);
 
   useEffect(() => () => clearTimeout(sperrUhr.current), []);
-  useEffect(() => { loadPlayers().then(setPlayers); }, []);
-  useEffect(() => { loadAppearances().then((e) => setEinsaetze(e || null)); }, []);
 
-  /* Die Welt einmal bauen: 362 Vereine, jeder mit einer Stärke aus seinen echten
-     Kadern — dieselbe Rechnung wie in der Traumelf. Daraus wird die Rufstufe.
-     Gemessen einige Sekunden, deshalb nur einmal je Sitzung. */
-  const welt = useMemo(() => {
-    if (!players || einsaetze === undefined) return null;
-    const jahre = Array.from({ length: 2026 - DRAFT_AB_JAHR + 1 }, (_, i) => DRAFT_AB_JAHR + i);
-    /* Die Klassen — also wie stark jeder Spieler war — brauchen Ziehungen je Liga.
-       Sie werden hier über die ganze Welt gebaut, damit ein Zweitligist an
-       derselben Skala gemessen wird wie Bayern. */
-    const ziehungen = [];
-    for (const liga of WELT_LIGEN) {
-      const vs = WELT_VEREINE.filter((v) => v.lg === liga.key);
-      if (vs.length) ziehungen.push(...baueZiehungen(players, vs, liga.key));
-    }
-    const klassen = baueKlassen(players, ziehungen, einsaetze);
-    const staerkeVon = (v) => {
-      const w = [];
-      for (const j of jahre) {
-        const kd = kader(players, v.key, j, 5);
-        if (kd.length >= 8) w.push(teamStaerke({ spieler: kd, jahr: j }, players, klassen));
-      }
-      if (!w.length) return NaN;
-      w.sort((a, b) => a - b);
-      return w[Math.floor(w.length / 2)];
-    };
-    return K.baueWelt(staerkeVon);
-  }, [players, einsaetze]);
-
-  const bereit = welt && welt.vereine.length > 0;
+  const welt = WELT;
+  const bereit = welt.vereine.length > 0;
 
   // ── Ablauf ─────────────────────────────────────────────────────────────────
 
@@ -616,7 +609,8 @@ export default function Karriere({ onLeave }) {
     const zufall = zufallRef.current;
     const saisons = K.TEMPO[basis.tempo].saisons;
     let verein = startVerein;
-    let k2 = { ...basis, verein };
+    /* Ein neuer Verein ist ein neuer Anfang — die Rolle gilt nur für den alten. */
+    let k2 = { ...basis, verein, rolle: K.rolleNachWechsel(basis, verein) };
     const neueTitel = [];
     const ereignisse = [];
     let spiele = 0, tore = 0, vorlagen = 0, ausgefallen = 0;
@@ -1035,7 +1029,6 @@ export default function Karriere({ onLeave }) {
           Mit 19 heisst dieselbe Entscheidung etwas anderes als mit 33. */}
       <div className="kaAlter">
         <small>ALTER</small><b><Zaehler wert={k.alter} warten={K.ZAEHLER_WARTEN} dauer={520} /></b>
-        <i>von {K.ALTERSGRENZE}</i>
       </div>
       {k.verein && <span className="kaWappen"><Emblem def={defVon(k.verein)} /></span>}
       <div className="kaWer">
@@ -1190,6 +1183,7 @@ export default function Karriere({ onLeave }) {
             key={karte.ereignis.key + (karte.verein?.key || "")}
             ereignis={karte.ereignis}
             verein={karte.verein ?? k.verein}
+            rolle={k.rolle}
             bewerte={bewerteOption}
             gesperrt={sperre}
             onFertig={waehleOption}
@@ -1271,8 +1265,8 @@ export default function Karriere({ onLeave }) {
               position={K.posDaten(k.pos).name}
               land={landName(k.land)}
               gesamt={k.gesamt}
-              hoechste={Math.max(...k.verlauf.map((z) => z.ovr), k.ovr)}
-              marktwert={K.werteText(K.marktwert(Math.max(...k.verlauf.map((z) => z.ovr), k.ovr)))}
+              hoechste={K.bestwert(k)}
+              marktwert={K.werteText(K.marktwert(K.bestwert(k)))}
               titel={TITEL_REIHE.filter((x) => k.titel[x]).map((x) => ({ key: x, name: TITEL_NAME[x], anzahl: k.titel[x] }))}
               auszeichnungen={karte.auszeichnungen}
               stationen={stationen}
@@ -1289,7 +1283,9 @@ export default function Karriere({ onLeave }) {
                   name: k.name,
                   stufe: karte.auszeichnungen[0]?.name || "ohne Auszeichnung",
                   saisons: k.verlauf.length,
-                  tore: k.gesamt.tore, vorlagen: k.gesamt.vorlagen, overall: k.ovr,
+                  tore: k.gesamt.tore, vorlagen: k.gesamt.vorlagen,
+                  torwart, gegentore: k.gesamt.gegentore || 0, westen: k.gesamt.westen || 0,
+                  overall: K.bestwert(k),
                   titel: TITEL_REIHE.filter((t) => k.titel[t]).map((t) => TITEL_NAME[t]),
                 })} />
               <button className="btn" onClick={() => { setK(null); setKarte(null); setMeldung([]); setSaison(null); }}>Neue Laufbahn</button>

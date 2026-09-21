@@ -68,3 +68,28 @@ test("baueDatei erzeugt gültiges, ladbares JavaScript", async () => {
   assert.deepEqual(mod.CAREER_BY_KEY["a b|1990"], [1]);
   assert.deepEqual(mod.CAREER_BY_KEY["c d|1991"], [0, 1], "Indizes aufsteigend sortiert");
 });
+
+/* ── Gleichnamige Hüllen in der Karrierewelt ──────────────────────────────── */
+import { gleichnamigeHuellen } from "./wikidata_career_world.mjs";
+
+test("eine Importhülle neben dem echten Verein fliegt, ein echter Namensvetter nicht", () => {
+  const vereine = [
+    { key: "BOC", label: "VfL Bochum", qid: "Q105861", lg: "BL" },
+    { key: "VFL", label: "VfL Bochum", qid: "Q97906009", lg: "BL" },         // Hülle, 1 Station
+    { key: "NAC", label: "Nacional", qid: "Q12345", lg: "PT" },
+    { key: "NAB", label: "Nacional", qid: "Q23456", lg: "BRA" },             // andere Liga
+    { key: "AAA", label: "Doppelt FC", qid: "Q11111", lg: "NL" },
+    { key: "BBB", label: "Doppelt FC", qid: "Q22222", lg: "NL" },            // keine Importhülle
+  ];
+  const stationen = new Map([["BOC", 900], ["VFL", 1], ["NAC", 40], ["NAB", 50], ["AAA", 30], ["BBB", 2]]);
+  const raus = gleichnamigeHuellen(vereine, stationen).map((v) => v.key);
+  assert.deepEqual(raus, ["VFL"]);
+});
+
+test("eine Hülle mit vielen Stationen bleibt — dann ist sie keine Hülle", () => {
+  const vereine = [
+    { key: "A", label: "X", qid: "Q105861", lg: "BL" },
+    { key: "B", label: "X", qid: "Q97906009", lg: "BL" },
+  ];
+  assert.deepEqual(gleichnamigeHuellen(vereine, new Map([["A", 900], ["B", 40]])), []);
+});

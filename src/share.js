@@ -78,11 +78,24 @@ export const shareTraumelf = ({ liga, formation, abzeichen, platz, teams, s, u, 
 
 /* Karriere: Das Urteil ist die Kennzahl, die Titel sind der Beleg. Höchstens fünf
    davon — eine Nachricht mit siebzehn Zeilen liest niemand. */
-export const shareKarriere = ({ name, stufe, saisons, tore, vorlagen, overall, titel = [] }) => buildShare({
+/* „1 Tore" stand so im Teilen-Text. */
+const anzahl = (n, eins, viele) => `${n} ${n === 1 ? eins : viele}`;
+
+/* Der Torwart misst sich an dem, was nicht passiert ist — die Urkunde zeigt deshalb
+   Gegentore und weiße Westen. Der Teilen-Text schrieb auch bei ihm „3 Tore · 1
+   Vorlagen" und damit eine Zeile, die über seine Laufbahn nichts sagt. */
+export const shareKarriere = ({ name, stufe, saisons, tore, vorlagen, overall, titel = [],
+  torwart = false, gegentore = 0, westen = 0 }) => buildShare({
   solo: "karriere",
   title: `🧭 Karriere · ${name} — ${stufe}`,
   lines: [
-    `${saisons} Saisons · ${tore} Tore · ${vorlagen} Vorlagen · Höchstwert ${overall}`,
+    [
+      anzahl(saisons, "Saison", "Saisons"),
+      ...(torwart
+        ? [anzahl(gegentore, "Gegentor", "Gegentore"), anzahl(westen, "weiße Weste", "weiße Westen")]
+        : [anzahl(tore, "Tor", "Tore"), anzahl(vorlagen, "Vorlage", "Vorlagen")]),
+      `Höchstwert ${overall}`,
+    ].join(" · "),
     titel.length ? titel.slice(0, 5).join(" · ") + (titel.length > 5 ? ` · +${titel.length - 5}` : "") : "ohne Titel",
   ],
 });

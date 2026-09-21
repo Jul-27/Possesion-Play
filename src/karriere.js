@@ -334,9 +334,13 @@ export function baueWelt(staerkeVon, vereine = WELT_VEREINE, ligen = WELT_LIGEN)
      aus, und damit stimmt das Feld automatisch. */
   const summen = new Map();
   for (const v of out) {
-    const e = summen.get(v.liga.key) || { liga: 0, pokal: 0 };
+    const e = summen.get(v.liga.key) || { liga: 0, pokal: 0, ab: 0, auf: 0 };
     e.liga += LIGA_GEWICHT[v.stufe];
     e.pokal += POKAL_GEWICHT[v.stufe];
+    /* Die Felder für Auf- und Abstieg — dieselbe Idee wie bei den Titeln: Die Liga
+       kennt die Summe, der Verein nur sein Gewicht. */
+    if (v.liga.stufe === 1) e.ab += ABSTIEG_GEWICHT[v.stufe] ?? 0;
+    if (v.liga.stufe === 2) e.auf += AUFSTIEG_GEWICHT[v.stufe] ?? 0;
     summen.set(v.liga.key, e);
   }
   /* Das Europafeld ist EINE Summe über alle Erstligisten — es hängt trotzdem an der
@@ -354,7 +358,7 @@ export function baueWelt(staerkeVon, vereine = WELT_VEREINE, ligen = WELT_LIGEN)
   const mitFeld = ligen.map((l) => ({
     ...l,
     feld: {
-      ...(summen.get(l.key) || { liga: 0, pokal: 0 }),
+      ...(summen.get(l.key) || { liga: 0, pokal: 0, ab: 0, auf: 0 }),
       cl: l.stufe === 1 && EUROPA.has(l.land) ? clSumme : 0,
       el: l.stufe === 1 && EUROPA.has(l.land) ? elSumme : 0,
     },
@@ -383,9 +387,35 @@ export function titelAnteil(verein, art) {
    Gespielt wird nicht die Tabelle, sondern die Erwartung: Ein starker Zweitligist
    steigt oft auf, ein schwacher Erstligist oft ab. Die Rufstufe ist dabei an die
    Spielklasse gebunden (in der zweiten ist bei 2 Schluss), deshalb wird sie beim
-   Wechsel neu berechnet — ein Aufsteiger darf wachsen. */
-export const AUFSTIEG_CHANCE = [0.01, 0.04, 0.12];          // je Rufstufe, nur 2. Liga
-export const ABSTIEG_CHANCE = [0.34, 0.16, 0.06, 0.01, 0, 0]; // je Rufstufe, nur 1. Liga
+   Wechsel neu berechnet — ein Aufsteiger darf wachsen.
+
+   ── JEDE LIGA HAT IHRE PLÄTZE ────────────────────────────────────────────────
+   VORHER WÜRFELTE JEDER VEREIN FÜR SICH, mit einer festen Chance je Rufstufe. Das
+   ist derselbe Fehler, den die Meisterschaften schon einmal hatten: Wie viele
+   absteigen, hing daran, wie viele schwache Vereine zufällig in einer Liga stehen.
+   Nachgerechnet stiegen in Österreich 2,5 von 10 Vereinen je Saison ab und 0,2 auf,
+   in Portugal 3,5 ab und 0,2 auf, in LaLiga 0,3 ab, aus der Championship 3,3 auf.
+   Im Durchspielen am 21.09.2026 stieg ein Spieler deshalb mit drei Vereinen in Folge
+   ab.
+
+   JETZT HAT JEDE LIGA IHRE PLÄTZE — so viele, wie es dort wirklich gibt, mit einem
+   halben Platz für eine Relegation. Die Rufstufe verteilt sie nur noch: Die Chance
+   eines Vereins ist sein Gewicht geteilt durch die Summe seiner Liga, mal die Zahl
+   der Plätze. Die Summen hängen wie die Titelfelder an der Liga (siehe baueWelt).
+
+   Die Gewichte sind mit Absicht flach: Bayern steigt nie ab, ein Mittelfeldklub ab
+   und zu, der schwächste oft — aber nicht sicher. Deshalb auch der Deckel: Ohne ihn
+   stieg der schwächste Verein der Premier League zu 90 % je Saison ab, in einem
+   Schritt über zwei Saisons also fast sicher. */
+export const ABSTIEG_GEWICHT = [1.0, 0.6, 0.3, 0.1, 0.02, 0];   // je Rufstufe, 1. Liga
+export const AUFSTIEG_GEWICHT = [0.2, 0.5, 1.0];                // je Rufstufe, 2. Liga
+export const WECHSEL_DECKEL = 0.75;
+/* Auf- und Abstiegsplätze je Land, für beide Richtungen gleich. Ein halber Platz ist
+   eine Relegation, die man in der Hälfte der Fälle verliert. */
+export const WECHSEL_PLAETZE = { GER: 2.5, ENG: 3, ESP: 3, ITA: 3, FRA: 2.5, PRT: 2.5, NED: 2.5, AUT: 1 };
+/* Für ein Land, das eine zweite Liga bekommt, ohne hier eingetragen zu werden —
+   sonst stiege dort still nie jemand auf oder ab. */
+export const WECHSEL_PLAETZE_SONST = 2;
 
 /** Die andere Spielklasse desselben Landes — oder null, wo es keine gibt. */
 export function schwesterLiga(liga, ligen = WELT_LIGEN) {
@@ -410,12 +440,23 @@ export function mitLiga(verein, liga) {
 export function ligaWechsel(verein, zufall, ligen = WELT_LIGEN, klasse = 1) {
   const andere = schwesterLiga(verein.liga, ligen);
   if (!andere) return { verein, richtung: null };
-  if (verein.liga.stufe === 2 && zufall() < (AUFSTIEG_CHANCE[verein.stufe] ?? 0) * klasse)
+  if (verein.liga.stufe === 2 && zufall() < aufstiegsChance(verein) * klasse)
     return { verein: mitLiga(verein, andere), richtung: "auf" };
-  if (verein.liga.stufe === 1 && zufall() < (ABSTIEG_CHANCE[verein.stufe] ?? 0) / klasse)
+  if (verein.liga.stufe === 1 && zufall() < abstiegsChance(verein) / klasse)
     return { verein: mitLiga(verein, andere), richtung: "ab" };
   return { verein, richtung: null };
 }
+
+/* Die Chance je Saison, VOR dem Klassenfaktor einer Entscheidung. Ohne Feld — ein
+   Verein, der nicht durch baueWelt ging — gibt es keinen Wechsel: Eine Chance ohne
+   Feld wäre wieder eine, die für sich allein würfelt. */
+function wechselChance(verein, gewicht, summe) {
+  const plaetze = WECHSEL_PLAETZE[verein.liga.land] ?? WECHSEL_PLAETZE_SONST;
+  if (!summe || !plaetze) return 0;
+  return Math.min(WECHSEL_DECKEL, plaetze * (gewicht[verein.stufe] ?? 0) / summe);
+}
+export const abstiegsChance = (verein) => wechselChance(verein, ABSTIEG_GEWICHT, verein.liga.feld?.ab);
+export const aufstiegsChance = (verein) => wechselChance(verein, AUFSTIEG_GEWICHT, verein.liga.feld?.auf);
 
 /* ── Leihe ─────────────────────────────────────────────────────────────────────
    Der zweite Grund, warum es die zweite Spielklasse gibt. Ein Siebzehnjähriger bei
@@ -672,7 +713,6 @@ export function einzelTitel(k, leistung, zufall) {
    und die Auswahl käme im Spiel schlicht nicht mehr vor. 72 heisst: Wer eine
    ordentliche Laufbahn spielt, kommt zu ein paar Einsätzen; gesetzt ist deshalb
    noch niemand. */
-export const NATIONALELF_AB = 72;
 export const TURNIER_TAKT = 4;
 
 /* WER DEN VERBAND WECHSELT, IST DORT GESETZT. Genau das verspricht die Karte („Du
@@ -681,7 +721,6 @@ export const TURNIER_TAKT = 4;
    sechs Punkte, und weil das Land in der Titelrechnung steht, ändert er auch die
    Aussichten auf einen Länderpokal. Ein Tausch mit zwei Seiten, keine Zierde. */
 export const VERBAND_BONUS = 6;
-export const berufungAb = (k) => NATIONALELF_AB - (k.verbandGewechselt ? VERBAND_BONUS : 0);
 
 /* ── Welche Auswahl gewinnt etwas? ─────────────────────────────────────────────
    VORHER GAR KEINE FRAGE: Die Titelchance hing allein am Rating des Spielers und an
@@ -714,6 +753,37 @@ const NATION_STAERKE = new Map([
 ]);
 
 export const nationStaerke = (land) => NATION_STAERKE.get(land) ?? NATION_REST;
+
+/* ── Wer wird berufen? ─────────────────────────────────────────────────────────
+   DIE SCHWELLE WAR FÜR JEDES LAND DIESELBE: 72, für Brasilien wie für Österreich
+   wie für Luxemburg. Die Titelchance der Auswahl hing längst am Land, die Berufung
+   nicht. Im Durchspielen am 21.09.2026 kam ein Österreicher mit Höchstwert 70 und
+   178 Spielen in der Premier League über eine ganze Laufbahn auf kein einziges
+   Länderspiel — während Österreich in Wirklichkeit genau aus solchen Spielern
+   besteht.
+
+   Ein Land mit tiefem Kader beruft später. Gemessen über 3000 Laufbahnen (Median
+   des Höchstwerts 73) heissen die Stufen:
+
+     76  die neun Grossen          etwa 30 % aller Laufbahnen werden berufen
+     73  die zweite Reihe          etwa 50 %
+     70  Nationen mit Tradition    etwa 76 %
+     67  alle übrigen              etwa 92 %
+
+   Ein Deutscher mit 74 ist ein ordentlicher Bundesligaspieler und bleibt zu Hause;
+   ein Österreicher mit 70 fährt mit. Die Titelchance ändert sich dadurch nicht —
+   sie hängt weiter am Land, nicht an der Schwelle. */
+export const BERUFUNG_A = 76, BERUFUNG_B = 73, BERUFUNG_C = 70, BERUFUNG_REST = 67;
+
+/** Ab welcher Stärke beruft dieses Land — ohne Verbandswechsel gerechnet. */
+export function berufungsSchwelle(land) {
+  const s = nationStaerke(land);
+  return s >= NATION_A ? BERUFUNG_A : s >= NATION_B ? BERUFUNG_B : s >= NATION_C ? BERUFUNG_C : BERUFUNG_REST;
+}
+
+/* Der Verbandswechsel senkt die Schwelle des NEUEN Landes um VERBAND_BONUS — die
+   Karte verspricht „Du wärest dort sofort gesetzt". */
+export const berufungAb = (k) => berufungsSchwelle(k.land) - (k.verbandGewechselt ? VERBAND_BONUS : 0);
 
 /* Alle wählbaren Länder — sie bilden das Feld der WM. Unsere acht eigenen Schlüssel
    (GER, ENG, …) ersetzen dort ihren ISO-Code, damit kein Land doppelt zählt. */
@@ -773,7 +843,7 @@ export function turnierIn(saisonNr, land = null) {
    sein Land gespielt hatte, stand nirgends — und damit fehlte der Zusammenhang:
    Ein Titel ohne Länderspiele wirkt wie ein Zufallsfund.
 
-   Berufen wird, wer NATIONALELF_AB erreicht. Die Zahl der Spiele hängt daran, wie
+   Berufen wird, wer die Schwelle seines Landes erreicht. Die Zahl der Spiele hängt daran, wie
    weit er darüber liegt — ein gerade Berufener kommt auf zwei, drei Einsätze, ein
    Weltklassespieler ist gesetzt. Tore und Vorlagen folgen derselben Rechnung wie
    im Verein, nur auf weniger Spiele. */
@@ -897,7 +967,13 @@ export function verbandsAngebot(k, zufall) {
 
    Die Felder von `wirkung`: ovr (sofortiger Zuwachs), rolle (neue Rolle im Team),
    liga/pokal/europa (Faktor auf die Titelchance dieser Saison), verletzt und
-   gesperrt (Saisons ohne Spiel), schutz (Rückhalt).
+   gesperrt (Saisons ohne Spiel), schutz (Rückhalt), klasse (Auf- und Abstieg).
+
+   `text` ist KEINE Wirkung, sondern der Satz für einen Ausgang, bei dem sich an den
+   Zahlen nichts ändert. Wer die 35-Prozent-Wette gegen die Verletzung gewann, las
+   vorher auf der Kachel „▲ nichts ändert sich" und danach „Es bleibt alles, wie es
+   war" — beides wahr, aber es klang nicht nach dem Glückstreffer, der es war. Eine
+   SICHERE Kachel darf nicht nur aus `text` bestehen; eine Prüfung passt darauf auf.
 
    ── RÜCKHALT ────────────────────────────────────────────────────────────────
    Eine sichere Kachel konnte lange nur eines: einen Punkt Stärke geben. Damit
@@ -939,6 +1015,48 @@ export function wettbewerbe(verein) {
 /* Helfer für die Bedingungen unten. Sie lesen aus dem Verlauf, was gerade passiert
    ist — der Schritt davor ist die „letzte Saison", auch wenn er zwei umfasst. */
 export const letzteSaison = (k) => (k.verlauf && k.verlauf.length ? k.verlauf[k.verlauf.length - 1] : null);
+
+/* ── Die Rolle gilt für einen Verein, nicht für eine Laufbahn ────────────────
+   DIE ROLLE WURDE NIE ZURÜCKGESETZT. Sie startete als „Stammspieler" und änderte
+   sich nur durch Ereigniskarten — nicht bei einem Wechsel. Wer mit 22 wegen eines
+   unbedachten Beitrags bei Werder Bremen auf „Rotation" fiel, blieb das in Kobe, in
+   Dschidda, in Caen, in New York und in Vila do Conde, bis zum Karriereende, und
+   bekam bei jedem dieser Vereine nur 72 Prozent der Einsätze. So im Durchspielen
+   am 21.09.2026 passiert.
+
+   Jede Karte, die eine Rolle vergibt, spricht von DIESER Mannschaft: „Der Verein
+   erwartet eine Reaktion", „Der Verein holt jemanden für deinen Platz". Ein neuer
+   Verein ist ein neuer Anfang. Derselbe Verein bleibt derselbe — auch nach Auf- oder
+   Abstieg, der den Schlüssel nicht ändert. */
+export function rolleNachWechsel(k, neuerVerein) {
+  if (!k.verein || !neuerVerein || k.verein.key !== neuerVerein.key) return "stamm";
+  return k.rolle;
+}
+
+/* ── In welche Richtung eine Rolle wirkt ──────────────────────────────────────
+   EIN RÜCKSCHLAG BEFÖRDERTE. „Das regelt der Platz" setzt beim Misslingen die Rolle
+   auf „Rotation" — und wer vorher nur im Kader stand, stieg damit AUF. Eine Wette zu
+   verlieren war für ihn besser, als sie nicht einzugehen. Umgekehrt konnte ein
+   gelungener Einsatz, der „Rotation" vergibt, einen Stammspieler herabstufen.
+
+   Eine Rolle in einer Wirkung ist deshalb ein Ziel MIT Richtung: Beim Gelingen einer
+   Wette geht es höchstens hinauf, beim Rückschlag und bei einer sicheren Kachel
+   höchstens hinunter. Sichere Kacheln vergeben in diesem Spiel nur Rückzüge
+   („Sich fügen", „Um eine Pause bitten") — käme eine hinzu, die befördern soll,
+   müsste sie eine Wette sein. */
+const ROLLEN_RANG = { kader: 0, rotation: 1, stamm: 2 };
+const RANG_ROLLE = ["kader", "rotation", "stamm"];
+export function rolleNach(aktuell, ziel, aufwaerts) {
+  if (!ziel) return aktuell;
+  const a = ROLLEN_RANG[aktuell] ?? ROLLEN_RANG.stamm, z = ROLLEN_RANG[ziel];
+  return RANG_ROLLE[aufwaerts ? Math.max(a, z) : Math.min(a, z)];
+}
+
+/* Der Höchstwert einer Laufbahn — für Urkunde UND Teilen-Text aus derselben
+   Quelle. Die Urkunde zeigte früher den Wert beim Rücktritt und wurde korrigiert;
+   der Teilen-Text hatte denselben Fehler behalten und schrieb „Höchstwert 67" unter
+   eine Laufbahn, deren Urkunde „Bestwert 70" sagte. */
+export const bestwert = (k) => Math.max(k.ovr, ...(k.verlauf || []).map((z) => z.ovr));
 export const letzteTitel = (k) => letzteSaison(k)?.titel || [];
 /* Ging es zuletzt aufwärts oder abwärts? Der Vergleich der beiden letzten Zeilen.
    Er ist der einzige Maßstab, der für jede Position gleich gilt: Ein Torwart und
@@ -996,8 +1114,11 @@ export const EREIGNISSE = [
     ] },
   { key: "posting", titel: "Unbedachter Beitrag", text: "Ein Beitrag von dir schlägt Wellen. Der Verein erwartet eine Reaktion.",
     optionen: [
-      { label: "Öffentlich entschuldigen", bild: "presse", wirkung: { rolle: "rotation" } },
-      { label: "Dazu stehen", bild: "risiko", chance: 0.4, wirkung: { ovr: 1 }, sonst: { rolle: "kader" } },
+      /* Beide Ausgänge setzten nur eine Rolle — und wer schon unten stand, verlor
+         dabei nichts: Die Entschuldigung war für einen Rotationsspieler gratis, der
+         Rückschlag für einen Ergänzungsspieler ebenso. Jetzt kostet beides auch. */
+      { label: "Öffentlich entschuldigen", bild: "presse", wirkung: { rolle: "rotation", ovr: -1 } },
+      { label: "Dazu stehen", bild: "risiko", chance: 0.4, wirkung: { ovr: 1 }, sonst: { rolle: "kader", ovr: -1 } },
     ] },
   { key: "prioritaet", titel: "Ansage des Vereins", text: "Der Verein will wissen, worauf ihr diese Saison alles setzt.",
     wenn: (k) => { const w = wettbewerbe(k.verein); return w.liga && w.europa; },
@@ -1005,16 +1126,25 @@ export const EREIGNISSE = [
       { label: "Auf die Liga", bild: "platz", wirkung: { liga: 2, europa: 0.5 } },
       { label: "Auf Europa", bild: "pokal", wirkung: { europa: 2, liga: 0.5 } },
     ] },
+  /* „Für DEINEN Platz" — die Karte setzt voraus, dass man einen hat. Vorher konnte
+     sie auch einen Ergänzungsspieler treffen, und dann ging es um einen Platz, den
+     er gar nicht besass. */
   { key: "konkurrenz", titel: "Konkurrenz auf deiner Position", text: "Der Verein holt jemanden für deinen Platz.",
+    wenn: (k) => k.rolle === "stamm",
     optionen: [
       { label: "Kampf annehmen", bild: "training", chance: 0.5, wirkung: { rolle: "stamm", ovr: 2 }, sonst: { rolle: "rotation" } },
       { label: "Sich fügen", bild: "bank", wirkung: { rolle: "rotation" } },
     ] },
   { key: "talent", titel: "Ein Talent drängt nach", text: "Ein Sechzehnjähriger trainiert bei euch mit und ist nah dran.",
-    wenn: (k) => { const w = wettbewerbe(k.verein); return w.liga || w.pokal; },
+    /* Der Junge drängt auf DEINEN Platz — also nur, wenn man einen hat. Und wer ihn
+       verteidigt, gewinnt dabei etwas: Vorher war der gute Ausgang nur „Stammplatz",
+       und für einen, der Stammspieler schon ist, hiess das: nichts. Die Wette hatte
+       dann keine Seite nach oben — im Durchspielen am 21.09.2026 ging sie auf, und
+       die Folge lautete „Es bleibt alles, wie es war". */
+    wenn: (k) => { const w = wettbewerbe(k.verein); return (w.liga || w.pokal) && k.rolle === "stamm"; },
     optionen: [
       { label: "Ihn unter die Fittiche nehmen", bild: "nachwuchs", wirkung: { liga: 1.3, pokal: 1.3 } },
-      { label: "Ihm keinen Raum lassen", bild: "kabine", chance: 0.6, wirkung: { rolle: "stamm" }, sonst: { rolle: "rotation", ovr: -1 } },
+      { label: "Ihm keinen Raum lassen", bild: "kabine", chance: 0.6, wirkung: { ovr: 1 }, sonst: { rolle: "rotation", ovr: -1 } },
     ] },
   /* PFIFFE KAMEN AUS DEM NICHTS. Die Karte hatte keine Bedingung und traf damit auch
      einen, der gerade Meister geworden war und dreissig Tore geschossen hatte. Jetzt
@@ -1030,7 +1160,7 @@ export const EREIGNISSE = [
     },
     optionen: [
       { label: "Bleiben und liefern", bild: "platz", chance: 0.5, wirkung: { ovr: 2, rolle: "stamm" }, sonst: { ovr: -2 } },
-      { label: "Sich zurückziehen", bild: "bank", wirkung: { rolle: "rotation" } },
+      { label: "Sich zurückziehen", bild: "bank", wirkung: { rolle: "rotation", ovr: -1 } },
     ] },
   /* AUSKURIEREN WAR DIE DUMME WAHL. Es kostete sicher eine ganze Saison, während
      Durchbeissen im Schnitt nur 0,65 kostete — vernünftig war also genau das, wovon
@@ -1038,7 +1168,7 @@ export const EREIGNISSE = [
   { key: "verletzung", titel: "Verletzung", text: "Es hat dich erwischt. Die Frage ist nur, wie lange.",
     optionen: [
       { label: "Auskurieren", bild: "medizin", wirkung: { verletzt: 1, ovr: 1 } },
-      { label: "Auf die Zähne beißen", bild: "risiko", chance: 0.35, wirkung: {}, sonst: { verletzt: 1, ovr: -3 } },
+      { label: "Auf die Zähne beißen", bild: "risiko", chance: 0.35, wirkung: { text: "Du spielst die Saison durch" }, sonst: { verletzt: 1, ovr: -3 } },
     ] },
   /* Achtzig Prozent auf das Dreifache der Titelchance, und der Rückschlag kostete nur
      zwei Punkte Stärke — da drückte man immer. Wenn es schiefgeht, bricht man im
@@ -1063,7 +1193,7 @@ export const EREIGNISSE = [
     wenn: (k) => k.alter <= 20 && !k.abschluss,
     optionen: [
       { label: "Durchziehen", bild: "lernen", wirkung: { ovr: -1, abschluss: true } },
-      { label: "Ganz auf Fußball setzen", bild: "training", chance: 0.5, wirkung: { ovr: 2 }, sonst: {} },
+      { label: "Ganz auf Fußball setzen", bild: "training", chance: 0.5, wirkung: { ovr: 2 }, sonst: { text: "Es bringt diesmal nichts" } },
     ] },
   /* Die Optionen dieser Karte werden in ziehEreignis ersetzt — erst dort steht
      fest, welches Land anklopft. Was hier steht, ist der Rückfall. */
@@ -1079,7 +1209,7 @@ export const EREIGNISSE = [
     wenn: (k) => k.alter >= 22,
     optionen: [
       { label: "Alles nachzahlen", bild: "geld", wirkung: { ovr: -1 } },
-      { label: "Anwälte kämpfen lassen", bild: "vertrag", chance: 0.45, wirkung: {}, sonst: { ovr: -3, rolle: "rotation" } },
+      { label: "Anwälte kämpfen lassen", bild: "vertrag", chance: 0.45, wirkung: { text: "Die Anwälte setzen sich durch" }, sonst: { ovr: -3, rolle: "rotation" } },
     ] },
 
   /* ── Karten, die an die Lage gebunden sind ──────────────────────────────────
@@ -1102,7 +1232,7 @@ export const EREIGNISSE = [
          „Alles riskieren" im Schnitt +1,25 UND die bessere Rolle, während das
          vorsichtige Spiel auf +0,75 kam — es gab nichts abzuwägen. */
       { label: "Alles riskieren", bild: "platz", chance: 0.45, wirkung: { ovr: 4, rolle: "rotation" }, sonst: { ovr: -1, rolle: "kader" } },
-      { label: "Kein Risiko eingehen", bild: "bank", chance: 0.75, wirkung: { ovr: 1 }, sonst: {} },
+      { label: "Kein Risiko eingehen", bild: "bank", chance: 0.75, wirkung: { ovr: 1 }, sonst: { text: "Du bleibst unauffällig" } },
     ] },
   { key: "berater", titel: "Ein Berater umwirbt dich", text: "Er verspricht dir die großen Vereine. Sein Anteil ist happig, seine Verbindungen sind es auch.",
     wenn: (k) => k.alter <= 23,
@@ -1135,7 +1265,10 @@ export const EREIGNISSE = [
   { key: "trainerwechsel", titel: "Neuer Trainer", text: "Der Verein entlässt den Trainer. Der Neue bringt eigene Vorstellungen mit — und eigene Spieler.",
     wenn: (k) => k.alter >= 20,
     optionen: [
-      { label: "Sich anbieten", bild: "kabine", chance: 0.55, wirkung: { rolle: "stamm", ovr: 1 }, sonst: { rolle: "rotation" } },
+      /* Für einen Stammspieler war das vorher schlechter als Abwarten: gewonnen +1,
+         verloren die Rolle — gegen +1 sicher. Wer sich dem Neuen anbietet und ihn
+         überzeugt, gewinnt jetzt mehr als der, der den Kopf einzieht. */
+      { label: "Sich anbieten", bild: "kabine", chance: 0.55, wirkung: { rolle: "stamm", ovr: 2 }, sonst: { rolle: "rotation", ovr: -1 } },
       /* Beide Kacheln hatten denselben schlechten Ausgang, aber nur eine einen
          guten — Abwarten war nie richtig. Jetzt ist es die sichere Wahl: kein
          Sprung, aber auch kein Absturz. */
@@ -1161,7 +1294,7 @@ export const EREIGNISSE = [
   { key: "medien", titel: "Das große Interview", text: "Eine Zeitung will ein langes Gespräch. Offen reden bringt Sympathien und Ärger.",
     wenn: (k) => k.ovr >= 78,
     optionen: [
-      { label: "Klartext reden", bild: "presse", chance: 0.45, wirkung: { ovr: 2 }, sonst: { rolle: "rotation" } },
+      { label: "Klartext reden", bild: "presse", chance: 0.45, wirkung: { ovr: 2 }, sonst: { rolle: "rotation", ovr: -1 } },
       { label: "Nichts sagen", bild: "kabine", wirkung: { ovr: 1 } },
     ] },
 
@@ -1178,7 +1311,7 @@ export const EREIGNISSE = [
   { key: "feier", titel: "Die Feier läuft aus dem Ruder", text: "Ein Bild von der Nacht nach dem Titel geht herum. Der Verein ist not amused.",
     wenn: (k) => letzteTitel(k).length > 0,
     optionen: [
-      { label: "Dazu stehen", bild: "pokal", chance: 0.55, wirkung: {}, sonst: { ovr: -2, rolle: "rotation" } },
+      { label: "Dazu stehen", bild: "pokal", chance: 0.55, wirkung: { text: "Der Verein lässt es dabei bewenden" }, sonst: { ovr: -2, rolle: "rotation" } },
       { label: "Sich entschuldigen und zahlen", bild: "geld", wirkung: { ovr: -1 } },
     ] },
 
@@ -1221,7 +1354,7 @@ export const EREIGNISSE = [
     wenn: (k) => posDaten(k.pos).gruppe === "TOR" && (k.verein?.stufe ?? 0) >= 2 && wettbewerbe(k.verein).pokal,
     optionen: [
       { label: "Auf die Ecke gehen", bild: "platz", chance: 0.45, wirkung: { ovr: 3, pokal: 1.8 }, sonst: { ovr: -1 } },
-      { label: "Stehen bleiben und reagieren", bild: "kabine", chance: 0.6, wirkung: { ovr: 1, pokal: 1.3 }, sonst: {} },
+      { label: "Stehen bleiben und reagieren", bild: "kabine", chance: 0.6, wirkung: { ovr: 1, pokal: 1.3 }, sonst: { text: "Er trifft trotzdem" } },
     ] },
 
   /* Auswahl. */
@@ -1244,11 +1377,11 @@ export const EREIGNISSE = [
   { key: "sprache", titel: "Die Sprache", text: "In der Kabine verstehst du die Hälfte. Beim Trainer ist es dieselbe Hälfte.",
     wenn: (k) => !!k.verein && !!k.land && k.verein.liga.land !== k.land,
     optionen: [
-      { label: "Jeden Morgen Unterricht", bild: "lernen", chance: 0.75, wirkung: { ovr: 2 }, sonst: {} },
+      { label: "Jeden Morgen Unterricht", bild: "lernen", chance: 0.75, wirkung: { ovr: 2 }, sonst: { text: "Es dauert länger als gedacht" } },
       /* Vorher 35 Prozent auf einen Punkt gegen 75 Prozent auf zwei — die Kachel war
          nur da. Wer die Sprache auf dem Platz lernt, lernt sie langsamer, aber bei
          denen, auf die es ankommt. */
-      { label: "Das regelt der Platz", bild: "platz", chance: 0.35, wirkung: { ovr: 3 }, sonst: { rolle: "rotation" } },
+      { label: "Das regelt der Platz", bild: "platz", chance: 0.35, wirkung: { ovr: 3 }, sonst: { rolle: "rotation", ovr: -1 } },
     ] },
   { key: "heimweh", titel: "Heimweh", text: "Es läuft sportlich, aber es ist weit weg. Die Familie fragt, wann du zurückkommst.",
     wenn: (k) => !!k.verein && !!k.land && k.verein.liga.land !== k.land && k.alter <= 25,
@@ -1265,7 +1398,7 @@ export const EREIGNISSE = [
          Die Operation kostete sicher eine Saison und gab zwei Punkte, das Durch-
          spritzen im Schnitt weniger. Jetzt holt sie mehr zurueck. */
       { label: "Operieren lassen", bild: "medizin", wirkung: { verletzt: 1, ovr: 3 } },
-      { label: "Mit Spritzen durch die Saison", bild: "risiko", chance: 0.5, wirkung: {}, sonst: { ovr: -4 } },
+      { label: "Mit Spritzen durch die Saison", bild: "risiko", chance: 0.5, wirkung: { text: "Das Knie hält" }, sonst: { ovr: -4 } },
     ] },
   /* DER SCHULABSCHLUSS HAT ENDLICH EINEN ZWECK. Er kostete mit zwanzig einen Punkt
      Stärke und tat danach nichts: Er stand in keiner Rechnung, auf keiner Urkunde,
@@ -1303,7 +1436,7 @@ export const EREIGNISSE = [
     optionen: [
       /* Mit nur einem Punkt bei achtzig Prozent waere Absagen das bessere Geschaeft
          gewesen. Das Richtige soll hier auch das Bessere sein — knapp. */
-      { label: "Zusagen", bild: "familie", chance: 0.8, wirkung: { ovr: 2 }, sonst: {} },
+      { label: "Zusagen", bild: "familie", chance: 0.8, wirkung: { ovr: 2 }, sonst: { text: "Es kostet nur freie Tage" } },
       { label: "Die Saison ist zu eng", bild: "reise", wirkung: { ovr: 1 } },
     ] },
 ];
@@ -1411,7 +1544,7 @@ export function klasseText(klasse, verein) {
   return null;
 }
 
-export function folgen(vorher, nachher, w, ausfall, grund = "verletzt", abgefangen = false) {
+export function folgen(vorher, nachher, w, ausfall, grund = "verletzt", abgefangen = false, gelungen = true) {
   const liste = [];
   /* Zuerst, weil es erklärt, warum darunter nichts Schlimmes steht. */
   if (abgefangen) liste.push({ text: "Es ging schief — dein Rückhalt hat es abgefangen", art: "gut" });
@@ -1446,13 +1579,14 @@ export function folgen(vorher, nachher, w, ausfall, grund = "verletzt", abgefang
         : "Du spielst künftig für den anderen Verband",
       art: "neutral",
     });
-    liste.push({ text: `In der Auswahl bist du gesetzt (berufen ab ${berufungAb(nachher)} statt ${NATIONALELF_AB})`, art: "gut" });
+    liste.push({ text: `In der Auswahl bist du gesetzt (berufen ab ${berufungAb(nachher)} statt ${berufungAb(vorher)})`, art: "gut" });
   }
   const klasse = klasseText(w.klasse, vorher.verein);
   if (klasse) liste.push({ text: klasse, art: w.klasse > 1 ? "gut" : "schlecht" });
   if (w.abschluss) liste.push({ text: "Der Schulabschluss ist in der Tasche — er öffnet später den Trainerschein", art: "gut" });
   if (w.trainerschein) liste.push({ text: "Der Trainerschein ist gemacht", art: "gut" });
   if (w.schutz) liste.push({ text: "Du hast Rückhalt — der nächste Rückschlag geht an dir vorbei", art: "gut" });
+  if (!liste.length && w.text) liste.push({ text: w.text, art: gelungen ? "gut" : "neutral" });
   if (!liste.length) liste.push({ text: "Es bleibt alles, wie es war", art: "neutral" });
   return liste;
 }
@@ -1472,7 +1606,7 @@ export function entscheide(k, option, zufall) {
   if (abgefangen) naechster.schutz = (k.schutz ?? 0) - 1;
   if (w.schutz) naechster.schutz = (naechster.schutz ?? 0) + w.schutz;
   if (w.ovr) naechster.ovr = grenze(k.ovr + w.ovr, OVR_MIN, OVR_MAX);
-  if (w.rolle) naechster.rolle = w.rolle;
+  if (w.rolle) naechster.rolle = rolleNach(k.rolle, w.rolle, gewagt && gelungen);
   /* DER WECHSEL WECHSELT JETZT WIRKLICH. Vorher stand hier nur das Merkmal, und
      `k.land` blieb — Flagge, Auswahl und Titelchance änderten sich nicht. */
   if (w.verbandswechsel) {
@@ -1493,7 +1627,7 @@ export function entscheide(k, option, zufall) {
     ausfall,
     grund,
     abgefangen,
-    folgen: folgen(k, naechster, w, ausfall, grund, abgefangen),
+    folgen: folgen(k, naechster, w, ausfall, grund, abgefangen, gelungen),
   };
 }
 

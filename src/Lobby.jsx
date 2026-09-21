@@ -22,7 +22,26 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
   const [error, setError] = useState("");
   const [duelOpen, setDuelOpen] = useState(false);
 
-  useEffect(() => { loadPlayers(); }, []); // Hintergrund-Prefetch der Spielerliste
+  /* HINTERGRUND-PREFETCH DER SPIELERLISTE — aber erst, wenn die Startseite steht.
+     players.js sind 1,1 MB über die Leitung und fast 5 MB zum Einlesen. Die meisten
+     Modi brauchen sie, deshalb lohnt das Vorladen; es soll nur nicht mit den Bildern
+     der Startseite um die Leitung und auf einem Handy nicht um den Hauptfaden
+     konkurrieren. Gemessen am Produktionsbuild: Startseite nach 55 ms, Laden und
+     Einlesen der Liste rund 145 ms auf einem Mac — auf einem Telefon ein Vielfaches.
+
+     Im Datensparmodus bleibt es aus. Jeder Modus, der die Liste braucht, lädt sie
+     beim Öffnen ohnehin selbst; wer nur Karriere spielt, braucht sie gar nicht mehr
+     (die Vereinsstärken liegen dort seit dem 21.09.2026 als Tabelle vor). */
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && navigator.connection?.saveData) return;
+    const los = () => { loadPlayers(); };
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(los, { timeout: 4000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = setTimeout(los, 2500);
+    return () => clearTimeout(id);
+  }, []);
 
   async function createGame() {
     setError(""); setBusy(true);

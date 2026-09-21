@@ -537,7 +537,7 @@ test("ohne Turnier gibt es keinen Länderpokal", () => {
 test("wer zu schwach ist, spielt nicht in der Nationalelf", () => {
   const zufall = K.rng(59);
   for (let i = 0; i < 300; i++)
-    assert.deepEqual(K.nationalTitel({ ovr: K.NATIONALELF_AB - 1 }, { stufe: 5 }, zufall, 0), []);
+    assert.deepEqual(K.nationalTitel({ ovr: K.berufungsSchwelle("GER") - 1, land: "GER" }, { stufe: 5 }, zufall, 0), []);
 });
 
 // ── Der Wächter ──────────────────────────────────────────────────────────────
@@ -862,14 +862,14 @@ test("ein Aufsteiger rechnet gegen sein neues Feld, nicht gegen das alte", () =>
    Titel gab es schon, Länderspiele nicht — und ein Titel ohne Einsätze wirkt wie
    ein Zufallsfund. */
 test("wer zu schwach ist, spielt nicht für sein Land", () => {
-  const k = { ...K.neueKarriere({ name: "T", pos: "ST", land: "GER", nummer: 9 }), ovr: K.NATIONALELF_AB - 1 };
+  const k = { ...K.neueKarriere({ name: "T", pos: "ST", land: "GER", nummer: 9 }), ovr: K.berufungsSchwelle("GER") - 1 };
   assert.deepEqual(K.nationalLeistung(k, K.rng(1)), { spiele: 0, tore: 0, vorlagen: 0 });
 });
 
 test("die Zahl der Länderspiele wächst mit dem Wert", () => {
   const mach = (ovr) => K.nationalLeistung(
     { ...K.neueKarriere({ name: "T", pos: "ST", land: "GER", nummer: 9 }), ovr }, K.rng(7)).spiele;
-  const frisch = mach(K.NATIONALELF_AB), spitze = mach(96);
+  const frisch = mach(K.berufungsSchwelle("GER")), spitze = mach(96);
   assert.ok(frisch > 0, "ein gerade Berufener spielt auch");
   assert.ok(spitze > frisch, `Spitze ${spitze} muss über frisch ${frisch} liegen`);
   assert.ok(spitze <= K.LAENDERSPIELE_JE_SAISON, "nie mehr als es Spiele gibt");
@@ -1124,8 +1124,8 @@ test("der Verbandswechsel wechselt das Land", () => {
 test("wer den Verband wechselt, wird früher berufen", () => {
   const ohne = { ovr: 70, land: "GER" };
   const mit = { ovr: 70, land: "AUT", verbandGewechselt: true };
-  assert.equal(K.berufungAb(ohne), K.NATIONALELF_AB);
-  assert.equal(K.berufungAb(mit), K.NATIONALELF_AB - K.VERBAND_BONUS);
+  assert.equal(K.berufungAb(ohne), K.berufungsSchwelle("GER"));
+  assert.equal(K.berufungAb(mit), K.berufungsSchwelle("AUT") - K.VERBAND_BONUS);
   assert.equal(K.nationalLeistung(ohne, K.rng(13)).spiele, 0, "mit 70 ist er noch nicht dabei");
   assert.ok(K.nationalLeistung(mit, K.rng(13)).spiele > 0, "nach dem Wechsel schon");
 });
@@ -1278,8 +1278,8 @@ test("eine gewöhnliche Laufbahn einer grossen Nation gewinnt selten einen Länd
 });
 
 test("im Turnierkader steht, wer deutlich über der Berufung liegt", () => {
-  assert.equal(K.imKader({ ovr: K.NATIONALELF_AB, land: "GER" }), K.KADER_SOCKEL);
-  assert.equal(K.imKader({ ovr: K.NATIONALELF_AB + K.KADER_SPANNE + 5, land: "GER" }), 1);
+  assert.equal(K.imKader({ ovr: K.berufungsSchwelle("GER"), land: "GER" }), K.KADER_SOCKEL);
+  assert.equal(K.imKader({ ovr: K.berufungsSchwelle("GER") + K.KADER_SPANNE + 5, land: "GER" }), 1);
   assert.ok(K.imKader({ ovr: 78, land: "GER" }) < K.imKader({ ovr: 84, land: "GER" }));
 });
 
@@ -1343,7 +1343,7 @@ test("keine sichere Kachel ohne Wirkung", () => {
   const leer = [];
   for (const e of K.EREIGNISSE)
     for (const o of e.optionen)
-      if (o.chance === undefined && !Object.keys(o.wirkung).length) leer.push(`${e.key}/${o.label}`);
+      if (o.chance === undefined && !Object.keys(o.wirkung).filter((f) => f !== "text").length) leer.push(`${e.key}/${o.label}`);
   assert.deepEqual(leer.sort(), [...KACHELN_OHNE_WIRKUNG].sort());
 });
 
@@ -1607,26 +1607,65 @@ test("die Binde nützt der Mannschaft, auch wenn ein anderer sie trägt", () => 
 
 /* ── Gruppe 4: der Kampf um die Liga ───────────────────────────────────────── */
 
-test("der Klassenfaktor bewegt Auf- und Abstieg wirklich", () => {
-  const zweite = { key: "x", staerke: 60, stufe: 1, lg: "BL2", liga: { key: "BL2", land: "GER", stufe: 2, name: "2. Bundesliga" } };
-  const erste = { key: "y", staerke: 60, stufe: 1, lg: "BL", liga: { key: "BL", land: "GER", stufe: 1, name: "Bundesliga" } };
+test("der Klassenfaktor bewegt Auf- und Abstieg wirklich", async () => {
+  /* Mit echten Vereinen aus der echten Welt: Die Chance hängt jetzt am Feld der
+     Liga, und das gibt es nur für Vereine, die durch baueWelt gingen. */
+  const { VEREINS_STAERKE } = await import("./careerStaerke.js");
+  const w = K.baueWelt((x) => VEREINS_STAERKE[x.key] ?? NaN);
+  const zweite = w.vereine.find((x) => x.liga.key === "BL2" && x.stufe === 1);
+  const erste = w.vereine.find((x) => x.liga.key === "BL" && x.stufe === 1);
+  const auf = K.aufstiegsChance(zweite), ab = K.abstiegsChance(erste);
+  assert.ok(auf > 0 && auf < 0.5 && ab > 0 && ab < 0.5, `auf ${auf}, ab ${ab}`);
 
-  /* Aufstieg: die Grundchance auf dieser Rufstufe ist 0,04. Mit Faktor 1,8 reicht
-     eine Ziehung von 0,05 — ohne ihn nicht. */
-  assert.equal(K.ligaWechsel(zweite, () => 0.05).richtung, null);
-  assert.equal(K.ligaWechsel(zweite, () => 0.05, undefined, 1.8).richtung, "auf");
-  /* Und unter eins wird es schwerer: 0,03 ginge sonst durch. */
-  assert.equal(K.ligaWechsel(zweite, () => 0.03).richtung, "auf");
-  assert.equal(K.ligaWechsel(zweite, () => 0.03, undefined, 0.75).richtung, null);
+  /* Knapp über der Grundchance: ohne Faktor kein Aufstieg, mit 1,8 schon. */
+  const knapp = () => auf * 1.2;
+  assert.equal(K.ligaWechsel(zweite, knapp, w.ligen).richtung, null);
+  assert.equal(K.ligaWechsel(zweite, knapp, w.ligen, 1.8).richtung, "auf");
+  /* Unter eins wird es schwerer. */
+  assert.equal(K.ligaWechsel(zweite, () => auf * 0.9, w.ligen).richtung, "auf");
+  assert.equal(K.ligaWechsel(zweite, () => auf * 0.9, w.ligen, 0.75).richtung, null);
 
-  /* Abstieg: Grundgefahr 0,16 auf dieser Rufstufe, geteilt durch den Faktor. */
-  assert.equal(K.ligaWechsel(erste, () => 0.1).richtung, "ab");
-  assert.equal(K.ligaWechsel(erste, () => 0.1, undefined, 1.8).richtung, null);
-  assert.equal(K.ligaWechsel(erste, () => 0.19, undefined, 0.75).richtung, "ab");
+  /* Abstieg: die Gefahr geteilt durch den Faktor. */
+  assert.equal(K.ligaWechsel(erste, () => ab * 0.9, w.ligen).richtung, "ab");
+  assert.equal(K.ligaWechsel(erste, () => ab * 0.9, w.ligen, 1.8).richtung, null);
+  assert.equal(K.ligaWechsel(erste, () => ab * 1.2, w.ligen, 0.75).richtung, "ab");
 
   /* Ohne Schwesterliga gibt es nichts zu bewegen. */
-  const allein = { ...erste, liga: { key: "SAU", land: "SA", stufe: 1, name: "Saudi Pro League" } };
-  assert.equal(K.ligaWechsel(allein, () => 0, undefined, 3).richtung, null);
+  const allein = w.vereine.find((x) => x.liga.key === "MLS");
+  assert.equal(K.ligaWechsel(allein, () => 0, w.ligen, 3).richtung, null);
+});
+
+/* ── Jede Liga hat ihre Plätze ──────────────────────────────────────────────── */
+
+test("in jeder Liga steigen so viele ab und auf, wie es Plätze gibt", async () => {
+  /* Vorher würfelte jeder Verein für sich: Österreich 2,5 Absteiger je Saison bei
+     zehn Vereinen, LaLiga 0,3, aus der Championship 3,3 Aufsteiger. */
+  const { VEREINS_STAERKE } = await import("./careerStaerke.js");
+  const w = K.baueWelt((x) => VEREINS_STAERKE[x.key] ?? NaN);
+  for (const liga of w.ligen) {
+    const schwester = K.schwesterLiga(liga, w.ligen);
+    if (!schwester) continue;
+    const vs = w.vereine.filter((x) => x.liga.key === liga.key);
+    const erwartet = vs.reduce((a, x) => a + (liga.stufe === 1 ? K.abstiegsChance(x) : K.aufstiegsChance(x)), 0);
+    const plaetze = K.WECHSEL_PLAETZE[liga.land] ?? K.WECHSEL_PLAETZE_SONST;
+    /* Der Deckel kann eine Liga mit einem einzigen, klar schwächsten Verein etwas
+       unter ihre Plätze drücken — mehr als einen halben Platz aber nicht. */
+    assert.ok(erwartet <= plaetze + 1e-9 && erwartet >= plaetze - 0.6,
+      `${liga.key}: ${erwartet.toFixed(2)} je Saison bei ${plaetze} Plätzen`);
+  }
+});
+
+test("wer stark ist, steigt nicht ab; wer schwach ist, eher als andere", async () => {
+  const { VEREINS_STAERKE } = await import("./careerStaerke.js");
+  const w = K.baueWelt((x) => VEREINS_STAERKE[x.key] ?? NaN);
+  const bayern = w.vereine.find((x) => x.name.includes("Bayern"));
+  assert.equal(K.abstiegsChance(bayern), 0);
+  /* Innerhalb einer Liga fällt die Gefahr mit der Rufstufe, und keiner steigt sicher ab. */
+  for (const key of ["BL", "PL", "AT", "PT"]) {
+    const vs = w.vereine.filter((x) => x.liga.key === key).sort((a, b) => a.stufe - b.stufe);
+    for (let i = 1; i < vs.length; i++) assert.ok(K.abstiegsChance(vs[i]) <= K.abstiegsChance(vs[i - 1]), key);
+    for (const x of vs) assert.ok(K.abstiegsChance(x) <= K.WECHSEL_DECKEL, `${x.name}: ${K.abstiegsChance(x)}`);
+  }
 });
 
 test("der Klassenfaktor wird genannt, wie er beim Verein ankommt", () => {
@@ -1721,7 +1760,7 @@ test("alle vierzig Karten sind durchgegangen", () => {
     assert.equal(e.optionen.length, 2, e.key);
     for (const o of e.optionen) {
       assert.ok(o.label && o.bild, `${e.key}: Kachel ohne Beschriftung oder Motiv`);
-      assert.ok(Object.keys(o.wirkung).length || o.chance !== undefined,
+      assert.ok(Object.keys(o.wirkung).filter((f) => f !== "text").length || o.chance !== undefined,
         `${e.key}/${o.label}: sichere Kachel ohne Wirkung`);
     }
   }
@@ -1736,4 +1775,172 @@ test("alle Motive gibt es auch als Datei", async () => {
   /* Und umgekehrt: kein Bild, das niemand zeigt. */
   const tot = [...da].filter((m) => !genutzt.includes(m));
   assert.deepEqual(tot, [], "Bilddatei, die keine Option verwendet");
+});
+
+/* ── Aus dem Durchspielen am 21.09.2026 ───────────────────────────────────── */
+
+test("die Rolle gilt nur für den Verein, bei dem man sie bekam", () => {
+  const bremen = { key: "SVW" }, kobe = { key: "VIS" };
+  const k = { verein: bremen, rolle: "rotation" };
+  /* Neuer Verein: neuer Anfang. */
+  assert.equal(K.rolleNachWechsel(k, kobe), "stamm");
+  /* Derselbe Verein — auch nach einem Abstieg, der nur die Liga tauscht. */
+  assert.equal(K.rolleNachWechsel(k, { key: "SVW", liga: { stufe: 2 } }), "rotation");
+  assert.equal(K.rolleNachWechsel({ verein: bremen, rolle: "kader" }, bremen), "kader");
+  /* Der erste Verein einer Laufbahn. */
+  assert.equal(K.rolleNachWechsel({ verein: null, rolle: "rotation" }, kobe), "stamm");
+});
+
+test("jeder Vereinswechsel läuft durch rolleNachWechsel", async () => {
+  /* Die Regel nützt nichts, wenn der Schritt sie nicht aufruft. Alle Wechsel —
+     Angebot, Leihe, Rückkehr, Bleiben — gehen durch spieleSchritt, und dort wird
+     der Stand für den neuen Verein gebaut. */
+  const { readFileSync } = await import("node:fs");
+  const quelle = readFileSync(new URL("./Karriere.jsx", import.meta.url), "utf8");
+  const schritt = quelle.split("function spieleSchritt")[1].split("\n  function ")[0];
+  assert.match(schritt, /rolle:\s*K\.rolleNachWechsel\(basis,\s*verein\)/);
+});
+
+test("der Bestwert ist der höchste Wert der Laufbahn, nicht der letzte", () => {
+  const k = { ovr: 67, verlauf: [{ ovr: 52 }, { ovr: 70 }, { ovr: 69 }] };
+  assert.equal(K.bestwert(k), 70);
+  /* Steht der Spieler gerade auf seinem Höchstwert, zählt der. */
+  assert.equal(K.bestwert({ ovr: 72, verlauf: [{ ovr: 70 }] }), 72);
+  assert.equal(K.bestwert({ ovr: 50, verlauf: [] }), 50);
+});
+
+/* ── Die Berufung hängt am Land ───────────────────────────────────────────── */
+
+test("ein Land mit tiefem Kader beruft später", () => {
+  assert.equal(K.berufungsSchwelle("GER"), K.BERUFUNG_A);
+  assert.equal(K.berufungsSchwelle("BR"), K.BERUFUNG_A);
+  assert.equal(K.berufungsSchwelle("JP"), K.BERUFUNG_B);
+  assert.equal(K.berufungsSchwelle("AUT"), K.BERUFUNG_C);
+  assert.equal(K.berufungsSchwelle("AT"), K.BERUFUNG_C, "beide Schreibweisen Österreichs");
+  assert.equal(K.berufungsSchwelle("LU"), K.BERUFUNG_REST);
+  /* Die Reihenfolge ist der Kern: Wer schwächer ist, beruft früher. */
+  assert.ok(K.BERUFUNG_A > K.BERUFUNG_B && K.BERUFUNG_B > K.BERUFUNG_C && K.BERUFUNG_C > K.BERUFUNG_REST);
+});
+
+test("der Österreicher aus dem Durchspielen wird jetzt berufen", () => {
+  /* Höchstwert 70, 178 Spiele in England — vorher kein einziges Länderspiel. */
+  const at = { ovr: 70, land: "AUT", pos: "OM" };
+  assert.ok(K.nationalLeistung(at, K.rng(3)).spiele > 0);
+  /* Ein Deutscher mit demselben Wert bleibt zu Hause. */
+  assert.equal(K.nationalLeistung({ ...at, land: "GER" }, K.rng(3)).spiele, 0);
+});
+
+test("der Verbandswechsel nennt die alte Schwelle als Vergleich, nicht eine feste", () => {
+  const k = { ovr: 70, rolle: "stamm", alter: 22, land: "GER", verein: null };
+  const r = K.entscheide(k, { label: "x", wirkung: { verbandswechsel: "PL" } }, () => 0);
+  const zeile = r.folgen.find((f) => /berufen ab/.test(f.text));
+  assert.ok(zeile, r.folgen.map((f) => f.text).join(" | "));
+  assert.match(zeile.text, new RegExp(`berufen ab ${K.berufungsSchwelle("PL") - K.VERBAND_BONUS} statt ${K.BERUFUNG_A}`));
+});
+
+/* ── Kein leerer Stammplatz ───────────────────────────────────────────────── */
+
+test("wer schon Stammspieler ist, gewinnt bei keiner Karte nur den Stammplatz", () => {
+  /* Für einen Stammspieler ist „Stammplatz" kein Gewinn. Eine Wette, deren guter
+     Ausgang nur daraus besteht, hätte für ihn keine Seite nach oben. Geprüft wird
+     jede Karte, die einem gewöhnlichen Stammspieler begegnen kann. */
+  const verlauf = [{ ovr: 70, titel: [], spiele: 30 }, { ovr: 69, titel: [], spiele: 30 }];
+  const k = { alter: 25, ovr: 69, rolle: "stamm", land: "GER", pos: "ST", vereine: ["A", "B", "C"], verlauf,
+    verein: { key: "X", stufe: 3, lg: "BL", liga: { key: "BL", land: "GER", stufe: 1 } }, national: { spiele: 3 } };
+  const hohl = [];
+  for (const e of K.EREIGNISSE) {
+    let passt;
+    try { passt = !e.wenn || e.wenn(k); } catch { passt = false; }
+    if (!passt) continue;
+    for (const o of e.optionen) {
+      const gewinn = Object.keys(o.wirkung).filter((f) => !(f === "rolle" && o.wirkung.rolle === "stamm"));
+      if (o.wirkung.rolle === "stamm" && !gewinn.length) hohl.push(`${e.key}/${o.label}`);
+    }
+  }
+  assert.deepEqual(hohl, []);
+});
+
+test("Konkurrenz und Talent kommen nur, wenn man einen Platz zu verteidigen hat", () => {
+  const verein = { key: "X", stufe: 3, lg: "BL", liga: { key: "BL", land: "GER", stufe: 1 } };
+  for (const key of ["konkurrenz", "talent"]) {
+    const e = K.EREIGNISSE.find((x) => x.key === key);
+    assert.equal(e.wenn({ rolle: "stamm", verein }), true, key);
+    assert.equal(e.wenn({ rolle: "rotation", verein }), false, key);
+  }
+});
+
+test("für einen Stammspieler ist Sich-Anbieten wieder eine echte Wahl", () => {
+  const [anbieten, abwarten] = K.EREIGNISSE.find((e) => e.key === "trainerwechsel").optionen;
+  /* Stammplatz zählt für ihn nicht; es bleibt die Stärke. */
+  assert.ok(anbieten.wirkung.ovr > abwarten.wirkung.ovr, "der Mutige muss mehr gewinnen können");
+});
+
+/* ── Kein stummer Ausgang ─────────────────────────────────────────────────── */
+
+test("jeder Ausgang ohne Zahlen hat einen Satz", () => {
+  /* „▲ nichts ändert sich" nach einem gewonnenen Einsatz klang nicht nach Glück. */
+  const stumm = [];
+  for (const e of K.EREIGNISSE) for (const o of e.optionen) {
+    if (o.chance === undefined) continue;
+    for (const [seite, w] of [["gelingt", o.wirkung], ["misslingt", o.sonst || {}]])
+      if (!Object.keys(w).length) stumm.push(`${e.key}/${o.label} (${seite})`);
+  }
+  assert.deepEqual(stumm, []);
+});
+
+test("der Satz steht in der Folge — grün beim Gelingen, neutral beim Rückschlag", () => {
+  const k = { ovr: 70, rolle: "stamm", alter: 31, land: "GER", verein: null };
+  const knie = K.EREIGNISSE.find((e) => e.key === "knie").optionen[1];
+  const glueck = K.entscheide(k, knie, () => 0.01);
+  assert.deepEqual(glueck.folgen, [{ text: "Das Knie hält", art: "gut" }]);
+  const stift = K.EREIGNISSE.find((e) => e.key === "stiftung").optionen[0];
+  const pech = K.entscheide(k, stift, () => 0.99);
+  assert.deepEqual(pech.folgen, [{ text: "Es kostet nur freie Tage", art: "neutral" }]);
+});
+
+test("ein Satz ist keine Wirkung: er ändert keine Zahl", () => {
+  const k = { ovr: 70, rolle: "stamm", alter: 31, land: "GER", verein: null, schutz: 0 };
+  const r = K.entscheide(k, { label: "x", wirkung: { text: "Nur Worte" } }, () => 0);
+  assert.equal(r.karriere.ovr, 70);
+  assert.equal(r.karriere.rolle, "stamm");
+  assert.equal(r.ausfall, 0);
+  assert.deepEqual(r.mod, { liga: 1, pokal: 1, europa: 1, klasse: 1 });
+});
+
+/* ── Rollen mit Richtung ──────────────────────────────────────────────────── */
+
+test("ein Rückschlag befördert nie, ein Gelingen stuft nie herab", () => {
+  assert.equal(K.rolleNach("kader", "rotation", false), "kader", "verloren und trotzdem aufgestiegen");
+  assert.equal(K.rolleNach("stamm", "rotation", false), "rotation");
+  assert.equal(K.rolleNach("kader", "rotation", true), "rotation");
+  assert.equal(K.rolleNach("stamm", "rotation", true), "stamm", "gewonnen und trotzdem herabgestuft");
+  assert.equal(K.rolleNach("rotation", undefined, false), "rotation");
+
+  const k = { ovr: 60, rolle: "kader", alter: 22, land: "GER", verein: null };
+  const sprache = K.EREIGNISSE.find((e) => e.key === "sprache").optionen[1];
+  const r = K.entscheide(k, sprache, () => 0.99);
+  assert.equal(r.karriere.rolle, "kader");
+});
+
+test("kein Rückschlag und kein Rückzug ist für irgendeine Rolle gratis", () => {
+  /* Für jede Rolle, bei der eine Karte erscheinen kann: Jeder schlechte Ausgang und
+     jede sichere Kachel muss für diesen Spieler etwas ändern. */
+  const verlauf = [{ ovr: 80, titel: [], spiele: 30 }, { ovr: 79, titel: [], spiele: 30 }];
+  const verein = { key: "X", stufe: 3, lg: "BL", liga: { key: "BL", land: "GER", stufe: 1 } };
+  const gratis = [];
+  for (const rolle of ["stamm", "rotation", "kader"]) {
+    const k = { alter: 25, ovr: 79, rolle, land: "ESP", pos: "ST", vereine: ["A", "B", "C"], verlauf, verein, national: { spiele: 3 } };
+    for (const e of K.EREIGNISSE) {
+      let passt; try { passt = !e.wenn || e.wenn(k); } catch { passt = false; }
+      if (!passt) continue;
+      for (const o of e.optionen) {
+        const negativ = o.chance === undefined ? o.wirkung : o.sonst;
+        if (!negativ) continue;
+        const nurRolle = Object.keys(negativ).every((f) => f === "rolle");
+        if (nurRolle && negativ.rolle && K.rolleNach(rolle, negativ.rolle, false) === rolle)
+          gratis.push(`${e.key}/${o.label} bei ${rolle}`);
+      }
+    }
+  }
+  assert.deepEqual(gratis, []);
 });

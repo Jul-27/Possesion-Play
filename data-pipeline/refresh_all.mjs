@@ -121,6 +121,17 @@ if (rettung.status !== 0) {
   process.exit(rettung.status || 1);
 }
 
+/* DIE VEREINSSTÄRKEN DER KARRIERE hängen an players.js und appearances.js — beide
+   hat der Lauf gerade verändert. Nach der Rettung, weil erst dann players.js steht;
+   vor der Prüfung, damit auch ein Lauf mit gemeldeten Verlusten eine passende
+   Tabelle hinterlässt. Ohne diesen Schritt schlüge careerStaerke.test.js an. */
+console.log("\n════════ career_staerke.mjs ════════");
+const staerke = spawnSync(process.execPath, [join(HERE, "career_staerke.mjs")], { stdio: "inherit" });
+if (staerke.status !== 0) {
+  console.error("\nAbbruch: career_staerke.mjs endete mit Exit-Code " + staerke.status);
+  process.exit(staerke.status || 1);
+}
+
 console.log("\n════════ verify_refresh.mjs ════════");
 const check = spawnSync(process.execPath, [join(HERE, "verify_refresh.mjs"), SNAPSHOT], { stdio: "inherit" });
 if (check.status === 1) {
