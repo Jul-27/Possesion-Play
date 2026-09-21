@@ -36,7 +36,7 @@ const { WELT_LIGEN, WELT_VEREINE } = await import(join(SRC, "careerWorld.js"));
 const { berechneVereinsStaerken } = await import(join(SRC, "vereinsStaerke.js"));
 
 const t = performance.now();
-const staerke = berechneVereinsStaerken(PLAYERS, EINSAETZE, WELT_VEREINE, WELT_LIGEN);
+const { staerke, zweiterAnlauf } = berechneVereinsStaerken(PLAYERS, EINSAETZE, WELT_VEREINE, WELT_LIGEN);
 const dauer = ((performance.now() - t) / 1000).toFixed(1);
 
 /* Volle Genauigkeit, nicht gerundet: `baueWelt` leitet aus der ungerundeten Zahl die
@@ -53,8 +53,12 @@ const text = `/* Die Stärke jedes Vereins der Karrierewelt — erzeugt von
    Rechnung steht in src/vereinsStaerke.js. Warum sie hier als Tabelle liegt und
    nicht mehr im Spiel läuft: siehe dort (22 Sekunden bei jedem Öffnen).
 
-   ${Object.keys(staerke).length} von ${WELT_VEREINE.length} Vereinen haben eine Stärke.${ohne.length ? `
+   ${Object.keys(staerke).length} von ${WELT_VEREINE.length} Vereinen haben eine Stärke, ${zweiterAnlauf.length} davon erst
+   im zweiten Anlauf (alle erfassten Spieler, fünf je Saison — siehe dort).${ohne.length ? `
    Ohne auswertbaren Kader und damit nicht in der Welt: ${ohne.join(", ")}.` : ""} */
+
+/* Die Vereine aus dem zweiten Anlauf — dünn erfasst, deshalb am unteren Ende. */
+export const ZWEITER_ANLAUF = ${JSON.stringify(zweiterAnlauf)};
 
 /* Fingerabdruck der Eingaben. Eine Prüfung vergleicht ihn mit dem aktuellen
    Stand; weicht er ab, ist diese Tabelle veraltet. */
@@ -65,4 +69,4 @@ ${zeilen.join("\n")}
 };
 `;
 writeFileSync(ZIEL, text);
-console.log(`careerStaerke.js: ${Object.keys(staerke).length} Vereine in ${dauer} s gerechnet${ohne.length ? `, ${ohne.length} ohne Kader` : ""}.`);
+console.log(`careerStaerke.js: ${Object.keys(staerke).length} Vereine in ${dauer} s gerechnet, ${zweiterAnlauf.length} im zweiten Anlauf${ohne.length ? `, ${ohne.length} ohne Kader` : ""}.`);

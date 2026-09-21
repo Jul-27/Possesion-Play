@@ -233,6 +233,45 @@ export function alleBekanntenSchluessel(welt = WELT_VEREINE_ALT) {
   return out;
 }
 
+/* ── GLEICHNAMIGE HÜLLEN ──────────────────────────────────────────────────────
+   Die Hüllenregel weiter unten verlangt KEINE EINZIGE Station — und drei Hüllen
+   schlüpften deshalb durch: „VfL Bochum" (Q97906009), „Holstein Kiel" (Q97940890)
+   und „Hansa Rostock" (Q97905936) sind Wikidatas „erste Fußball-Herrenmannschaft"
+   neben dem eigentlichen Verein, und an jeder hängt genau EIN Spieler. Das reichte,
+   um bewahrt zu werden. Sie standen dann als zweiter, leerer Eintrag neben dem
+   echten Verein in derselben Liga.
+
+   Warum die Entdopplung in loeseAuf sie nicht fing: Sie läuft JE LIGA, und zwar
+   bevor jeder Verein seiner letzten Liga zugeordnet wird. Stand der Verein in der
+   2. Liga unter der einen und in der Bundesliga unter der anderen Kennung, sah die
+   Entdopplung die beiden nie nebeneinander.
+
+   Hier wird deshalb am Ende noch einmal verglichen, in der fertigen Welt: Zwei
+   Einträge mit demselben Namen in derselben Liga, einer davon eine Importhülle mit
+   einer Handvoll Stationen, der andere mit mehr — dann fliegt die Hülle. Die Grenze
+   ist mit Absicht eng; gleichnamige, wirklich verschiedene Vereine stehen in
+   verschiedenen Ligen und werden gar nicht erst verglichen. */
+export const HUELLE_MAX_STATIONEN = 3;
+const normName = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+export function gleichnamigeHuellen(vereine, stationen) {
+  const gruppen = new Map();
+  for (const v of vereine) {
+    const k = `${v.lg}|${normName(v.label ?? v.name)}`;
+    if (!gruppen.has(k)) gruppen.set(k, []);
+    gruppen.get(k).push(v);
+  }
+  const n = (v) => stationen.get(v.key) || 0;
+  const raus = [];
+  for (const g of gruppen.values()) {
+    if (g.length < 2) continue;
+    const echt = g.reduce((a, b) => (n(b) > n(a) ? b : a));
+    for (const v of g)
+      if (v !== echt && /^Q9\d{7}$/.test(v.qid) && n(v) <= HUELLE_MAX_STATIONEN && n(echt) > n(v)) raus.push(v);
+  }
+  return raus;
+}
+
 /* Schlüssel: Wo ein Verein schon einen hat, behält er ihn. */
 export function schluesselFuer(vereine, vorhanden = alleBekanntenSchluessel()) {
   const vonQid = new Map(Object.entries(vorhanden).map(([k, q]) => [q, k]));
@@ -322,7 +361,8 @@ async function main() {
      Ein Verein ohne eine einzige Station ist in diesem Modus kein Verein: keine
      Stärke, keine Rufstufe, kein Angebot. Ihn zu bewahren schützt nichts. */
   const mitSpielern = new Set();
-  for (const p of PLAYERS) for (const e of p.cp || []) mitSpielern.add(e[0]);
+  const stationen = new Map();
+  for (const p of PLAYERS) for (const e of p.cp || []) { mitSpielern.add(e[0]); stationen.set(e[0], (stationen.get(e[0]) || 0) + 1); }
   /* WAS DER LAUF ABSICHTLICH AUSSORTIERT HAT, WIRD NICHT BEWAHRT. Villarreal CF B
      wurde als Zweitmannschaft verworfen — und stand danach trotzdem in der Datei,
      weil die Bewahrung nur fragte, ob der Lauf den Verein FINDET. Er hat ihn
@@ -354,7 +394,13 @@ async function main() {
     console.log(`\n${huellen.length} Massenimport-Hüllen verworfen (kein Spieler, QID aus dem Importbereich):`);
     console.log("  " + huellen.map((v) => `${v.name} ${v.qid}`).join(", "));
   }
-  const vereine = zusammen.filter((v) => !huelle(v))
+  const ohneHuellen = zusammen.filter((v) => !huelle(v));
+  const gleichnamig = new Set(gleichnamigeHuellen(ohneHuellen, stationen));
+  if (gleichnamig.size) {
+    console.log(`\n${gleichnamig.size} gleichnamige Hüllen neben dem echten Verein verworfen:`);
+    console.log("  " + [...gleichnamig].map((v) => `${v.label} ${v.qid}`).join(", "));
+  }
+  const vereine = ohneHuellen.filter((v) => !gleichnamig.has(v))
     .sort((a, b) => a.lg.localeCompare(b.lg) || a.label.localeCompare(b.label, "de"));
   console.log(`\n${vereine.length} Vereine insgesamt, ${new Set(vereine.map((v) => v.key)).size} eindeutige Schlüssel`);
   for (const liga of WELT_LIGEN)

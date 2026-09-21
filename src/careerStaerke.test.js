@@ -54,3 +54,33 @@ test("der Karrieremodus lädt keine Spielerdaten mehr", async () => {
     assert.ok(!quelle.includes(verboten), `Karriere.jsx greift wieder auf ${verboten} zu`);
   }
 });
+
+/* ── Schritt 4: fehlende Vereine ──────────────────────────────────────────── */
+
+test("keine Liga führt denselben Verein zweimal", () => {
+  /* Wikidata führt für viele Vereine neben dem Verein die „erste Herrenmannschaft"
+     als eigenes Objekt. VfL Bochum, Holstein Kiel und Hansa Rostock standen deshalb
+     doppelt in der Welt — einmal mit Kader, einmal als leere Hülle. */
+  const norm = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const gesehen = new Map(), doppelt = [];
+  for (const v of WELT_VEREINE) {
+    const k = `${v.lg}|${norm(v.name)}`;
+    if (gesehen.has(k)) doppelt.push(`${v.name} (${gesehen.get(k)} und ${v.key})`);
+    else gesehen.set(k, v.key);
+  }
+  assert.deepEqual(doppelt, []);
+});
+
+test("der zweite Anlauf holt dünn erfasste Vereine zurück, ohne andere anzufassen", async () => {
+  const { ZWEITER_ANLAUF } = await import("./careerStaerke.js");
+  assert.ok(ZWEITER_ANLAUF.length > 0);
+  for (const key of ZWEITER_ANLAUF) {
+    assert.ok(key in VEREINS_STAERKE, `${key} steht im zweiten Anlauf, hat aber keine Stärke`);
+    /* Dünn erfasst heisst: am unteren Ende. Kein Verein aus dem zweiten Anlauf darf
+       in die Spitze rutschen, weil fünf bekannte Namen einen Schnitt verzerren. */
+    assert.ok(VEREINS_STAERKE[key] < 80, `${key}: ${VEREINS_STAERKE[key]}`);
+  }
+  /* Die Saudi Pro League war mit vier Vereinen praktisch leer. */
+  const welt = K.baueWelt((v) => VEREINS_STAERKE[v.key] ?? NaN);
+  assert.ok(welt.vereine.filter((v) => v.liga.key === "SAU").length >= 8);
+});
