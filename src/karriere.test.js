@@ -1906,3 +1906,41 @@ test("ein Satz ist keine Wirkung: er ändert keine Zahl", () => {
   assert.equal(r.ausfall, 0);
   assert.deepEqual(r.mod, { liga: 1, pokal: 1, europa: 1, klasse: 1 });
 });
+
+/* ── Rollen mit Richtung ──────────────────────────────────────────────────── */
+
+test("ein Rückschlag befördert nie, ein Gelingen stuft nie herab", () => {
+  assert.equal(K.rolleNach("kader", "rotation", false), "kader", "verloren und trotzdem aufgestiegen");
+  assert.equal(K.rolleNach("stamm", "rotation", false), "rotation");
+  assert.equal(K.rolleNach("kader", "rotation", true), "rotation");
+  assert.equal(K.rolleNach("stamm", "rotation", true), "stamm", "gewonnen und trotzdem herabgestuft");
+  assert.equal(K.rolleNach("rotation", undefined, false), "rotation");
+
+  const k = { ovr: 60, rolle: "kader", alter: 22, land: "GER", verein: null };
+  const sprache = K.EREIGNISSE.find((e) => e.key === "sprache").optionen[1];
+  const r = K.entscheide(k, sprache, () => 0.99);
+  assert.equal(r.karriere.rolle, "kader");
+});
+
+test("kein Rückschlag und kein Rückzug ist für irgendeine Rolle gratis", () => {
+  /* Für jede Rolle, bei der eine Karte erscheinen kann: Jeder schlechte Ausgang und
+     jede sichere Kachel muss für diesen Spieler etwas ändern. */
+  const verlauf = [{ ovr: 80, titel: [], spiele: 30 }, { ovr: 79, titel: [], spiele: 30 }];
+  const verein = { key: "X", stufe: 3, lg: "BL", liga: { key: "BL", land: "GER", stufe: 1 } };
+  const gratis = [];
+  for (const rolle of ["stamm", "rotation", "kader"]) {
+    const k = { alter: 25, ovr: 79, rolle, land: "ESP", pos: "ST", vereine: ["A", "B", "C"], verlauf, verein, national: { spiele: 3 } };
+    for (const e of K.EREIGNISSE) {
+      let passt; try { passt = !e.wenn || e.wenn(k); } catch { passt = false; }
+      if (!passt) continue;
+      for (const o of e.optionen) {
+        const negativ = o.chance === undefined ? o.wirkung : o.sonst;
+        if (!negativ) continue;
+        const nurRolle = Object.keys(negativ).every((f) => f === "rolle");
+        if (nurRolle && negativ.rolle && K.rolleNach(rolle, negativ.rolle, false) === rolle)
+          gratis.push(`${e.key}/${o.label} bei ${rolle}`);
+      }
+    }
+  }
+  assert.deepEqual(gratis, []);
+});

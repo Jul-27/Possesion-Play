@@ -1033,6 +1033,25 @@ export function rolleNachWechsel(k, neuerVerein) {
   return k.rolle;
 }
 
+/* ── In welche Richtung eine Rolle wirkt ──────────────────────────────────────
+   EIN RÜCKSCHLAG BEFÖRDERTE. „Das regelt der Platz" setzt beim Misslingen die Rolle
+   auf „Rotation" — und wer vorher nur im Kader stand, stieg damit AUF. Eine Wette zu
+   verlieren war für ihn besser, als sie nicht einzugehen. Umgekehrt konnte ein
+   gelungener Einsatz, der „Rotation" vergibt, einen Stammspieler herabstufen.
+
+   Eine Rolle in einer Wirkung ist deshalb ein Ziel MIT Richtung: Beim Gelingen einer
+   Wette geht es höchstens hinauf, beim Rückschlag und bei einer sicheren Kachel
+   höchstens hinunter. Sichere Kacheln vergeben in diesem Spiel nur Rückzüge
+   („Sich fügen", „Um eine Pause bitten") — käme eine hinzu, die befördern soll,
+   müsste sie eine Wette sein. */
+const ROLLEN_RANG = { kader: 0, rotation: 1, stamm: 2 };
+const RANG_ROLLE = ["kader", "rotation", "stamm"];
+export function rolleNach(aktuell, ziel, aufwaerts) {
+  if (!ziel) return aktuell;
+  const a = ROLLEN_RANG[aktuell] ?? ROLLEN_RANG.stamm, z = ROLLEN_RANG[ziel];
+  return RANG_ROLLE[aufwaerts ? Math.max(a, z) : Math.min(a, z)];
+}
+
 /* Der Höchstwert einer Laufbahn — für Urkunde UND Teilen-Text aus derselben
    Quelle. Die Urkunde zeigte früher den Wert beim Rücktritt und wurde korrigiert;
    der Teilen-Text hatte denselben Fehler behalten und schrieb „Höchstwert 67" unter
@@ -1095,8 +1114,11 @@ export const EREIGNISSE = [
     ] },
   { key: "posting", titel: "Unbedachter Beitrag", text: "Ein Beitrag von dir schlägt Wellen. Der Verein erwartet eine Reaktion.",
     optionen: [
-      { label: "Öffentlich entschuldigen", bild: "presse", wirkung: { rolle: "rotation" } },
-      { label: "Dazu stehen", bild: "risiko", chance: 0.4, wirkung: { ovr: 1 }, sonst: { rolle: "kader" } },
+      /* Beide Ausgänge setzten nur eine Rolle — und wer schon unten stand, verlor
+         dabei nichts: Die Entschuldigung war für einen Rotationsspieler gratis, der
+         Rückschlag für einen Ergänzungsspieler ebenso. Jetzt kostet beides auch. */
+      { label: "Öffentlich entschuldigen", bild: "presse", wirkung: { rolle: "rotation", ovr: -1 } },
+      { label: "Dazu stehen", bild: "risiko", chance: 0.4, wirkung: { ovr: 1 }, sonst: { rolle: "kader", ovr: -1 } },
     ] },
   { key: "prioritaet", titel: "Ansage des Vereins", text: "Der Verein will wissen, worauf ihr diese Saison alles setzt.",
     wenn: (k) => { const w = wettbewerbe(k.verein); return w.liga && w.europa; },
@@ -1138,7 +1160,7 @@ export const EREIGNISSE = [
     },
     optionen: [
       { label: "Bleiben und liefern", bild: "platz", chance: 0.5, wirkung: { ovr: 2, rolle: "stamm" }, sonst: { ovr: -2 } },
-      { label: "Sich zurückziehen", bild: "bank", wirkung: { rolle: "rotation" } },
+      { label: "Sich zurückziehen", bild: "bank", wirkung: { rolle: "rotation", ovr: -1 } },
     ] },
   /* AUSKURIEREN WAR DIE DUMME WAHL. Es kostete sicher eine ganze Saison, während
      Durchbeissen im Schnitt nur 0,65 kostete — vernünftig war also genau das, wovon
@@ -1246,7 +1268,7 @@ export const EREIGNISSE = [
       /* Für einen Stammspieler war das vorher schlechter als Abwarten: gewonnen +1,
          verloren die Rolle — gegen +1 sicher. Wer sich dem Neuen anbietet und ihn
          überzeugt, gewinnt jetzt mehr als der, der den Kopf einzieht. */
-      { label: "Sich anbieten", bild: "kabine", chance: 0.55, wirkung: { rolle: "stamm", ovr: 2 }, sonst: { rolle: "rotation" } },
+      { label: "Sich anbieten", bild: "kabine", chance: 0.55, wirkung: { rolle: "stamm", ovr: 2 }, sonst: { rolle: "rotation", ovr: -1 } },
       /* Beide Kacheln hatten denselben schlechten Ausgang, aber nur eine einen
          guten — Abwarten war nie richtig. Jetzt ist es die sichere Wahl: kein
          Sprung, aber auch kein Absturz. */
@@ -1272,7 +1294,7 @@ export const EREIGNISSE = [
   { key: "medien", titel: "Das große Interview", text: "Eine Zeitung will ein langes Gespräch. Offen reden bringt Sympathien und Ärger.",
     wenn: (k) => k.ovr >= 78,
     optionen: [
-      { label: "Klartext reden", bild: "presse", chance: 0.45, wirkung: { ovr: 2 }, sonst: { rolle: "rotation" } },
+      { label: "Klartext reden", bild: "presse", chance: 0.45, wirkung: { ovr: 2 }, sonst: { rolle: "rotation", ovr: -1 } },
       { label: "Nichts sagen", bild: "kabine", wirkung: { ovr: 1 } },
     ] },
 
@@ -1359,7 +1381,7 @@ export const EREIGNISSE = [
       /* Vorher 35 Prozent auf einen Punkt gegen 75 Prozent auf zwei — die Kachel war
          nur da. Wer die Sprache auf dem Platz lernt, lernt sie langsamer, aber bei
          denen, auf die es ankommt. */
-      { label: "Das regelt der Platz", bild: "platz", chance: 0.35, wirkung: { ovr: 3 }, sonst: { rolle: "rotation" } },
+      { label: "Das regelt der Platz", bild: "platz", chance: 0.35, wirkung: { ovr: 3 }, sonst: { rolle: "rotation", ovr: -1 } },
     ] },
   { key: "heimweh", titel: "Heimweh", text: "Es läuft sportlich, aber es ist weit weg. Die Familie fragt, wann du zurückkommst.",
     wenn: (k) => !!k.verein && !!k.land && k.verein.liga.land !== k.land && k.alter <= 25,
@@ -1584,7 +1606,7 @@ export function entscheide(k, option, zufall) {
   if (abgefangen) naechster.schutz = (k.schutz ?? 0) - 1;
   if (w.schutz) naechster.schutz = (naechster.schutz ?? 0) + w.schutz;
   if (w.ovr) naechster.ovr = grenze(k.ovr + w.ovr, OVR_MIN, OVR_MAX);
-  if (w.rolle) naechster.rolle = w.rolle;
+  if (w.rolle) naechster.rolle = rolleNach(k.rolle, w.rolle, gewagt && gelungen);
   /* DER WECHSEL WECHSELT JETZT WIRKLICH. Vorher stand hier nur das Merkmal, und
      `k.land` blieb — Flagge, Auswahl und Titelchance änderten sich nicht. */
   if (w.verbandswechsel) {

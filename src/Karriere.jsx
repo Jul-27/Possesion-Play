@@ -388,11 +388,15 @@ const prozent = (p) => `${Math.round(p * 100)} %`;
 /* `rolle` ist die heutige Rolle des Spielers. Eine Wirkung, die ihm genau die gibt,
    ist keine — „Stammplatz" stand vorher auch bei einem, der längst Stammspieler war,
    als Gewinn auf der Kachel. */
-function wirkungsText(w, verein, rolle) {
+/* `aufwaerts`: Ist das der gute Ausgang einer Wette? Dann kann eine Rolle nur
+   befördern, sonst nur herabstufen — dieselbe Regel wie in entscheide (rolleNach).
+   Angezeigt wird die Rolle, die WIRKLICH herauskäme, und nur, wenn sie sich ändert. */
+function wirkungsText(w, verein, rolle, aufwaerts = false) {
   const teile = [];
   const hat = K.wettbewerbe(verein);
   if (w.ovr) teile.push(`${w.ovr > 0 ? "+" : ""}${w.ovr} Stärke`);
-  if (w.rolle && w.rolle !== rolle) teile.push({ stamm: "Stammplatz", rotation: "Rotation", kader: "nur im Kader" }[w.rolle]);
+  const neueRolle = K.rolleNach(rolle, w.rolle, aufwaerts);
+  if (w.rolle && neueRolle !== rolle) teile.push({ stamm: "Stammplatz", rotation: "Rotation", kader: "nur im Kader" }[neueRolle]);
   if (w.verletzt) teile.push(`${w.verletzt} Saison verletzt`);
   if (w.gesperrt) teile.push(`${w.gesperrt} Saison gesperrt`);
   for (const [feld, name] of [["liga", "Meisterschaft"], ["pokal", "Pokal"], ["europa", "Europapokal"]]) {
@@ -471,7 +475,7 @@ function Ereigniskarte({ ereignis, verein, rolle, bewerte, onFertig, folge, onWe
           const gewaehlt = wahl?.i === i;
           const ausgaenge = o.chance === undefined
             ? [{ art: "neutral", text: wirkungsText(o.wirkung, verein, rolleBeimZiehen) }]
-            : [{ art: "gut", text: wirkungsText(o.wirkung, verein, rolleBeimZiehen) },
+            : [{ art: "gut", text: wirkungsText(o.wirkung, verein, rolleBeimZiehen, true) },
                { art: "schlecht", text: wirkungsText(o.sonst, verein, rolleBeimZiehen) }];
           return (
             <button key={i} type="button"
