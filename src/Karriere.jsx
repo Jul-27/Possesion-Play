@@ -406,6 +406,8 @@ function wirkungsText(w, verein, rolle) {
   if (w.abschluss) teile.push("Schulabschluss");
   if (w.trainerschein) teile.push("Trainerschein");
   if (w.schutz) teile.push(w.schutz === 1 ? "Rückhalt" : `${w.schutz}× Rückhalt`);
+  /* Der Satz eines Ausgangs ohne Zahlen — siehe `text` in karriere.js. */
+  if (!teile.length && w.text) return w.text;
   return teile.length ? teile.join(" · ") : "nichts ändert sich";
 }
 

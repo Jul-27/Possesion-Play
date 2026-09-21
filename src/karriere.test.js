@@ -1343,7 +1343,7 @@ test("keine sichere Kachel ohne Wirkung", () => {
   const leer = [];
   for (const e of K.EREIGNISSE)
     for (const o of e.optionen)
-      if (o.chance === undefined && !Object.keys(o.wirkung).length) leer.push(`${e.key}/${o.label}`);
+      if (o.chance === undefined && !Object.keys(o.wirkung).filter((f) => f !== "text").length) leer.push(`${e.key}/${o.label}`);
   assert.deepEqual(leer.sort(), [...KACHELN_OHNE_WIRKUNG].sort());
 });
 
@@ -1760,7 +1760,7 @@ test("alle vierzig Karten sind durchgegangen", () => {
     assert.equal(e.optionen.length, 2, e.key);
     for (const o of e.optionen) {
       assert.ok(o.label && o.bild, `${e.key}: Kachel ohne Beschriftung oder Motiv`);
-      assert.ok(Object.keys(o.wirkung).length || o.chance !== undefined,
+      assert.ok(Object.keys(o.wirkung).filter((f) => f !== "text").length || o.chance !== undefined,
         `${e.key}/${o.label}: sichere Kachel ohne Wirkung`);
     }
   }
@@ -1873,4 +1873,36 @@ test("für einen Stammspieler ist Sich-Anbieten wieder eine echte Wahl", () => {
   const [anbieten, abwarten] = K.EREIGNISSE.find((e) => e.key === "trainerwechsel").optionen;
   /* Stammplatz zählt für ihn nicht; es bleibt die Stärke. */
   assert.ok(anbieten.wirkung.ovr > abwarten.wirkung.ovr, "der Mutige muss mehr gewinnen können");
+});
+
+/* ── Kein stummer Ausgang ─────────────────────────────────────────────────── */
+
+test("jeder Ausgang ohne Zahlen hat einen Satz", () => {
+  /* „▲ nichts ändert sich" nach einem gewonnenen Einsatz klang nicht nach Glück. */
+  const stumm = [];
+  for (const e of K.EREIGNISSE) for (const o of e.optionen) {
+    if (o.chance === undefined) continue;
+    for (const [seite, w] of [["gelingt", o.wirkung], ["misslingt", o.sonst || {}]])
+      if (!Object.keys(w).length) stumm.push(`${e.key}/${o.label} (${seite})`);
+  }
+  assert.deepEqual(stumm, []);
+});
+
+test("der Satz steht in der Folge — grün beim Gelingen, neutral beim Rückschlag", () => {
+  const k = { ovr: 70, rolle: "stamm", alter: 31, land: "GER", verein: null };
+  const knie = K.EREIGNISSE.find((e) => e.key === "knie").optionen[1];
+  const glueck = K.entscheide(k, knie, () => 0.01);
+  assert.deepEqual(glueck.folgen, [{ text: "Das Knie hält", art: "gut" }]);
+  const stift = K.EREIGNISSE.find((e) => e.key === "stiftung").optionen[0];
+  const pech = K.entscheide(k, stift, () => 0.99);
+  assert.deepEqual(pech.folgen, [{ text: "Es kostet nur freie Tage", art: "neutral" }]);
+});
+
+test("ein Satz ist keine Wirkung: er ändert keine Zahl", () => {
+  const k = { ovr: 70, rolle: "stamm", alter: 31, land: "GER", verein: null, schutz: 0 };
+  const r = K.entscheide(k, { label: "x", wirkung: { text: "Nur Worte" } }, () => 0);
+  assert.equal(r.karriere.ovr, 70);
+  assert.equal(r.karriere.rolle, "stamm");
+  assert.equal(r.ausfall, 0);
+  assert.deepEqual(r.mod, { liga: 1, pokal: 1, europa: 1, klasse: 1 });
 });

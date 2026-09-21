@@ -967,7 +967,13 @@ export function verbandsAngebot(k, zufall) {
 
    Die Felder von `wirkung`: ovr (sofortiger Zuwachs), rolle (neue Rolle im Team),
    liga/pokal/europa (Faktor auf die Titelchance dieser Saison), verletzt und
-   gesperrt (Saisons ohne Spiel), schutz (Rückhalt).
+   gesperrt (Saisons ohne Spiel), schutz (Rückhalt), klasse (Auf- und Abstieg).
+
+   `text` ist KEINE Wirkung, sondern der Satz für einen Ausgang, bei dem sich an den
+   Zahlen nichts ändert. Wer die 35-Prozent-Wette gegen die Verletzung gewann, las
+   vorher auf der Kachel „▲ nichts ändert sich" und danach „Es bleibt alles, wie es
+   war" — beides wahr, aber es klang nicht nach dem Glückstreffer, der es war. Eine
+   SICHERE Kachel darf nicht nur aus `text` bestehen; eine Prüfung passt darauf auf.
 
    ── RÜCKHALT ────────────────────────────────────────────────────────────────
    Eine sichere Kachel konnte lange nur eines: einen Punkt Stärke geben. Damit
@@ -1140,7 +1146,7 @@ export const EREIGNISSE = [
   { key: "verletzung", titel: "Verletzung", text: "Es hat dich erwischt. Die Frage ist nur, wie lange.",
     optionen: [
       { label: "Auskurieren", bild: "medizin", wirkung: { verletzt: 1, ovr: 1 } },
-      { label: "Auf die Zähne beißen", bild: "risiko", chance: 0.35, wirkung: {}, sonst: { verletzt: 1, ovr: -3 } },
+      { label: "Auf die Zähne beißen", bild: "risiko", chance: 0.35, wirkung: { text: "Du spielst die Saison durch" }, sonst: { verletzt: 1, ovr: -3 } },
     ] },
   /* Achtzig Prozent auf das Dreifache der Titelchance, und der Rückschlag kostete nur
      zwei Punkte Stärke — da drückte man immer. Wenn es schiefgeht, bricht man im
@@ -1165,7 +1171,7 @@ export const EREIGNISSE = [
     wenn: (k) => k.alter <= 20 && !k.abschluss,
     optionen: [
       { label: "Durchziehen", bild: "lernen", wirkung: { ovr: -1, abschluss: true } },
-      { label: "Ganz auf Fußball setzen", bild: "training", chance: 0.5, wirkung: { ovr: 2 }, sonst: {} },
+      { label: "Ganz auf Fußball setzen", bild: "training", chance: 0.5, wirkung: { ovr: 2 }, sonst: { text: "Es bringt diesmal nichts" } },
     ] },
   /* Die Optionen dieser Karte werden in ziehEreignis ersetzt — erst dort steht
      fest, welches Land anklopft. Was hier steht, ist der Rückfall. */
@@ -1181,7 +1187,7 @@ export const EREIGNISSE = [
     wenn: (k) => k.alter >= 22,
     optionen: [
       { label: "Alles nachzahlen", bild: "geld", wirkung: { ovr: -1 } },
-      { label: "Anwälte kämpfen lassen", bild: "vertrag", chance: 0.45, wirkung: {}, sonst: { ovr: -3, rolle: "rotation" } },
+      { label: "Anwälte kämpfen lassen", bild: "vertrag", chance: 0.45, wirkung: { text: "Die Anwälte setzen sich durch" }, sonst: { ovr: -3, rolle: "rotation" } },
     ] },
 
   /* ── Karten, die an die Lage gebunden sind ──────────────────────────────────
@@ -1204,7 +1210,7 @@ export const EREIGNISSE = [
          „Alles riskieren" im Schnitt +1,25 UND die bessere Rolle, während das
          vorsichtige Spiel auf +0,75 kam — es gab nichts abzuwägen. */
       { label: "Alles riskieren", bild: "platz", chance: 0.45, wirkung: { ovr: 4, rolle: "rotation" }, sonst: { ovr: -1, rolle: "kader" } },
-      { label: "Kein Risiko eingehen", bild: "bank", chance: 0.75, wirkung: { ovr: 1 }, sonst: {} },
+      { label: "Kein Risiko eingehen", bild: "bank", chance: 0.75, wirkung: { ovr: 1 }, sonst: { text: "Du bleibst unauffällig" } },
     ] },
   { key: "berater", titel: "Ein Berater umwirbt dich", text: "Er verspricht dir die großen Vereine. Sein Anteil ist happig, seine Verbindungen sind es auch.",
     wenn: (k) => k.alter <= 23,
@@ -1283,7 +1289,7 @@ export const EREIGNISSE = [
   { key: "feier", titel: "Die Feier läuft aus dem Ruder", text: "Ein Bild von der Nacht nach dem Titel geht herum. Der Verein ist not amused.",
     wenn: (k) => letzteTitel(k).length > 0,
     optionen: [
-      { label: "Dazu stehen", bild: "pokal", chance: 0.55, wirkung: {}, sonst: { ovr: -2, rolle: "rotation" } },
+      { label: "Dazu stehen", bild: "pokal", chance: 0.55, wirkung: { text: "Der Verein lässt es dabei bewenden" }, sonst: { ovr: -2, rolle: "rotation" } },
       { label: "Sich entschuldigen und zahlen", bild: "geld", wirkung: { ovr: -1 } },
     ] },
 
@@ -1326,7 +1332,7 @@ export const EREIGNISSE = [
     wenn: (k) => posDaten(k.pos).gruppe === "TOR" && (k.verein?.stufe ?? 0) >= 2 && wettbewerbe(k.verein).pokal,
     optionen: [
       { label: "Auf die Ecke gehen", bild: "platz", chance: 0.45, wirkung: { ovr: 3, pokal: 1.8 }, sonst: { ovr: -1 } },
-      { label: "Stehen bleiben und reagieren", bild: "kabine", chance: 0.6, wirkung: { ovr: 1, pokal: 1.3 }, sonst: {} },
+      { label: "Stehen bleiben und reagieren", bild: "kabine", chance: 0.6, wirkung: { ovr: 1, pokal: 1.3 }, sonst: { text: "Er trifft trotzdem" } },
     ] },
 
   /* Auswahl. */
@@ -1349,7 +1355,7 @@ export const EREIGNISSE = [
   { key: "sprache", titel: "Die Sprache", text: "In der Kabine verstehst du die Hälfte. Beim Trainer ist es dieselbe Hälfte.",
     wenn: (k) => !!k.verein && !!k.land && k.verein.liga.land !== k.land,
     optionen: [
-      { label: "Jeden Morgen Unterricht", bild: "lernen", chance: 0.75, wirkung: { ovr: 2 }, sonst: {} },
+      { label: "Jeden Morgen Unterricht", bild: "lernen", chance: 0.75, wirkung: { ovr: 2 }, sonst: { text: "Es dauert länger als gedacht" } },
       /* Vorher 35 Prozent auf einen Punkt gegen 75 Prozent auf zwei — die Kachel war
          nur da. Wer die Sprache auf dem Platz lernt, lernt sie langsamer, aber bei
          denen, auf die es ankommt. */
@@ -1370,7 +1376,7 @@ export const EREIGNISSE = [
          Die Operation kostete sicher eine Saison und gab zwei Punkte, das Durch-
          spritzen im Schnitt weniger. Jetzt holt sie mehr zurueck. */
       { label: "Operieren lassen", bild: "medizin", wirkung: { verletzt: 1, ovr: 3 } },
-      { label: "Mit Spritzen durch die Saison", bild: "risiko", chance: 0.5, wirkung: {}, sonst: { ovr: -4 } },
+      { label: "Mit Spritzen durch die Saison", bild: "risiko", chance: 0.5, wirkung: { text: "Das Knie hält" }, sonst: { ovr: -4 } },
     ] },
   /* DER SCHULABSCHLUSS HAT ENDLICH EINEN ZWECK. Er kostete mit zwanzig einen Punkt
      Stärke und tat danach nichts: Er stand in keiner Rechnung, auf keiner Urkunde,
@@ -1408,7 +1414,7 @@ export const EREIGNISSE = [
     optionen: [
       /* Mit nur einem Punkt bei achtzig Prozent waere Absagen das bessere Geschaeft
          gewesen. Das Richtige soll hier auch das Bessere sein — knapp. */
-      { label: "Zusagen", bild: "familie", chance: 0.8, wirkung: { ovr: 2 }, sonst: {} },
+      { label: "Zusagen", bild: "familie", chance: 0.8, wirkung: { ovr: 2 }, sonst: { text: "Es kostet nur freie Tage" } },
       { label: "Die Saison ist zu eng", bild: "reise", wirkung: { ovr: 1 } },
     ] },
 ];
@@ -1516,7 +1522,7 @@ export function klasseText(klasse, verein) {
   return null;
 }
 
-export function folgen(vorher, nachher, w, ausfall, grund = "verletzt", abgefangen = false) {
+export function folgen(vorher, nachher, w, ausfall, grund = "verletzt", abgefangen = false, gelungen = true) {
   const liste = [];
   /* Zuerst, weil es erklärt, warum darunter nichts Schlimmes steht. */
   if (abgefangen) liste.push({ text: "Es ging schief — dein Rückhalt hat es abgefangen", art: "gut" });
@@ -1558,6 +1564,7 @@ export function folgen(vorher, nachher, w, ausfall, grund = "verletzt", abgefang
   if (w.abschluss) liste.push({ text: "Der Schulabschluss ist in der Tasche — er öffnet später den Trainerschein", art: "gut" });
   if (w.trainerschein) liste.push({ text: "Der Trainerschein ist gemacht", art: "gut" });
   if (w.schutz) liste.push({ text: "Du hast Rückhalt — der nächste Rückschlag geht an dir vorbei", art: "gut" });
+  if (!liste.length && w.text) liste.push({ text: w.text, art: gelungen ? "gut" : "neutral" });
   if (!liste.length) liste.push({ text: "Es bleibt alles, wie es war", art: "neutral" });
   return liste;
 }
@@ -1598,7 +1605,7 @@ export function entscheide(k, option, zufall) {
     ausfall,
     grund,
     abgefangen,
-    folgen: folgen(k, naechster, w, ausfall, grund, abgefangen),
+    folgen: folgen(k, naechster, w, ausfall, grund, abgefangen, gelungen),
   };
 }
 
