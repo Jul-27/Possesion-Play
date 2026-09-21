@@ -537,7 +537,7 @@ test("ohne Turnier gibt es keinen Länderpokal", () => {
 test("wer zu schwach ist, spielt nicht in der Nationalelf", () => {
   const zufall = K.rng(59);
   for (let i = 0; i < 300; i++)
-    assert.deepEqual(K.nationalTitel({ ovr: K.NATIONALELF_AB - 1 }, { stufe: 5 }, zufall, 0), []);
+    assert.deepEqual(K.nationalTitel({ ovr: K.berufungsSchwelle("GER") - 1, land: "GER" }, { stufe: 5 }, zufall, 0), []);
 });
 
 // ── Der Wächter ──────────────────────────────────────────────────────────────
@@ -862,14 +862,14 @@ test("ein Aufsteiger rechnet gegen sein neues Feld, nicht gegen das alte", () =>
    Titel gab es schon, Länderspiele nicht — und ein Titel ohne Einsätze wirkt wie
    ein Zufallsfund. */
 test("wer zu schwach ist, spielt nicht für sein Land", () => {
-  const k = { ...K.neueKarriere({ name: "T", pos: "ST", land: "GER", nummer: 9 }), ovr: K.NATIONALELF_AB - 1 };
+  const k = { ...K.neueKarriere({ name: "T", pos: "ST", land: "GER", nummer: 9 }), ovr: K.berufungsSchwelle("GER") - 1 };
   assert.deepEqual(K.nationalLeistung(k, K.rng(1)), { spiele: 0, tore: 0, vorlagen: 0 });
 });
 
 test("die Zahl der Länderspiele wächst mit dem Wert", () => {
   const mach = (ovr) => K.nationalLeistung(
     { ...K.neueKarriere({ name: "T", pos: "ST", land: "GER", nummer: 9 }), ovr }, K.rng(7)).spiele;
-  const frisch = mach(K.NATIONALELF_AB), spitze = mach(96);
+  const frisch = mach(K.berufungsSchwelle("GER")), spitze = mach(96);
   assert.ok(frisch > 0, "ein gerade Berufener spielt auch");
   assert.ok(spitze > frisch, `Spitze ${spitze} muss über frisch ${frisch} liegen`);
   assert.ok(spitze <= K.LAENDERSPIELE_JE_SAISON, "nie mehr als es Spiele gibt");
@@ -1124,8 +1124,8 @@ test("der Verbandswechsel wechselt das Land", () => {
 test("wer den Verband wechselt, wird früher berufen", () => {
   const ohne = { ovr: 70, land: "GER" };
   const mit = { ovr: 70, land: "AUT", verbandGewechselt: true };
-  assert.equal(K.berufungAb(ohne), K.NATIONALELF_AB);
-  assert.equal(K.berufungAb(mit), K.NATIONALELF_AB - K.VERBAND_BONUS);
+  assert.equal(K.berufungAb(ohne), K.berufungsSchwelle("GER"));
+  assert.equal(K.berufungAb(mit), K.berufungsSchwelle("AUT") - K.VERBAND_BONUS);
   assert.equal(K.nationalLeistung(ohne, K.rng(13)).spiele, 0, "mit 70 ist er noch nicht dabei");
   assert.ok(K.nationalLeistung(mit, K.rng(13)).spiele > 0, "nach dem Wechsel schon");
 });
@@ -1278,8 +1278,8 @@ test("eine gewöhnliche Laufbahn einer grossen Nation gewinnt selten einen Länd
 });
 
 test("im Turnierkader steht, wer deutlich über der Berufung liegt", () => {
-  assert.equal(K.imKader({ ovr: K.NATIONALELF_AB, land: "GER" }), K.KADER_SOCKEL);
-  assert.equal(K.imKader({ ovr: K.NATIONALELF_AB + K.KADER_SPANNE + 5, land: "GER" }), 1);
+  assert.equal(K.imKader({ ovr: K.berufungsSchwelle("GER"), land: "GER" }), K.KADER_SOCKEL);
+  assert.equal(K.imKader({ ovr: K.berufungsSchwelle("GER") + K.KADER_SPANNE + 5, land: "GER" }), 1);
   assert.ok(K.imKader({ ovr: 78, land: "GER" }) < K.imKader({ ovr: 84, land: "GER" }));
 });
 
@@ -1768,4 +1768,33 @@ test("der Bestwert ist der höchste Wert der Laufbahn, nicht der letzte", () => 
   /* Steht der Spieler gerade auf seinem Höchstwert, zählt der. */
   assert.equal(K.bestwert({ ovr: 72, verlauf: [{ ovr: 70 }] }), 72);
   assert.equal(K.bestwert({ ovr: 50, verlauf: [] }), 50);
+});
+
+/* ── Die Berufung hängt am Land ───────────────────────────────────────────── */
+
+test("ein Land mit tiefem Kader beruft später", () => {
+  assert.equal(K.berufungsSchwelle("GER"), K.BERUFUNG_A);
+  assert.equal(K.berufungsSchwelle("BR"), K.BERUFUNG_A);
+  assert.equal(K.berufungsSchwelle("JP"), K.BERUFUNG_B);
+  assert.equal(K.berufungsSchwelle("AUT"), K.BERUFUNG_C);
+  assert.equal(K.berufungsSchwelle("AT"), K.BERUFUNG_C, "beide Schreibweisen Österreichs");
+  assert.equal(K.berufungsSchwelle("LU"), K.BERUFUNG_REST);
+  /* Die Reihenfolge ist der Kern: Wer schwächer ist, beruft früher. */
+  assert.ok(K.BERUFUNG_A > K.BERUFUNG_B && K.BERUFUNG_B > K.BERUFUNG_C && K.BERUFUNG_C > K.BERUFUNG_REST);
+});
+
+test("der Österreicher aus dem Durchspielen wird jetzt berufen", () => {
+  /* Höchstwert 70, 178 Spiele in England — vorher kein einziges Länderspiel. */
+  const at = { ovr: 70, land: "AUT", pos: "OM" };
+  assert.ok(K.nationalLeistung(at, K.rng(3)).spiele > 0);
+  /* Ein Deutscher mit demselben Wert bleibt zu Hause. */
+  assert.equal(K.nationalLeistung({ ...at, land: "GER" }, K.rng(3)).spiele, 0);
+});
+
+test("der Verbandswechsel nennt die alte Schwelle als Vergleich, nicht eine feste", () => {
+  const k = { ovr: 70, rolle: "stamm", alter: 22, land: "GER", verein: null };
+  const r = K.entscheide(k, { label: "x", wirkung: { verbandswechsel: "PL" } }, () => 0);
+  const zeile = r.folgen.find((f) => /berufen ab/.test(f.text));
+  assert.ok(zeile, r.folgen.map((f) => f.text).join(" | "));
+  assert.match(zeile.text, new RegExp(`berufen ab ${K.berufungsSchwelle("PL") - K.VERBAND_BONUS} statt ${K.BERUFUNG_A}`));
 });

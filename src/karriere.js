@@ -672,7 +672,6 @@ export function einzelTitel(k, leistung, zufall) {
    und die Auswahl käme im Spiel schlicht nicht mehr vor. 72 heisst: Wer eine
    ordentliche Laufbahn spielt, kommt zu ein paar Einsätzen; gesetzt ist deshalb
    noch niemand. */
-export const NATIONALELF_AB = 72;
 export const TURNIER_TAKT = 4;
 
 /* WER DEN VERBAND WECHSELT, IST DORT GESETZT. Genau das verspricht die Karte („Du
@@ -681,7 +680,6 @@ export const TURNIER_TAKT = 4;
    sechs Punkte, und weil das Land in der Titelrechnung steht, ändert er auch die
    Aussichten auf einen Länderpokal. Ein Tausch mit zwei Seiten, keine Zierde. */
 export const VERBAND_BONUS = 6;
-export const berufungAb = (k) => NATIONALELF_AB - (k.verbandGewechselt ? VERBAND_BONUS : 0);
 
 /* ── Welche Auswahl gewinnt etwas? ─────────────────────────────────────────────
    VORHER GAR KEINE FRAGE: Die Titelchance hing allein am Rating des Spielers und an
@@ -714,6 +712,37 @@ const NATION_STAERKE = new Map([
 ]);
 
 export const nationStaerke = (land) => NATION_STAERKE.get(land) ?? NATION_REST;
+
+/* ── Wer wird berufen? ─────────────────────────────────────────────────────────
+   DIE SCHWELLE WAR FÜR JEDES LAND DIESELBE: 72, für Brasilien wie für Österreich
+   wie für Luxemburg. Die Titelchance der Auswahl hing längst am Land, die Berufung
+   nicht. Im Durchspielen am 21.09.2026 kam ein Österreicher mit Höchstwert 70 und
+   178 Spielen in der Premier League über eine ganze Laufbahn auf kein einziges
+   Länderspiel — während Österreich in Wirklichkeit genau aus solchen Spielern
+   besteht.
+
+   Ein Land mit tiefem Kader beruft später. Gemessen über 3000 Laufbahnen (Median
+   des Höchstwerts 73) heissen die Stufen:
+
+     76  die neun Grossen          etwa 30 % aller Laufbahnen werden berufen
+     73  die zweite Reihe          etwa 50 %
+     70  Nationen mit Tradition    etwa 76 %
+     67  alle übrigen              etwa 92 %
+
+   Ein Deutscher mit 74 ist ein ordentlicher Bundesligaspieler und bleibt zu Hause;
+   ein Österreicher mit 70 fährt mit. Die Titelchance ändert sich dadurch nicht —
+   sie hängt weiter am Land, nicht an der Schwelle. */
+export const BERUFUNG_A = 76, BERUFUNG_B = 73, BERUFUNG_C = 70, BERUFUNG_REST = 67;
+
+/** Ab welcher Stärke beruft dieses Land — ohne Verbandswechsel gerechnet. */
+export function berufungsSchwelle(land) {
+  const s = nationStaerke(land);
+  return s >= NATION_A ? BERUFUNG_A : s >= NATION_B ? BERUFUNG_B : s >= NATION_C ? BERUFUNG_C : BERUFUNG_REST;
+}
+
+/* Der Verbandswechsel senkt die Schwelle des NEUEN Landes um VERBAND_BONUS — die
+   Karte verspricht „Du wärest dort sofort gesetzt". */
+export const berufungAb = (k) => berufungsSchwelle(k.land) - (k.verbandGewechselt ? VERBAND_BONUS : 0);
 
 /* Alle wählbaren Länder — sie bilden das Feld der WM. Unsere acht eigenen Schlüssel
    (GER, ENG, …) ersetzen dort ihren ISO-Code, damit kein Land doppelt zählt. */
@@ -773,7 +802,7 @@ export function turnierIn(saisonNr, land = null) {
    sein Land gespielt hatte, stand nirgends — und damit fehlte der Zusammenhang:
    Ein Titel ohne Länderspiele wirkt wie ein Zufallsfund.
 
-   Berufen wird, wer NATIONALELF_AB erreicht. Die Zahl der Spiele hängt daran, wie
+   Berufen wird, wer die Schwelle seines Landes erreicht. Die Zahl der Spiele hängt daran, wie
    weit er darüber liegt — ein gerade Berufener kommt auf zwei, drei Einsätze, ein
    Weltklassespieler ist gesetzt. Tore und Vorlagen folgen derselben Rechnung wie
    im Verein, nur auf weniger Spiele. */
@@ -1469,7 +1498,7 @@ export function folgen(vorher, nachher, w, ausfall, grund = "verletzt", abgefang
         : "Du spielst künftig für den anderen Verband",
       art: "neutral",
     });
-    liste.push({ text: `In der Auswahl bist du gesetzt (berufen ab ${berufungAb(nachher)} statt ${NATIONALELF_AB})`, art: "gut" });
+    liste.push({ text: `In der Auswahl bist du gesetzt (berufen ab ${berufungAb(nachher)} statt ${berufungAb(vorher)})`, art: "gut" });
   }
   const klasse = klasseText(w.klasse, vorher.verein);
   if (klasse) liste.push({ text: klasse, art: w.klasse > 1 ? "gut" : "schlecht" });
