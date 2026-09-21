@@ -939,6 +939,29 @@ export function wettbewerbe(verein) {
 /* Helfer für die Bedingungen unten. Sie lesen aus dem Verlauf, was gerade passiert
    ist — der Schritt davor ist die „letzte Saison", auch wenn er zwei umfasst. */
 export const letzteSaison = (k) => (k.verlauf && k.verlauf.length ? k.verlauf[k.verlauf.length - 1] : null);
+
+/* ── Die Rolle gilt für einen Verein, nicht für eine Laufbahn ────────────────
+   DIE ROLLE WURDE NIE ZURÜCKGESETZT. Sie startete als „Stammspieler" und änderte
+   sich nur durch Ereigniskarten — nicht bei einem Wechsel. Wer mit 22 wegen eines
+   unbedachten Beitrags bei Werder Bremen auf „Rotation" fiel, blieb das in Kobe, in
+   Dschidda, in Caen, in New York und in Vila do Conde, bis zum Karriereende, und
+   bekam bei jedem dieser Vereine nur 72 Prozent der Einsätze. So im Durchspielen
+   am 21.09.2026 passiert.
+
+   Jede Karte, die eine Rolle vergibt, spricht von DIESER Mannschaft: „Der Verein
+   erwartet eine Reaktion", „Der Verein holt jemanden für deinen Platz". Ein neuer
+   Verein ist ein neuer Anfang. Derselbe Verein bleibt derselbe — auch nach Auf- oder
+   Abstieg, der den Schlüssel nicht ändert. */
+export function rolleNachWechsel(k, neuerVerein) {
+  if (!k.verein || !neuerVerein || k.verein.key !== neuerVerein.key) return "stamm";
+  return k.rolle;
+}
+
+/* Der Höchstwert einer Laufbahn — für Urkunde UND Teilen-Text aus derselben
+   Quelle. Die Urkunde zeigte früher den Wert beim Rücktritt und wurde korrigiert;
+   der Teilen-Text hatte denselben Fehler behalten und schrieb „Höchstwert 67" unter
+   eine Laufbahn, deren Urkunde „Bestwert 70" sagte. */
+export const bestwert = (k) => Math.max(k.ovr, ...(k.verlauf || []).map((z) => z.ovr));
 export const letzteTitel = (k) => letzteSaison(k)?.titel || [];
 /* Ging es zuletzt aufwärts oder abwärts? Der Vergleich der beiden letzten Zeilen.
    Er ist der einzige Maßstab, der für jede Position gleich gilt: Ein Torwart und

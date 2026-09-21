@@ -595,7 +595,8 @@ export default function Karriere({ onLeave }) {
     const zufall = zufallRef.current;
     const saisons = K.TEMPO[basis.tempo].saisons;
     let verein = startVerein;
-    let k2 = { ...basis, verein };
+    /* Ein neuer Verein ist ein neuer Anfang — die Rolle gilt nur für den alten. */
+    let k2 = { ...basis, verein, rolle: K.rolleNachWechsel(basis, verein) };
     const neueTitel = [];
     const ereignisse = [];
     let spiele = 0, tore = 0, vorlagen = 0, ausgefallen = 0;
@@ -1250,8 +1251,8 @@ export default function Karriere({ onLeave }) {
               position={K.posDaten(k.pos).name}
               land={landName(k.land)}
               gesamt={k.gesamt}
-              hoechste={Math.max(...k.verlauf.map((z) => z.ovr), k.ovr)}
-              marktwert={K.werteText(K.marktwert(Math.max(...k.verlauf.map((z) => z.ovr), k.ovr)))}
+              hoechste={K.bestwert(k)}
+              marktwert={K.werteText(K.marktwert(K.bestwert(k)))}
               titel={TITEL_REIHE.filter((x) => k.titel[x]).map((x) => ({ key: x, name: TITEL_NAME[x], anzahl: k.titel[x] }))}
               auszeichnungen={karte.auszeichnungen}
               stationen={stationen}
@@ -1268,7 +1269,9 @@ export default function Karriere({ onLeave }) {
                   name: k.name,
                   stufe: karte.auszeichnungen[0]?.name || "ohne Auszeichnung",
                   saisons: k.verlauf.length,
-                  tore: k.gesamt.tore, vorlagen: k.gesamt.vorlagen, overall: k.ovr,
+                  tore: k.gesamt.tore, vorlagen: k.gesamt.vorlagen,
+                  torwart, gegentore: k.gesamt.gegentore || 0, westen: k.gesamt.westen || 0,
+                  overall: K.bestwert(k),
                   titel: TITEL_REIHE.filter((t) => k.titel[t]).map((t) => TITEL_NAME[t]),
                 })} />
               <button className="btn" onClick={() => { setK(null); setKarte(null); setMeldung([]); setSaison(null); }}>Neue Laufbahn</button>

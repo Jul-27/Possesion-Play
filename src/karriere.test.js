@@ -1737,3 +1737,35 @@ test("alle Motive gibt es auch als Datei", async () => {
   const tot = [...da].filter((m) => !genutzt.includes(m));
   assert.deepEqual(tot, [], "Bilddatei, die keine Option verwendet");
 });
+
+/* ── Aus dem Durchspielen am 21.09.2026 ───────────────────────────────────── */
+
+test("die Rolle gilt nur für den Verein, bei dem man sie bekam", () => {
+  const bremen = { key: "SVW" }, kobe = { key: "VIS" };
+  const k = { verein: bremen, rolle: "rotation" };
+  /* Neuer Verein: neuer Anfang. */
+  assert.equal(K.rolleNachWechsel(k, kobe), "stamm");
+  /* Derselbe Verein — auch nach einem Abstieg, der nur die Liga tauscht. */
+  assert.equal(K.rolleNachWechsel(k, { key: "SVW", liga: { stufe: 2 } }), "rotation");
+  assert.equal(K.rolleNachWechsel({ verein: bremen, rolle: "kader" }, bremen), "kader");
+  /* Der erste Verein einer Laufbahn. */
+  assert.equal(K.rolleNachWechsel({ verein: null, rolle: "rotation" }, kobe), "stamm");
+});
+
+test("jeder Vereinswechsel läuft durch rolleNachWechsel", async () => {
+  /* Die Regel nützt nichts, wenn der Schritt sie nicht aufruft. Alle Wechsel —
+     Angebot, Leihe, Rückkehr, Bleiben — gehen durch spieleSchritt, und dort wird
+     der Stand für den neuen Verein gebaut. */
+  const { readFileSync } = await import("node:fs");
+  const quelle = readFileSync(new URL("./Karriere.jsx", import.meta.url), "utf8");
+  const schritt = quelle.split("function spieleSchritt")[1].split("\n  function ")[0];
+  assert.match(schritt, /rolle:\s*K\.rolleNachWechsel\(basis,\s*verein\)/);
+});
+
+test("der Bestwert ist der höchste Wert der Laufbahn, nicht der letzte", () => {
+  const k = { ovr: 67, verlauf: [{ ovr: 52 }, { ovr: 70 }, { ovr: 69 }] };
+  assert.equal(K.bestwert(k), 70);
+  /* Steht der Spieler gerade auf seinem Höchstwert, zählt der. */
+  assert.equal(K.bestwert({ ovr: 72, verlauf: [{ ovr: 70 }] }), 72);
+  assert.equal(K.bestwert({ ovr: 50, verlauf: [] }), 50);
+});

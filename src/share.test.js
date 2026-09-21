@@ -70,3 +70,22 @@ test("shareCarousel zeigt Leben und Bot-Stufe", () => {
 test("shareCarousel behauptet bei einer Niederlage keinen Sieg", () => {
   assert.match(shareCarousel(false, 0, 2, "Mittel"), /verloren 0:2/);
 });
+
+/* ── Karriere ────────────────────────────────────────────────────────────── */
+import { shareKarriere } from "./share.js";
+
+test("Karriere: Feldspieler mit Toren und Vorlagen, richtig gebeugt", () => {
+  const t = shareKarriere({ name: "A", stufe: "Der Wanderer", saisons: 1, tore: 1, vorlagen: 1, overall: 70 });
+  assert.match(t, /1 Saison · 1 Tor · 1 Vorlage · Höchstwert 70/);
+  const u = shareKarriere({ name: "A", stufe: "x", saisons: 18, tore: 47, vorlagen: 56, overall: 70 });
+  assert.match(u, /18 Saisons · 47 Tore · 56 Vorlagen/);
+});
+
+test("Karriere: der Torwart teilt Gegentore und weiße Westen, nicht Tore", () => {
+  const t = shareKarriere({ name: "T", stufe: "x", saisons: 20, tore: 3, vorlagen: 1,
+    torwart: true, gegentore: 800, westen: 117, overall: 74 });
+  assert.match(t, /20 Saisons · 800 Gegentore · 117 weiße Westen · Höchstwert 74/);
+  assert.doesNotMatch(t, /Tore ·|Vorlage/);
+  assert.match(shareKarriere({ name: "T", stufe: "x", saisons: 2, torwart: true, gegentore: 1, westen: 1, overall: 60 }),
+    /1 Gegentor · 1 weiße Weste/);
+});
