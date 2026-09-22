@@ -2049,3 +2049,67 @@ test("jede Vereinskachel im Spiel trägt ihre Aussicht", async () => {
   const ohne = quelle.split("<VereinsKarte").slice(1).filter((stueck) => !/aussicht=\{aussicht\(/.test(stueck.split("/>")[0]));
   assert.equal(ohne.length, 0, "eine Vereinskachel ohne Aussicht");
 });
+
+/* ── Die Karriere des Tages ───────────────────────────────────────────────── */
+
+test("der Tagesstart ist für alle gleich und wechselt mit dem Datum", () => {
+  const a = K.tagesStart("2026-09-23"), b = K.tagesStart("2026-09-23"), c = K.tagesStart("2026-09-24");
+  assert.deepEqual(a, b);
+  assert.ok(K.TAGES_LAENDER.includes(a.land));
+  assert.ok(K.TAGES_POSITIONEN.includes(a.pos));
+  assert.equal(a.tempo, "normal");
+  assert.notEqual(a.seed, c.seed);
+  /* Über ein Jahr kommt jedes Land und jede Position vor. */
+  const laender = new Set(), pos = new Set();
+  for (let t = 0; t < 365; t++) {
+    const d = new Date(Date.UTC(2026, 0, 1 + t)).toISOString().slice(0, 10);
+    const s = K.tagesStart(d); laender.add(s.land); pos.add(s.pos);
+  }
+  assert.equal(laender.size, K.TAGES_LAENDER.length);
+  assert.equal(pos.size, K.TAGES_POSITIONEN.length);
+});
+
+test("in der Karriere des Tages hängt das Talent nicht am Namen", () => {
+  const st = K.tagesStart("2026-09-23");
+  const mach = (name) => K.neueKarriere({ name, land: st.land, nummer: 9, pos: st.pos, tempo: st.tempo, seed: st.seed, schluessel: st.schluessel });
+  const a = mach("Anna"), b = mach("Ben");
+  assert.equal(a.talent, b.talent);
+  assert.equal(a.typ, b.typ);
+  /* Frei gespielt dagegen schon. */
+  const c = K.neueKarriere({ name: "Anna", land: "GER", nummer: 9, pos: "ST", seed: 1 });
+  const d = K.neueKarriere({ name: "Ben", land: "GER", nummer: 9, pos: "ST", seed: 1 });
+  assert.ok(c.talent !== d.talent || c.typ !== d.typ);
+});
+
+test("die Tagespunkte liegen auf der Skala der anderen Tagesrätsel", () => {
+  const leer = { ovr: 60, verlauf: [{ ovr: 60 }], titel: {}, gesamt: { spiele: 0, tore: 0, vorlagen: 0 }, vereine: [], laender: [] };
+  const w = K.tagesPunkte(leer);
+  assert.ok(w.punkte >= 1 && w.punkte <= 100);
+  const gross = { ...leer, ovr: 95, verlauf: [{ ovr: 95 }], titel: { WM: 2, CL: 3, BDO: 2, MBL: 5 } };
+  assert.equal(K.tagesPunkte(gross).punkte, 100, "gedeckelt");
+  /* Die Teile ergeben die Punkte, solange nicht gedeckelt wird. */
+  const mittel = { ...leer, ovr: 73, verlauf: [{ ovr: 73 }], titel: { DFB: 2 } };
+  const m = K.tagesPunkte(mittel);
+  assert.equal(m.punkte, m.teile.bestwert + m.teile.titel + m.teile.auszeichnungen);
+  assert.equal(m.teile.titel, 4, "zwei Pokale zu je 2");
+  assert.equal(K.titelPunkte("WM"), 8);
+  assert.equal(K.titelPunkte("MPL"), 3);
+});
+
+test("die Bilanz wächst über Laufbahnen und merkt sich jede Auszeichnung einmal", () => {
+  let st = null;
+  st = K.updateKarriereStats(st, { bestwert: 72, titel: 3, weltmeister: false, ballonDor: false, auszeichnungen: ["wanderer"] });
+  st = K.updateKarriereStats(st, { bestwert: 88, titel: 5, weltmeister: true, ballonDor: false, auszeichnungen: ["wanderer", "grenzgaenger"] });
+  assert.deepEqual(st, { played: 2, bestwert: 88, titelGesamt: 8, meisteTitel: 5, weltmeister: 1, ballonDor: 0,
+    auszeichnungen: ["grenzgaenger", "wanderer"] });
+});
+
+test("die Eichung der Tagespunkte: ein mittlerer Bestwert trägt rund die Hälfte", () => {
+  /* Geeicht an 3000 simulierten Laufbahnen (Median des Bestwerts 72). Ändert sich
+     die Formel, soll das hier bewusst auffallen — die Saisontabelle hängt daran. */
+  const nur = (best) => K.tagesPunkte({ ovr: best, verlauf: [{ ovr: best }], titel: {}, gesamt: { spiele: 0, tore: 0, vorlagen: 0 }, vereine: [], laender: [] }).teile.bestwert;
+  assert.equal(nur(58), 0);
+  assert.equal(nur(72), 49);
+  assert.equal(nur(80), 77);
+  assert.ok(nur(90) > 100, "ein Weltstar erreicht die 100 schon über den Bestwert");
+});
