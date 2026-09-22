@@ -47,6 +47,7 @@ export const MISSIONEN = [
   { id: "elf-halb",     text: "Besetze sechs Positionen in der Elf", ziel: 6, xp: 30, wert: (s) => s.elfFelder },
   { id: "heatmap",      text: "Fülle ein Heatmap-Board",          ziel: 1, xp: 40, wert: (s) => (s.modi.includes("heat") ? 1 : 0) },
   { id: "kette",        text: "Löse die Tagesaufgabe der Fußball-Kette", ziel: 1, xp: 40, wert: (s) => (s.modi.includes("chain") ? 1 : 0) },
+  { id: "karriere",     text: "Spiele die Karriere des Tages",    ziel: 1, xp: 50, wert: (s) => (s.modi.includes("karriere") ? 1 : 0) },
 ];
 
 /* Drei Missionen des Tages, aus dem Datum abgeleitet — für alle gleich, ohne Server.

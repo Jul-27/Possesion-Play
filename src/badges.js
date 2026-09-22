@@ -34,6 +34,7 @@ export function badgeStand(leser = read, entries = collectStats()) {
     hex: leser("pp:soloStats") || {},
     heat: leser("pp:heatBest") || {},
     carousel: leser("pp:carouselStats") || {},
+    karriere: leser("pp:karriereStats") || {},
   };
 }
 
@@ -44,7 +45,9 @@ export const BADGES = [
   { id: "erste",       icon: "star",     name: "Erster Treffer",   text: "Löse dein erstes Rätsel",              ziel: 1,   xp: 20,  wert: (s) => s.raetsel },
   { id: "stamm",       icon: "medal",    name: "Stammspieler",     text: "50 Rätsel gespielt",                   ziel: 50,  xp: 60,  wert: (s) => s.raetsel },
   { id: "dauerlaeufer",icon: "cup",      name: "Dauerläufer",      text: "250 Rätsel gespielt",                  ziel: 250, xp: 200, wert: (s) => s.raetsel },
-  { id: "allrounder",  icon: "network",  name: "Alleskönner",      text: "Alle acht Modi mindestens einmal",     ziel: 8,   xp: 120, wert: (s) => s.modi },
+  /* Mit der Karriere zählt die Statistik neun Modi. Das Ziel bleibt bei acht, damit
+     niemand ein Abzeichen verliert, das er schon hatte. */
+  { id: "allrounder",  icon: "network",  name: "Alleskönner",      text: "Acht verschiedene Modi gespielt",      ziel: 8,   xp: 120, wert: (s) => s.modi },
 
   { id: "serie7",      icon: "streak",   name: "Serientäter",      text: "Sieben Tage in Folge",                 ziel: 7,   xp: 80,  wert: (s) => s.serie },
   { id: "serie30",     icon: "crown",    name: "Unbeugsam",        text: "Dreißig Tage in Folge",                ziel: 30,  xp: 300, wert: (s) => s.serie },
@@ -62,6 +65,14 @@ export const BADGES = [
     wert: (s) => Math.round((s.heat.density || 0) * 100) },
   { id: "feuerwerk",   icon: "grid",     name: "Feuerwerk",        text: "80 Punkte in der Heatmap",             ziel: 80,  xp: 140, wert: (s) => s.heat.score || 0 },
   { id: "karussell",   icon: "carousel", name: "Drehschwindel",    text: "Zehn Siege im Transferkarussell",      ziel: 10,  xp: 110, wert: (s) => s.carousel.won || 0 },
+
+  /* Die Karriere. Die Schwellen sind an gespielten Laufbahnen geeicht: Bestwert 90
+     erreicht etwa jede zehnte, Weltmeister wird man in einer von zwanzig bis dreissig. */
+  { id: "profi",       icon: "jersey",   name: "Profivertrag",     text: "Eine Laufbahn zu Ende gespielt",       ziel: 1,   xp: 30,  wert: (s) => s.karriere.played || 0 },
+  { id: "weltklasse",  icon: "star",     name: "Weltklasse",       text: "Bestwert 90 in einer Laufbahn",        ziel: 90,  xp: 150, wert: (s) => s.karriere.bestwert || 0 },
+  { id: "weltmeister", icon: "globe",    name: "Weltmeister",      text: "In einer Laufbahn Weltmeister geworden", ziel: 1, xp: 160, wert: (s) => s.karriere.weltmeister || 0 },
+  { id: "vitrine",     icon: "cup",      name: "Volle Vitrine",    text: "50 Titel über alle Laufbahnen",        ziel: 50,  xp: 120, wert: (s) => s.karriere.titelGesamt || 0 },
+  { id: "ehrenhalle",  icon: "crown",    name: "Ehrenhalle",       text: "10 der 15 Auszeichnungen einmal erreicht", ziel: 10, xp: 200, wert: (s) => (s.karriere.auszeichnungen || []).length },
 ];
 
 /** Fortschritt eines Abzeichens. */

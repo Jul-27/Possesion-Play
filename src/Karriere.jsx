@@ -15,6 +15,9 @@ import Icon from "./Icons.jsx";
 import { Emblem } from "./Emblems.jsx";
 import UrkundeKarriere from "./UrkundeKarriere.jsx";
 import Trophaee from "./Trophaeen.jsx";
+import { dailyDateStr, dailyNumber } from "./dailyLogic.js";
+import { tagesZustand, beginneTag, abbruchVerbuchen, verbucheLaufbahn } from "./karriereTag.js";
+import { submit as bestenlisteMelden, getGroup } from "./leaderboard.js";
 
 /* Titelnamen für die Vitrine. Die Schlüssel sind dieselben wie im Feld `t` der
    Spielerdaten — „CL" heißt in der Karriere dasselbe wie in jedem anderen Modus. */
@@ -347,6 +350,65 @@ function VereinsKarte({ verein, anlass, onClick, breit = false, gesperrt = false
   );
 }
 
+/* ── Die Karriere des Tages ────────────────────────────────────────────────────
+   Oben auf dem Startbildschirm: was heute für alle gilt, und ob man schon dran war. */
+function TagesBlock({ heute, tag, onStart }) {
+  const st = K.tagesStart(heute);
+  const nr = dailyNumber(heute);
+  /* KEIN „aus": „aus Vereinigte Staaten", „aus Niederlande" — Ländernamen mit Artikel
+     müssten gebeugt werden. Dieselbe Lösung wie beim Verbandswechsel: ohne Präposition. */
+  const was = `${K.posDaten(st.pos).name} · ${landFlagge(st.land)} ${landName(st.land)}`;
+  if (tag.ergebnis && !tag.ergebnis.abgebrochen) {
+    return (
+      <div className="kaTag fertig">
+        <span className="kaTagKopf">Karriere des Tages #{nr}</span>
+        <b>Heute gespielt · {tag.ergebnis.punkte} Punkte</b>
+        <small>{was} · morgen gibt es eine neue</small>
+      </div>
+    );
+  }
+  if (tag.begonnen) {
+    return (
+      <div className="kaTag vorbei">
+        <span className="kaTagKopf">Karriere des Tages #{nr}</span>
+        <b>Heute abgebrochen</b>
+        <small>Sie zählt einmal am Tag — morgen gibt es eine neue.</small>
+      </div>
+    );
+  }
+  return (
+    <div className="kaTag">
+      <span className="kaTagKopf">Karriere des Tages #{nr}</span>
+      <b>{was}</b>
+      <small>Für alle derselbe Start — gleiches Talent, gleiche Vereine, gleicher Zufall.
+        Ein Versuch, er zählt für die Bestenliste.</small>
+      <button className="btn primary" onClick={onStart}>Karriere des Tages spielen</button>
+    </div>
+  );
+}
+
+/* Auf der Endkarte: die Punkte und woher sie kommen. */
+function TagesErgebnis({ nummer, wertung, gemeldet, mitGruppe }) {
+  const t = wertung.teile;
+  return (
+    <div className="kaTagErgebnis">
+      <span className="kaTagKopf">Karriere des Tages #{nummer}</span>
+      <b className="kaTagPunkte">{wertung.punkte} <small>Punkte</small></b>
+      <span className="kaTagTeile">
+        Bestwert {wertung.bestwert} → {t.bestwert} · {wertung.titel} Titel → {t.titel}
+        {" "}· {wertung.auszeichnungen} {wertung.auszeichnungen === 1 ? "Auszeichnung" : "Auszeichnungen"} → {t.auszeichnungen}
+        {t.bestwert + t.titel + t.auszeichnungen > 100 ? " · bei 100 gedeckelt" : ""}
+      </span>
+      <small className="kaTagMeldung">
+        {!mitGruppe ? "Tritt in der Bestenliste einer Gruppe bei, um dich mit anderen zu messen."
+          : gemeldet === true ? "In die Bestenliste deiner Gruppe eingetragen."
+          : gemeldet === false ? "Die Bestenliste war nicht erreichbar — gezählt hat es trotzdem."
+          : "Wird in die Bestenliste eingetragen …"}
+      </small>
+    </div>
+  );
+}
+
 /* ── Das Spielfeld ────────────────────────────────────────────────────────────
    Zwölf Positionen dort, wo sie auf dem Platz stehen. Eine Reihe von Kürzeln sagt
    einem Fußballfan nichts; eine Aufstellungstafel sagt alles auf einen Blick. */
@@ -564,6 +626,18 @@ export default function Karriere({ onLeave }) {
   const [tempo, setTempo] = useState("normal");
   const [landSuche, setLandSuche] = useState("");
 
+  /* Die Karriere des Tages (siehe karriereTag.js). `heute` wird beim Öffnen einmal
+     festgehalten: Wer über Mitternacht spielt, spielt die Karriere des Tages zu Ende,
+     mit der er angefangen hat. */
+  const [heute] = useState(() => dailyDateStr());
+  const [tag, setTag] = useState(() => tagesZustand(heute));
+  const [tagesWertung, setTagesWertung] = useState(null);
+  const [gemeldet, setGemeldet] = useState(null);   // true | false | null (nicht versucht)
+  /* Eine begonnene, nie beendete Karriere des Tages als verloren verbuchen — die
+     laufende Karriere wird nicht gespeichert, wer den Modus verlassen hat, hat sie
+     aufgegeben. */
+  useEffect(() => { if (abbruchVerbuchen(heute)) setTag(tagesZustand(heute)); }, [heute]);
+
   // Lauf
   const [k, setK] = useState(null);
   const [karte, setKarte] = useState(null);   // { art: "jugend"|"ereignis"|"angebot"|"ende", ... }
@@ -594,10 +668,22 @@ export default function Karriere({ onLeave }) {
 
   // ── Ablauf ─────────────────────────────────────────────────────────────────
 
-  function starte() {
-    const seed = Date.now() >>> 0;
-    const neu = K.neueKarriere({ name: name.trim() || "Namenlos", land, nummer, pos, fuss, tempo, seed });
-    zufallRef.current = K.rng(K.hashStr(`${neu.name}|${seed}`));
+  function starte(tages = false) {
+    /* In der Karriere des Tages kommen Land, Position, Tempo und Zufall aus dem Datum
+       — für alle gleich. Name, Nummer und Fuss bleiben frei; sie ändern am Spiel
+       nichts. Der Zufall des Laufs hängt NICHT am Namen, sonst bekäme jeder, der einen
+       anderen eintippt, andere Jugendvereine. */
+    const st = tages ? K.tagesStart(heute) : null;
+    const seed = st ? st.seed : Date.now() >>> 0;
+    const neu = K.neueKarriere({
+      name: name.trim() || "Namenlos", nummer, fuss,
+      land: st ? st.land : land, pos: st ? st.pos : pos, tempo: st ? st.tempo : tempo, seed,
+      ...(st ? { schluessel: st.schluessel, tagesDatum: heute } : {}),
+    });
+    zufallRef.current = st ? K.rng(K.hashStr(`${st.schluessel}|lauf`)) : K.rng(K.hashStr(`${neu.name}|${seed}`));
+    if (st) { beginneTag(heute); setTag(tagesZustand(heute)); }
+    setTagesWertung(null);
+    setGemeldet(null);
     modRef.current = { liga: 1, pokal: 1, europa: 1, klasse: 1 };
     ausfallRef.current = { saisons: 0, grund: "verletzt" };
     letzteRef.current = [];
@@ -608,7 +694,7 @@ export default function Karriere({ onLeave }) {
     setMeldung([]);
     setSaison(null);
     setFeier(null);
-    setKarte({ art: "jugend", vereine: K.jugendAngebote(welt, land, zufallRef.current) });
+    setKarte({ art: "jugend", vereine: K.jugendAngebote(welt, neu.land, zufallRef.current) });
     play("start");
   }
 
@@ -819,6 +905,15 @@ export default function Karriere({ onLeave }) {
 
   function beende(k2, grund = null) {
     const fertig = { ...k2, beendet: true };
+    /* Das Ergebnis zählt — die Laufbahn selbst wird nicht gespeichert. */
+    const wertung = verbucheLaufbahn(fertig);
+    if (wertung) {
+      setTagesWertung(wertung);
+      setTag(tagesZustand(fertig.tagesDatum));
+      bestenlisteMelden("karriere", {
+        punkte: wertung.punkte, bestwert: wertung.bestwert, titel: wertung.titel, auszeichnungen: wertung.auszeichnungen,
+      }, fertig.tagesDatum).then((ok) => setGemeldet(!!ok)).catch(() => setGemeldet(false));
+    }
     setK(fertig);
     setKarte({ art: "ende", auszeichnungen: K.erreichteAuszeichnungen(fertig), grund });
     play("end");
@@ -845,6 +940,7 @@ export default function Karriere({ onLeave }) {
       {kopf}
       <div className="panel kaAnlage">
         <Bild pfad="/bilder/karriere-kopf.jpg" klasse="kaKopfbild" alt="" />
+        <TagesBlock heute={heute} tag={tag} onStart={() => starte(true)} />
         <h2>Definiere deine Identität</h2>
 
         <div className="kaAnlageSpalten">
@@ -905,7 +1001,7 @@ export default function Karriere({ onLeave }) {
           ))}
         </div>
 
-        <button className="btn primary" onClick={starte}>Laufbahn beginnen</button>
+        <button className="btn primary" onClick={() => starte(false)}>Laufbahn beginnen</button>
         <DataStamp />
       </div>
     </div>
@@ -1147,9 +1243,9 @@ export default function Karriere({ onLeave }) {
             <h3>Dein erster Verein</h3>
             {/* Bei Laendern ohne eigene Liga greift der Rueckfall auf beliebige kleine
                 Vereine — dann darf hier nicht das Gegenteil stehen. */}
-            <p>{karte.vereine.every((v) => v.liga.land === land)
-              ? `Drei Vereine aus ${landName(land)} wollen dich in ihre Jugend holen.`
-              : `In ${landName(land)} spielt keiner unserer Vereine — diese drei würden dich trotzdem nehmen.`}</p>
+            <p>{karte.vereine.every((v) => v.liga.land === K.ligaLand(k.land))
+              ? `Drei Vereine aus ${landName(k.land)} wollen dich in ihre Jugend holen.`
+              : `In ${landName(k.land)} spielt keiner unserer Vereine — diese drei würden dich trotzdem nehmen.`}</p>
             <div className="kaVereine">
               {karte.vereine.map((v) => (
                 <VereinsKarte key={v.key} verein={v} anlass="Anfangen bei" aussicht={aussicht(v)}
@@ -1244,6 +1340,10 @@ export default function Karriere({ onLeave }) {
             <Confetti farben={["#F5B301", "#4ADE80", "#E8F3ED", "#D98A02", "#7DF3C0"]} />
             <h2>Laufbahn beendet</h2>
             {karte.grund && <p className="kaGrund">{karte.grund}</p>}
+            {tagesWertung && (
+              <TagesErgebnis nummer={dailyNumber(k.tagesDatum)} wertung={tagesWertung}
+                gemeldet={gemeldet} mitGruppe={!!getGroup()} />
+            )}
             <p className="kaBilanz">
               {k.verlauf.length ? `${k.verlauf[0].alter} bis ${k.alter}` : k.alter} ·{" "}
               {k.gesamt.spiele} Spiele ·{" "}

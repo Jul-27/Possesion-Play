@@ -99,3 +99,17 @@ test("alle acht Solo-Modi kommen in der Sammlung vor", () => {
     assert.ok(text.includes(wort), `kein Abzeichen für ${wort}`);
   }
 });
+
+test("die Karriere zählt für Abzeichen, ohne dass jemand eines verliert", () => {
+  const leer = () => null;
+  const mit = (k) => (key) => (key === "pp:karriereStats" ? k : null);
+  const s = badgeStand(mit({ played: 3, bestwert: 91, titelGesamt: 12, weltmeister: 1, auszeichnungen: ["a", "b"] }), []);
+  const fertig = (id) => stand(BADGES.find((b) => b.id === id), s).fertig;
+  assert.ok(fertig("profi") && fertig("weltklasse") && fertig("weltmeister"));
+  assert.ok(!fertig("vitrine") && !fertig("ehrenhalle"));
+  /* Alleskönner bleibt bei acht Modi, obwohl es jetzt neun gibt. */
+  assert.equal(BADGES.find((b) => b.id === "allrounder").ziel, 8);
+  /* Ohne eine einzige Laufbahn: kein Karriere-Abzeichen. */
+  const ohne = badgeStand(leer, []);
+  assert.ok(!stand(BADGES.find((b) => b.id === "profi"), ohne).fertig);
+});

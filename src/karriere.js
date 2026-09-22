@@ -514,10 +514,14 @@ export function passendeVereine(welt, ovr, { land = null, ligaStufe = null, auss
 }
 
 /* ── Der eigene Spieler ────────────────────────────────────────────────────────*/
-export function neueKarriere({ name, land, nummer, pos, fuss = "rechts", tempo = "normal", seed = Date.now() }) {
-  const zufall = rng(hashStr(`${name}|${seed}`));
+/* `schluessel` bestimmt den Zufall der Anlage (Typ, Talent). Frei gespielt hängt er
+   am Namen und der Uhrzeit; in der Karriere des Tages am Datum allein — sonst bekäme
+   jeder, der einen anderen Namen eintippt, ein anderes Talent. */
+export function neueKarriere({ name, land, nummer, pos, fuss = "rechts", tempo = "normal", seed = Date.now(),
+  schluessel = `${name}|${seed}`, tagesDatum = null }) {
+  const zufall = rng(hashStr(schluessel));
   return {
-    name, land, nummer, pos, fuss, tempo, seed,
+    name, land, nummer, pos, fuss, tempo, seed, tagesDatum,
     typ: entwicklungstyp(zufall, pos),
     talent: zieheTalent(zufall),
     alter: START_ALTER,
@@ -2009,3 +2013,109 @@ export const ZAEHLER_WARTEN = 900;
    Wartezeit, Zählerlauf und ein kurzer Atemzug danach. */
 export const SPERRE_NACHLAUF = 260;
 export const sperrDauer = (sprung) => ZAEHLER_WARTEN + zaehlerDauer(sprung) + SPERRE_NACHLAUF;
+
+
+/* ══ Die Karriere des Tages ═════════════════════════════════════════════════════
+   EINE LAUFBAHN IST KURZ UND WIRD NICHT GESPEICHERT — so ist der Modus gedacht.
+   Damit fehlte ein Grund, morgen wiederzukommen, und die Möglichkeit, sich mit
+   anderen zu messen: Jede Laufbahn begann mit einem anderen Talent, und ob man mit
+   Weltmeister oder Kreisliga endete, sagte wenig über die eigenen Entscheidungen.
+
+   Die Karriere des Tages gibt allen am selben Tag DENSELBEN START: dasselbe Land,
+   dieselbe Position, dasselbe Tempo, dasselbe Talent, dieselben drei Jugendvereine,
+   denselben Zufall. Was danach passiert, entscheiden die Wahlen des Spielers. Sie
+   zählt einmal am Tag, mit Serie, und landet in der Bestenliste der Gruppe.
+
+   Gespeichert wird dabei weiterhin keine laufende Karriere — nur ihr Ergebnis. */
+
+/* Nur Länder mit eigener Liga in der Welt: Die drei Jugendvereine kommen sonst von
+   irgendwoher, und „Deutschland" steht über einem Start in Japan. */
+export const TAGES_LAENDER = ["GER", "ENG", "ESP", "ITA", "FRA", "PRT", "NED", "AUT", "BR", "US", "SA", "JP"];
+/* Alle zwölf Positionen, auch der Torwart. Er spielt eine andere Laufbahn mit
+   anderen Zahlen — aber an einem Torwarttag sind alle Torhüter, und die Punkte
+   hängen an Bestwert, Titeln und Auszeichnungen, nicht an Toren. */
+export const TAGES_POSITIONEN = POSITIONEN.map((p) => p.key);
+
+/** Der Start des Tages — für alle gleich, aus dem Datum abgeleitet. */
+export function tagesStart(datum) {
+  const seed = hashStr(`karriere:${datum}`);
+  const z = rng(seed);
+  return {
+    land: TAGES_LAENDER[Math.floor(z() * TAGES_LAENDER.length)],
+    pos: TAGES_POSITIONEN[Math.floor(z() * TAGES_POSITIONEN.length)],
+    tempo: "normal",
+    seed,
+    schluessel: `karriere:${datum}`,
+  };
+}
+
+/* ── Die Punkte ────────────────────────────────────────────────────────────────
+   Die Saisontabelle der Bestenliste zählt die Tagespunkte aller Modi zusammen, und
+   ein Tagesrätsel bringt dort 60 bis 100. Die Karriere punktet deshalb auf derselben
+   Skala, gedeckelt bei 100 — sonst entschiede sie die Saison allein.
+
+   Drei Teile, alle aus der fertigen Laufbahn ablesbar:
+   · Bestwert — der höchste Wert der Laufbahn, ab 58 dreieinhalb Punkte je Punkt.
+     Er ist der Kern: Wer gut entscheidet, wird besser.
+   · Titel — nach Gewicht: eine Meisterschaft 3, ein Pokal 2, Europa League 4,
+     Champions League 6, Kontinentalmeister 5, Weltmeister und Ballon d'Or je 8.
+   · Auszeichnungen — je 3 Punkte.
+
+   GEEICHT AN 3000 SIMULIERTEN LAUFBAHNEN. Die erste Fassung (ab 55, anderthalb je
+   Punkt) ergab einen Median von 28 und liess 90 % unter 44 — die Karriere wäre in der
+   Saisontabelle nur halb so viel wert gewesen wie ein Rätsel, und gut und schlecht
+   lagen dicht beieinander. Jetzt: Median 51, oberes Viertel ab 66, die besten zehn
+   Prozent ab 85, knapp fünf Prozent erreichen 100. */
+export const TAGES_TITEL_PUNKTE = { CL: 6, EL: 4, WM: 8, EM: 5, CA: 5, BDO: 8 };
+export function titelPunkte(key) {
+  if (TAGES_TITEL_PUNKTE[key] !== undefined) return TAGES_TITEL_PUNKTE[key];
+  if (Object.values(LIGA_TITEL).includes(key)) return 3;
+  if (Object.values(POKAL_TITEL).includes(key)) return 2;
+  return 0;
+}
+
+export function tagesPunkte(k) {
+  const best = bestwert(k);
+  const ausBestwert = Math.max(0, Math.round((best - 58) * 3.5));
+  const ausTiteln = Object.entries(k.titel || {}).reduce((s, [key, n]) => s + titelPunkte(key) * n, 0);
+  const auszeichnungen = erreichteAuszeichnungen(k).length;
+  const ausAuszeichnungen = auszeichnungen * 3;
+  const roh = ausBestwert + ausTiteln + ausAuszeichnungen;
+  return {
+    punkte: Math.max(1, Math.min(100, roh)),
+    teile: { bestwert: ausBestwert, titel: ausTiteln, auszeichnungen: ausAuszeichnungen },
+    bestwert: best,
+    titel: Object.values(k.titel || {}).reduce((a, b) => a + b, 0),
+    auszeichnungen,
+  };
+}
+
+/* ── Die Bilanz über alle Laufbahnen ──────────────────────────────────────────
+   Für Statistik, XP und Abzeichen. Gespeichert wird nur diese Bilanz, nie eine
+   Laufbahn — dieselbe Form wie bei den anderen Modi (played, Bestwerte), damit
+   stats.js, progress.js und badges.js sie ohne Sonderfall lesen. */
+export const KARRIERE_STATS_KEY = "pp:karriereStats";
+
+export function laufbahnBilanz(k) {
+  return {
+    bestwert: bestwert(k),
+    titel: Object.values(k.titel || {}).reduce((a, b) => a + b, 0),
+    weltmeister: (k.titel?.WM || 0) > 0,
+    ballonDor: (k.titel?.BDO || 0) > 0,
+    auszeichnungen: erreichteAuszeichnungen(k).map((a) => a.key),
+  };
+}
+
+export function updateKarriereStats(prev, bilanz) {
+  const p = prev && typeof prev === "object" ? prev : {};
+  const alle = new Set([...(p.auszeichnungen || []), ...bilanz.auszeichnungen]);
+  return {
+    played: (p.played || 0) + 1,
+    bestwert: Math.max(p.bestwert || 0, bilanz.bestwert),
+    titelGesamt: (p.titelGesamt || 0) + bilanz.titel,
+    meisteTitel: Math.max(p.meisteTitel || 0, bilanz.titel),
+    weltmeister: (p.weltmeister || 0) + (bilanz.weltmeister ? 1 : 0),
+    ballonDor: (p.ballonDor || 0) + (bilanz.ballonDor ? 1 : 0),
+    auszeichnungen: [...alle].sort(),
+  };
+}

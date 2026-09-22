@@ -11,6 +11,8 @@ export const MODES = {
   hex:    { name: "Hex-Training", icon: "hex", label: (s, d) => `${d?.moves ?? "?"} Züge` },
   eleven: { name: "Elf des Tages", icon: "jersey", label: (s, d) => (d?.wrong ? `${d.wrong} Fehlversuche` : "ohne Fehler") },
   heat:   { name: "Heatmap", icon: "flame", label: (s, d) => `Dichte ${(d?.density ?? 0).toFixed(2)}` },
+  karriere: { name: "Karriere des Tages", icon: "trophy",
+    label: (s, d) => `Bestwert ${d?.bestwert ?? "?"} · ${d?.titel ?? 0} Titel` },
 };
 
 export function scoreFor(mode, result = {}) {
@@ -23,6 +25,9 @@ export function scoreFor(mode, result = {}) {
     case "eleven": return result.solved ? Math.max(1, 100 - result.wrong * 5) : 0;
     // Heatmap wertet selbst schon in Punkten, hoch ist besser — nichts umzurechnen.
     case "heat":   return Math.max(0, Math.round(result.score || 0));
+    /* Die Karriere rechnet ihre Punkte selbst (tagesPunkte in karriere.js), schon
+       auf die Skala der anderen Tagesrätsel gedeckelt. */
+    case "karriere": return Math.max(1, Math.min(100, Math.round(result.punkte || 0)));
     default:       return 0;
   }
 }
