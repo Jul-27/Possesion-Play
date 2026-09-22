@@ -744,12 +744,14 @@ export default function Karriere({ onLeave }) {
     /* Nicht jede Laufbahn läuft bis zur Altersgrenze — vorher taten es 299 von 300. */
     if (K.ruecktrittFaellig(k2, zufall)) return beende(k2, "Der Körper hat entschieden.");
 
-    /* Eine Leihe endet immer nach einem Schritt — man kehrt zu seinem Verein zurück
-       und entscheidet dort neu. */
+    /* Eine Leihe endet nach einem Schritt. Danach entscheidet der Spieler: zurück,
+       beim Leihverein bleiben oder woandershin — siehe nachLeiheWege. Das zählt als
+       gesehenes Angebot, sonst käme gleich im nächsten Schritt schon wieder eines. */
     if (k2.leiheVon) {
-      const heim = k2.leiheVon;
+      const wege = K.nachLeiheWege(k2.leiheVon, verein, offerten);
       setK({ ...k2, leiheVon: null });
-      return setKarte({ art: "rueckkehr", heim, verein });
+      seitAngebotRef.current = 0;
+      return setKarte({ art: "rueckkehr", ...wege });
     }
     /* Wer jung ist und bei seinem Verein nicht spielt, bekommt eine Leihe angeboten.
        Genau dafür gibt es die zweite Spielklasse. */
@@ -1169,12 +1171,19 @@ export default function Karriere({ onLeave }) {
 
         {karte?.art === "rueckkehr" && (
           <div className="kaEntscheidung">
-            <h3>Zurück von der Leihe</h3>
-            <p>Die Zeit bei {karte.verein.name} ist vorbei — {karte.heim.name} holt dich zurück.</p>
-            <div className="kaVereine einer">
-              <VereinsKarte verein={karte.heim} anlass="Zurück zu"
-                gesperrt={sperre} onClick={() => spieleSchritt(k, karte.heim)} />
+            <h3>Die Leihe ist vorbei</h3>
+            <p>Die Saison bei {karte.leihverein.name} ist um. {karte.heim.name} erwartet dich
+              zurück — du kannst aber auch bleiben oder zu einem anderen Verein gehen.</p>
+            <div className="kaVereine">
+              <VereinsKarte verein={karte.leihverein} anlass="Bleiben bei"
+                gesperrt={sperre} onClick={() => spieleSchritt(k, karte.leihverein)} />
+              {karte.andere.map((v) => (
+                <VereinsKarte key={v.key} verein={v} anlass="Wechseln zu"
+                  gesperrt={sperre} onClick={() => spieleSchritt(k, v)} />
+              ))}
             </div>
+            <VereinsKarte verein={karte.heim} anlass="Zurück zu" breit
+              gesperrt={sperre} onClick={() => spieleSchritt(k, karte.heim)} />
           </div>
         )}
 
