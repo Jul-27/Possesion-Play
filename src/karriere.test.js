@@ -2015,3 +2015,37 @@ test("auch bei 60 möglichen Spielen spielt niemand mehr als die Rotation erlaub
   /* Und ohne Angabe bleibt die alte Rechnung (für Aufrufer ohne Verein). */
   assert.ok(K.saisonLeistung(k, 5, K.rng(1)).spiele <= K.SPIELE_JE_SAISON);
 });
+
+/* ── Was einen bei einem Verein erwartet ──────────────────────────────────── */
+
+test("die Aussicht auf der Kachel folgt der Stärke im Vergleich zum Verein", async () => {
+  const { VEREINS_STAERKE } = await import("./careerStaerke.js");
+  const w = K.baueWelt((x) => VEREINS_STAERKE[x.key] ?? NaN);
+  const real = w.vereine.find((x) => x.name.includes("Real Madrid"));
+  const klein = w.vereine.find((x) => x.stufe === 0 && x.liga.stufe === 2);
+  const jung = { ovr: 58, pos: "ST" };
+  /* Mit 58 bei Real Madrid: Bank. Beim Zweitligisten: Stammplatz. */
+  assert.equal(K.einsatzAussicht(jung, real).text, "Meist auf der Bank");
+  assert.equal(K.einsatzAussicht(jung, klein).art, "gut");
+  /* Ein Weltklassespieler bei Real: Stammplatz und über 50 Spiele. */
+  const star = K.einsatzAussicht({ ovr: 93, pos: "ST" }, real);
+  assert.equal(star.text, "Stammplatz");
+  assert.ok(star.spiele > 50, `${star.spiele} Spiele`);
+});
+
+test("die Kachel verspricht genau das, was die Saison dann rechnet", () => {
+  /* Dieselbe Rechnung: erwartete Spiele = saisonLeistung ohne Zufall in den Spielen. */
+  const verein = { stufe: 3, liga: { key: "BL", land: "GER", stufe: 1 } };
+  for (const [ovr, rolle] of [[70, "stamm"], [78, "rotation"], [64, "kader"]]) {
+    const k = { ovr, pos: "ZM", rolle };
+    const a = K.einsatzAussicht(k, verein, rolle);
+    assert.equal(a.spiele, K.saisonLeistung(k, 3, K.rng(1), K.spieleMoeglich(verein)).spiele, `${ovr}/${rolle}`);
+  }
+});
+
+test("jede Vereinskachel im Spiel trägt ihre Aussicht", async () => {
+  const { readFileSync } = await import("node:fs");
+  const quelle = readFileSync(new URL("./Karriere.jsx", import.meta.url), "utf8");
+  const ohne = quelle.split("<VereinsKarte").slice(1).filter((stueck) => !/aussicht=\{aussicht\(/.test(stueck.split("/>")[0]));
+  assert.equal(ohne.length, 0, "eine Vereinskachel ohne Aussicht");
+});

@@ -1579,6 +1579,16 @@ body::after {
 .kaVerein.breit .kaVereinAnlass { grid-area: anlass; }
 .kaVerein.breit .kaVereinName { grid-area: name; }
 .kaVerein.breit .kaVereinLiga { grid-area: liga; }
+/* Was einen bei diesem Verein erwartet: Einschätzung und Spiele je Saison. */
+.kaVereinAussicht {
+  font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+  border: 1px solid transparent; white-space: nowrap;
+}
+.kaVereinAussicht.gut { color: #12673A; background: rgba(25,122,70,.10); border-color: rgba(25,122,70,.28); }
+.kaVereinAussicht.mittel { color: #7A560E; background: rgba(138,98,16,.10); border-color: rgba(138,98,16,.28); }
+.kaVereinAussicht.schlecht { color: #9B1C16; background: rgba(179,38,30,.08); border-color: rgba(179,38,30,.26); }
+.kaVerein.breit { grid-template-areas: "wappen anlass" "wappen name" "wappen liga" "wappen aussicht"; }
+.kaVerein.breit .kaVereinAussicht { grid-area: aussicht; justify-self: start; margin-top: 4px; }
 .kaVerein:disabled { opacity: .5; cursor: default; transform: none; }
 .kaVerein:disabled:hover { border-color: var(--line); transform: none; background: var(--bg-2); }
 /* Die Rufstufe als Punktreihe: schneller zu erfassen als eine Zahl. */

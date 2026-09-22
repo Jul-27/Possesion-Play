@@ -329,7 +329,8 @@ function Titelfeier({ titel, onFertig }) {
    eine Anforderungszeile, dann bei einer Leihe noch die zu erwartende Zahl der
    Spiele. Beides ist weg: Wer wählt, soll den Verein sehen, nicht eine Vorschau auf
    seine Statistik. Das Niveau steht ohnehin im Ligennamen. */
-function VereinsKarte({ verein, anlass, onClick, breit = false, gesperrt = false }) {
+/* `aussicht` ist die Einschätzung aus einsatzAussicht — was einen dort erwartet. */
+function VereinsKarte({ verein, anlass, onClick, breit = false, gesperrt = false, aussicht = null }) {
   return (
     <button type="button" className={"kaVerein" + (breit ? " breit" : "")}
       disabled={gesperrt} onClick={onClick}>
@@ -337,6 +338,11 @@ function VereinsKarte({ verein, anlass, onClick, breit = false, gesperrt = false
       <b className="kaVereinName">{verein.name}</b>
       <span className="kaVereinWappen"><Emblem def={defVon(verein)} /></span>
       <span className="kaVereinLiga">{verein.liga.name}</span>
+      {aussicht && (
+        <span className={"kaVereinAussicht " + aussicht.art}>
+          {aussicht.text} · ≈ {aussicht.spiele} {aussicht.spiele === 1 ? "Spiel" : "Spiele"}
+        </span>
+      )}
     </button>
   );
 }
@@ -582,6 +588,9 @@ export default function Karriere({ onLeave }) {
 
   const welt = WELT;
   const bereit = welt.vereine.length > 0;
+  /* Was erwartet den Spieler bei diesem Verein? Mit der Rolle, die spieleSchritt ihm
+     dort gäbe — sonst verspräche die Kachel etwas anderes, als dann passiert. */
+  const aussicht = (v) => (k ? K.einsatzAussicht(k, v, K.rolleNachWechsel(k, v)) : null);
 
   // ── Ablauf ─────────────────────────────────────────────────────────────────
 
@@ -1143,7 +1152,7 @@ export default function Karriere({ onLeave }) {
               : `In ${landName(land)} spielt keiner unserer Vereine — diese drei würden dich trotzdem nehmen.`}</p>
             <div className="kaVereine">
               {karte.vereine.map((v) => (
-                <VereinsKarte key={v.key} verein={v} anlass="Anfangen bei"
+                <VereinsKarte key={v.key} verein={v} anlass="Anfangen bei" aussicht={aussicht(v)}
                   gesperrt={sperre} onClick={() => spieleSchritt(k, v)} />
               ))}
             </div>
@@ -1156,7 +1165,7 @@ export default function Karriere({ onLeave }) {
             <p>Bei {karte.bleiben.name} kommst du nicht zum Zug. Eine Saison woanders bringt dir Spiele.</p>
             <div className="kaVereine">
               {karte.vereine.map((v) => (
-                <VereinsKarte key={v.key} verein={v} anlass="Leihe zu"
+                <VereinsKarte key={v.key} verein={v} anlass="Leihe zu" aussicht={aussicht(v)}
                   gesperrt={sperre} onClick={() => spieleSchritt({ ...k, leiheVon: karte.bleiben }, v)} />
               ))}
             </div>
@@ -1175,14 +1184,14 @@ export default function Karriere({ onLeave }) {
             <p>Die Saison bei {karte.leihverein.name} ist um. {karte.heim.name} erwartet dich
               zurück — du kannst aber auch bleiben oder zu einem anderen Verein gehen.</p>
             <div className="kaVereine">
-              <VereinsKarte verein={karte.leihverein} anlass="Bleiben bei"
+              <VereinsKarte verein={karte.leihverein} anlass="Bleiben bei" aussicht={aussicht(karte.leihverein)}
                 gesperrt={sperre} onClick={() => spieleSchritt(k, karte.leihverein)} />
               {karte.andere.map((v) => (
-                <VereinsKarte key={v.key} verein={v} anlass="Wechseln zu"
+                <VereinsKarte key={v.key} verein={v} anlass="Wechseln zu" aussicht={aussicht(v)}
                   gesperrt={sperre} onClick={() => spieleSchritt(k, v)} />
               ))}
             </div>
-            <VereinsKarte verein={karte.heim} anlass="Zurück zu" breit
+            <VereinsKarte verein={karte.heim} anlass="Zurück zu" breit aussicht={aussicht(karte.heim)}
               gesperrt={sperre} onClick={() => spieleSchritt(k, karte.heim)} />
           </div>
         )}
@@ -1208,7 +1217,7 @@ export default function Karriere({ onLeave }) {
             {karte.vereine.length > 0 && (
               <div className="kaVereine">
                 {karte.vereine.map((v) => (
-                  <VereinsKarte key={v.key} verein={v} anlass="Wechseln zu"
+                  <VereinsKarte key={v.key} verein={v} anlass="Wechseln zu" aussicht={aussicht(v)}
                     gesperrt={sperre} onClick={() => spieleSchritt(k, v)} />
                 ))}
               </div>
@@ -1217,7 +1226,7 @@ export default function Karriere({ onLeave }) {
                 Vereinskacheln und ging unter — dabei ist es genauso eine
                 Entscheidung wie ein Wechsel. Jetzt ist es eine Kachel derselben
                 Bauart, nur über die ganze Breite. */}
-            <VereinsKarte verein={karte.bleiben} anlass="Bleiben bei" breit
+            <VereinsKarte verein={karte.bleiben} anlass="Bleiben bei" breit aussicht={aussicht(karte.bleiben)}
               gesperrt={sperre} onClick={() => spieleSchritt(k, karte.bleiben)} />
             {karte.rücktritt && (
               <div className="kaOptionen" style={{ marginTop: 10 }}>

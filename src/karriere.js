@@ -646,6 +646,29 @@ export function spieleMoeglich(verein) {
   return Math.round(ligaSpiele + pokal + kontinent);
 }
 
+/* ── Was erwartet einen bei diesem Verein? ─────────────────────────────────────
+   DIE ANGEBOTE WAREN EIN BLINDFLUG. Eine Vereinskachel zeigte Name, Wappen und Liga
+   — ob man dort spielen oder auf der Bank sitzen würde, sah man nicht, obwohl das
+   Spiel es längst ausrechnet (einsatzAnteil). Beim Durchspielen wirkte genau das am
+   stärksten zufällig: Man wählte den grösseren Namen und sass dann zwei Saisons.
+
+   Jetzt steht auf jeder Kachel, was einen erwartet: eine Einschätzung in Worten und
+   die Zahl der Spiele je Saison — dieselbe Rechnung, mit der die Saison danach
+   gespielt wird. Die Rolle ist die, mit der man dort anfinge (rolleNachWechsel):
+   Stammspieler bei einem neuen Verein, die bisherige beim eigenen. */
+export const AUSSICHT = [
+  [0.80, "Stammplatz", "gut"],
+  [0.55, "Viel Einsatzzeit", "gut"],
+  [0.30, "Kampf um den Platz", "mittel"],
+  [0, "Meist auf der Bank", "schlecht"],
+];
+export function einsatzAussicht(k, verein, rolle = "stamm") {
+  const anteil = einsatzAnteil(k.ovr, verein.stufe, rolle);
+  const spiele = Math.min(SPIELE_MAX, Math.round(spieleMoeglich(verein) * anteil));
+  const [, text, art] = AUSSICHT.find(([ab]) => anteil >= ab);
+  return { text, art, spiele, anteil };
+}
+
 /** Tore und Vorlagen einer Saison — beim Torwart zusätzlich Gegentore und Westen.
  *  `moeglich` ist die Zahl der Pflichtspiele des Vereins (spieleMoeglich); ohne sie
  *  rechnet die Funktion wie früher mit einer Liga zu 34 Spielen. */
