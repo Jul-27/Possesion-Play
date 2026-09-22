@@ -642,7 +642,7 @@ export default function Karriere({ onLeave }) {
           spiele: 0, tore: 0, vorlagen: 0, gegentore: 0, westen: 0, titel: [], aus: ausfallRef.current.grund });
         continue;
       }
-      const l = K.saisonLeistung(k2, verein.stufe, zufall);
+      const l = K.saisonLeistung(k2, verein.stufe, zufall, K.spieleMoeglich(verein));
       spiele += l.spiele; tore += l.tore; vorlagen += l.vorlagen;
       gegentore += l.gegentore || 0; westen += l.westen || 0;
       const saisonTitel = [];
