@@ -1944,3 +1944,33 @@ test("kein Rückschlag und kein Rückzug ist für irgendeine Rolle gratis", () =
   }
   assert.deepEqual(gratis, []);
 });
+
+/* ── Nach der Leihe ───────────────────────────────────────────────────────── */
+
+test("nach der Leihe gibt es drei Wege statt einer Pflicht", () => {
+  const heim = { key: "HEI" }, leih = { key: "LEI" };
+  const offerten = [{ key: "LEI" }, { key: "A" }, { key: "HEI" }, { key: "B" }, { key: "C" }];
+  const w = K.nachLeiheWege(heim, leih, offerten);
+  assert.equal(w.heim, heim);
+  assert.equal(w.leihverein, leih);
+  /* Stamm- und Leihverein nie doppelt unter den fremden, und höchstens zwei. */
+  assert.deepEqual(w.andere.map((v) => v.key), ["A", "B"]);
+  /* Ohne Angebote bleiben die beiden eigenen Wege. */
+  assert.deepEqual(K.nachLeiheWege(heim, leih, []).andere, []);
+});
+
+test("wer beim Leihverein bleibt, behält dort seine Rolle; wer zurückgeht, fängt neu an", () => {
+  const leih = { key: "LEI" }, heim = { key: "HEI" };
+  const k = { verein: leih, rolle: "rotation" };
+  assert.equal(K.rolleNachWechsel(k, leih), "rotation");
+  assert.equal(K.rolleNachWechsel(k, heim), "stamm");
+});
+
+test("die Rückkehrkarte bietet alle drei Wege an", async () => {
+  const { readFileSync } = await import("node:fs");
+  const quelle = readFileSync(new URL("./Karriere.jsx", import.meta.url), "utf8");
+  const karte = quelle.split('karte?.art === "rueckkehr"')[1].split("{karte?.art ===")[0];
+  assert.match(karte, /spieleSchritt\(k, karte\.leihverein\)/, "beim Leihverein bleiben");
+  assert.match(karte, /karte\.andere\.map/, "zu einem anderen Verein");
+  assert.match(karte, /spieleSchritt\(k, karte\.heim\)/, "zurück zum Stammverein");
+});

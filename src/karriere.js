@@ -483,6 +483,26 @@ export function leihAngebote(welt, k, verein, zufall, anzahl = 3) {
   return out;
 }
 
+/* ── Nach der Leihe ────────────────────────────────────────────────────────────
+   DIE RÜCKKEHR WAR ZWANG. Nach einer Leihsaison gab es genau eine Kachel: „Zurück
+   zu …" — auch wenn man beim Leihverein Stammspieler geworden war und der eigene
+   Verein einen weiter auf die Bank gesetzt hätte. Eine Entscheidung gab es erst
+   wieder einen Schritt später.
+
+   Jetzt ist das Ende der Leihe ein Wechselfenster wie jedes andere, mit drei Wegen:
+   zurück zum Stammverein (der naheliegende, deshalb die breite Kachel), beim
+   Leihverein bleiben, oder zu einem der Vereine, die gerade anklopfen. Von denen
+   höchstens zwei, damit das Bild dasselbe bleibt wie bei jedem Angebot: drei
+   Kacheln und eine breite darunter. Stammverein und Leihverein stehen nie doppelt
+   unter den fremden Angeboten. */
+export const NACH_LEIHE_ANDERE = 2;
+export function nachLeiheWege(heim, leihverein, offerten) {
+  const andere = offerten
+    .filter((v) => v.key !== heim.key && v.key !== leihverein.key)
+    .slice(0, NACH_LEIHE_ANDERE);
+  return { heim, leihverein, andere };
+}
+
 /** Alle Vereine einer Stufe, die den Spieler nehmen würden. */
 export function passendeVereine(welt, ovr, { land = null, ligaStufe = null, ausser = [] } = {}) {
   const raus = new Set(ausser);
