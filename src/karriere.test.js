@@ -570,7 +570,7 @@ function spieleDurch(seed, stil, welt) {
   for (let schritt = 0; schritt < 11 && k.alter < 39; schritt++) {
     const neu = [];
     for (let s = 0; s < 2; s++) {
-      const l = K.saisonLeistung(k, verein.stufe, zufall);
+      const l = K.saisonLeistung(k, verein.stufe, zufall, K.spieleMoeglich(verein));
       k.gesamt = { spiele: k.gesamt.spiele + l.spiele, tore: k.gesamt.tore + l.tore, vorlagen: k.gesamt.vorlagen + l.vorlagen };
       k.saisonNr++;
       neu.push(...K.saisonTitel(verein, zufall, mod), ...K.einzelTitel(k, l, zufall),
@@ -1973,4 +1973,79 @@ test("die Rückkehrkarte bietet alle drei Wege an", async () => {
   assert.match(karte, /spieleSchritt\(k, karte\.leihverein\)/, "beim Leihverein bleiben");
   assert.match(karte, /karte\.andere\.map/, "zu einem anderen Verein");
   assert.match(karte, /spieleSchritt\(k, karte\.heim\)/, "zurück zum Stammverein");
+});
+
+/* ── Wie viele Spiele eine Saison hat ─────────────────────────────────────── */
+
+test("ein Spitzenverein spielt deutlich mehr als 34 Spiele, ein Kleiner nicht", async () => {
+  const { VEREINS_STAERKE } = await import("./careerStaerke.js");
+  const w = K.baueWelt((x) => VEREINS_STAERKE[x.key] ?? NaN);
+  const verein = (n) => w.vereine.find((x) => x.name.includes(n));
+  const city = K.spieleMoeglich(verein("Manchester City"));
+  const real = K.spieleMoeglich(verein("Real Madrid"));
+  const heidenheim = K.spieleMoeglich(verein("Heidenheim"));
+  /* Liga, Pokal, Champions League: Manchester City 2022/23 hatte 61 Pflichtspiele. */
+  assert.ok(city >= 55 && city <= 64, `City ${city}`);
+  assert.ok(real >= 52 && real <= 60, `Real ${real}`);
+  /* Ein Abstiegskandidat ohne Europapokal: kaum mehr als die Liga. */
+  assert.ok(heidenheim >= 34 && heidenheim <= 38, `Heidenheim ${heidenheim}`);
+});
+
+test("die Ligaspiele stimmen je Liga", async () => {
+  const { WELT_LIGEN } = await import("./careerWorld.js");
+  /* Jede Liga der Welt ist eingetragen — sonst gälte für sie eine Näherung. */
+  for (const l of WELT_LIGEN) assert.ok(l.key in K.LIGA_SPIELE, `${l.key} fehlt in LIGA_SPIELE`);
+  assert.equal(K.LIGA_SPIELE.PL, 38);
+  assert.equal(K.LIGA_SPIELE.PL2, 46);
+  assert.equal(K.LIGA_SPIELE.BL, 34);
+});
+
+test("Europapokal gibt es nur für Erstligisten", () => {
+  const liga2 = { key: "PL2", land: "ENG", stufe: 2 }, liga1 = { key: "PL", land: "ENG", stufe: 1 };
+  const zweit = K.spieleMoeglich({ stufe: 2, liga: liga2 });
+  /* Championship: 46 Liga + Pokale, aber kein Europapokal. */
+  assert.equal(zweit, Math.round(46 + K.POKAL_SPIELE[2] * K.POKAL_FAKTOR.ENG));
+  const erst = K.spieleMoeglich({ stufe: 2, liga: liga1 });
+  assert.equal(erst, Math.round(38 + K.POKAL_SPIELE[2] * K.POKAL_FAKTOR.ENG + K.EUROPA_SPIELE[2]));
+});
+
+test("auch bei 60 möglichen Spielen spielt niemand mehr als die Rotation erlaubt", () => {
+  const k = { ovr: 99, pos: "ZM", rolle: "stamm" };
+  for (let i = 0; i < 50; i++) assert.ok(K.saisonLeistung(k, 5, K.rng(i), 64).spiele <= K.SPIELE_MAX);
+  /* Und ohne Angabe bleibt die alte Rechnung (für Aufrufer ohne Verein). */
+  assert.ok(K.saisonLeistung(k, 5, K.rng(1)).spiele <= K.SPIELE_JE_SAISON);
+});
+
+/* ── Was einen bei einem Verein erwartet ──────────────────────────────────── */
+
+test("die Aussicht auf der Kachel folgt der Stärke im Vergleich zum Verein", async () => {
+  const { VEREINS_STAERKE } = await import("./careerStaerke.js");
+  const w = K.baueWelt((x) => VEREINS_STAERKE[x.key] ?? NaN);
+  const real = w.vereine.find((x) => x.name.includes("Real Madrid"));
+  const klein = w.vereine.find((x) => x.stufe === 0 && x.liga.stufe === 2);
+  const jung = { ovr: 58, pos: "ST" };
+  /* Mit 58 bei Real Madrid: Bank. Beim Zweitligisten: Stammplatz. */
+  assert.equal(K.einsatzAussicht(jung, real).text, "Meist auf der Bank");
+  assert.equal(K.einsatzAussicht(jung, klein).art, "gut");
+  /* Ein Weltklassespieler bei Real: Stammplatz und über 50 Spiele. */
+  const star = K.einsatzAussicht({ ovr: 93, pos: "ST" }, real);
+  assert.equal(star.text, "Stammplatz");
+  assert.ok(star.spiele > 50, `${star.spiele} Spiele`);
+});
+
+test("die Kachel verspricht genau das, was die Saison dann rechnet", () => {
+  /* Dieselbe Rechnung: erwartete Spiele = saisonLeistung ohne Zufall in den Spielen. */
+  const verein = { stufe: 3, liga: { key: "BL", land: "GER", stufe: 1 } };
+  for (const [ovr, rolle] of [[70, "stamm"], [78, "rotation"], [64, "kader"]]) {
+    const k = { ovr, pos: "ZM", rolle };
+    const a = K.einsatzAussicht(k, verein, rolle);
+    assert.equal(a.spiele, K.saisonLeistung(k, 3, K.rng(1), K.spieleMoeglich(verein)).spiele, `${ovr}/${rolle}`);
+  }
+});
+
+test("jede Vereinskachel im Spiel trägt ihre Aussicht", async () => {
+  const { readFileSync } = await import("node:fs");
+  const quelle = readFileSync(new URL("./Karriere.jsx", import.meta.url), "utf8");
+  const ohne = quelle.split("<VereinsKarte").slice(1).filter((stueck) => !/aussicht=\{aussicht\(/.test(stueck.split("/>")[0]));
+  assert.equal(ohne.length, 0, "eine Vereinskachel ohne Aussicht");
 });

@@ -599,10 +599,82 @@ export function torwartSaison(k, stufe, spiele, zufall) {
   return { gegentore, westen };
 }
 
-/** Tore und Vorlagen einer Saison — beim Torwart zusätzlich Gegentore und Westen. */
-export function saisonLeistung(k, stufe, zufall) {
+/* ── Wie viele Spiele hat eine Saison? ────────────────────────────────────────
+   VORHER IMMER 34. Egal ob Real Madrid oder Kapfenberg: Ein Stammspieler kam auf 30
+   bis 34 Spiele, denn gezählt wurde nur eine Liga mit 18 Vereinen. Wer bei Manchester
+   City spielt, spielt aber Premier League (38), FA Cup, League Cup und Champions
+   League — Rodri kam 2022/23 auf 56 Pflichtspiele, Haaland auf 53.
+
+   Jetzt setzt sich eine Saison aus drei Teilen zusammen:
+
+   1. LIGA — die echte Zahl je Liga: 38 in der Premier League, 46 in der
+      Championship, 32 in Österreich (22 plus 10 in der Meister- oder
+      Qualifikationsrunde).
+   2. POKAL — im Schnitt so viele Runden, wie ein Verein dieser Stufe übersteht: ein
+      Kleiner scheidet früh aus, ein Grosser steht oft im Halbfinale. England hat
+      zwei Pokale (FA Cup und League Cup), zählt aber nicht doppelt: Die Grossen
+      steigen in beide erst spät ein.
+   3. EUROPA — nur für Erstligisten aus Europa, und nur im Schnitt dessen, was ihre
+      Stufe erreicht: ein Spitzenverein 13 Spiele (acht in der Ligaphase, dann K.-o.),
+      ein Mittelklub gelegentlich die Conference League. Ausserhalb Europas die
+      Kontinentalwettbewerbe (Libertadores, AFC, CONCACAF), schwächer gewichtet.
+
+   Wer in einem Verein mit 60 möglichen Spielen Stammspieler ist, spielt trotzdem
+   nicht alle: Rotation. Die Obergrenze von 56 entspricht dem, was die meistbelasteten
+   Spieler Europas in einer Saison tatsächlich erreichen. */
+export const LIGA_SPIELE = {
+  BL: 34, BL2: 34, PL: 38, PL2: 46, LL: 38, LL2: 42, SA: 38, SA2: 38,
+  L1: 34, L2: 34, PT: 34, PT2: 34, NL: 34, NL2: 38, AT: 32, AT2: 30,
+  BRA: 38, MLS: 34, SAU: 34, JPN: 38,
+};
+export const POKAL_SPIELE = [1.5, 2, 2.5, 3.5, 4.5, 5.5];          // je Rufstufe
+export const POKAL_FAKTOR = { ENG: 1.6 };                          // zwei Pokale
+export const EUROPA_SPIELE = [0, 1, 3, 7, 11, 13];                 // je Rufstufe, nur 1. Liga
+export const KONTINENT_FAKTOR = { BRA: 0.8, SAU: 0.6, JPN: 0.6, USA: 0.4 };
+export const SPIELE_MAX = 56;
+
+/** Pflichtspiele, die ein Verein dieser Stufe in einer Saison im Schnitt bestreitet. */
+export function spieleMoeglich(verein) {
+  const liga = verein?.liga;
+  if (!liga) return SPIELE_JE_SAISON;
+  const land = liga.land;
+  const ligaSpiele = LIGA_SPIELE[liga.key] ?? (liga.plaetze ? 2 * (liga.plaetze - 1) : SPIELE_JE_SAISON);
+  const pokal = (POKAL_SPIELE[verein.stufe] ?? 0) * (POKAL_FAKTOR[land] ?? 1);
+  const kontinent = liga.stufe !== 1 ? 0
+    : EUROPA.has(land) ? (EUROPA_SPIELE[verein.stufe] ?? 0)
+    : (EUROPA_SPIELE[verein.stufe] ?? 0) * (KONTINENT_FAKTOR[land] ?? 0);
+  return Math.round(ligaSpiele + pokal + kontinent);
+}
+
+/* ── Was erwartet einen bei diesem Verein? ─────────────────────────────────────
+   DIE ANGEBOTE WAREN EIN BLINDFLUG. Eine Vereinskachel zeigte Name, Wappen und Liga
+   — ob man dort spielen oder auf der Bank sitzen würde, sah man nicht, obwohl das
+   Spiel es längst ausrechnet (einsatzAnteil). Beim Durchspielen wirkte genau das am
+   stärksten zufällig: Man wählte den grösseren Namen und sass dann zwei Saisons.
+
+   Jetzt steht auf jeder Kachel, was einen erwartet: eine Einschätzung in Worten und
+   die Zahl der Spiele je Saison — dieselbe Rechnung, mit der die Saison danach
+   gespielt wird. Die Rolle ist die, mit der man dort anfinge (rolleNachWechsel):
+   Stammspieler bei einem neuen Verein, die bisherige beim eigenen. */
+export const AUSSICHT = [
+  [0.80, "Stammplatz", "gut"],
+  [0.55, "Viel Einsatzzeit", "gut"],
+  [0.30, "Kampf um den Platz", "mittel"],
+  [0, "Meist auf der Bank", "schlecht"],
+];
+export function einsatzAussicht(k, verein, rolle = "stamm") {
+  const anteil = einsatzAnteil(k.ovr, verein.stufe, rolle);
+  const spiele = Math.min(SPIELE_MAX, Math.round(spieleMoeglich(verein) * anteil));
+  const [, text, art] = AUSSICHT.find(([ab]) => anteil >= ab);
+  return { text, art, spiele, anteil };
+}
+
+/** Tore und Vorlagen einer Saison — beim Torwart zusätzlich Gegentore und Westen.
+ *  `moeglich` ist die Zahl der Pflichtspiele des Vereins (spieleMoeglich); ohne sie
+ *  rechnet die Funktion wie früher mit einer Liga zu 34 Spielen. */
+export function saisonLeistung(k, stufe, zufall, moeglich = SPIELE_JE_SAISON) {
   const p = posDaten(k.pos);
-  const spiele = Math.round(SPIELE_JE_SAISON * einsatzAnteil(k.ovr, stufe, k.rolle));
+  const spiele = Math.min(SPIELE_MAX, Math.round(moeglich * einsatzAnteil(k.ovr, stufe, k.rolle)));
   const guete = gueteVon(k.ovr);
   const umfeld = 0.75 + stufe * 0.11;
   const tore = poisson(spiele * 0.42 * p.tore * guete * umfeld, zufall);
