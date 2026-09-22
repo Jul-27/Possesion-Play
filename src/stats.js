@@ -23,6 +23,7 @@ export function collectStats() {
   const solo = read("pp:soloStats");
   const heat = read("pp:heatBest");
   const carousel = read("pp:carouselStats");
+  const karriere = read("pp:karriereStats");
 
   return [
     entry("daily", "guess", "Steckbrief", null, daily, [
@@ -62,6 +63,14 @@ export function collectStats() {
       { label: "gewonnen", value: carousel?.won ?? null },
       { label: "längste Kette", value: carousel?.bestChain || null },
     ], 0),
+
+    /* Die Karriere zählte für nichts — keine Statistik, keine XP, kein Abzeichen.
+       Gespeichert wird nur die Bilanz fertiger Laufbahnen, nie eine laufende. */
+    entry("karriere", "trophy", "Karriere", "karriere", karriere, [
+      { label: "bester Wert", value: karriere?.bestwert || null },
+      { label: "Titel gesamt", value: karriere?.titelGesamt || null },
+      { label: "Auszeichnungen", value: karriere?.auszeichnungen?.length ? `${karriere.auszeichnungen.length} von 15` : null },
+    ], challengeStats("karriere")?.streak || 0),
 
     entry("hex", "hex", "Hex-Training", "hex", solo, [
       { label: "Bestwert", value: solo?.bestMoves ? `${solo.bestMoves} Züge` : null },

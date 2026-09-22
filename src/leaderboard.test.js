@@ -45,3 +45,10 @@ test("Jeder Modus hat Name, Symbol und lesbare Beschriftung", () => {
     assert.equal(typeof m.label(5, { stations: 3, moves: 9, wrong: 1, solved: true }), "string");
   }
 });
+
+test("Karriere des Tages: Punkte kommen gedeckelt aus tagesPunkte, Beschriftung zeigt Bestwert und Titel", () => {
+  assert.equal(scoreFor("karriere", { punkte: 64 }), 64);
+  assert.equal(scoreFor("karriere", { punkte: 250 }), 100);
+  assert.equal(scoreFor("karriere", { punkte: 0 }), 1);
+  assert.equal(MODES.karriere.label(64, { bestwert: 81, titel: 4 }), "Bestwert 81 · 4 Titel");
+});
