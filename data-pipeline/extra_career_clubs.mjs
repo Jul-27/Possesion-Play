@@ -113,6 +113,14 @@ export const EXTRA_CAREER_CLUBS = [
      Datei ohnehin aus dem korrigierten players.js neu auf. */
   { n: "Nicolás Capaldo",    by: 1998, clubs: ["Boca Juniors", "FC Red Bull Salzburg",
                                                "Hamburger SV"] },                                        // 2015–2021 · 2021–2025 · 2025–
+  /* „Fehler melden", 16.–23.09.2026, geprüft an der Infobox der englischen Wikipedia
+     (25.09.2026). Samassékou stand im Karussell ganz ohne Station. */
+  { n: "Diadié Samassékou",  by: 1996, clubs: ["FC Liefering", "FC Red Bull Salzburg", "TSG 1899 Hoffenheim",
+                                               "Olympiakos Piräus", "FC Cádiz", "Houston Dynamo"] },    // 2015–16 · 2016–19 · 2019–25 · 2022–23 L · 2024 L · 2025–
+  { n: "Amadou Haidara",     by: 1998, clubs: ["RC Lens"] },                                             // 2025–
+  { n: "Noah Okafor",        by: 2000, clubs: ["Leeds United"] },                                        // 2025–
+  { n: "Amin Younes",        by: 1993, clubs: ["FC Schalke 04"] },                                       // 2024–2026
+  { n: "Kerim Alajbegović",  by: 2007, clubs: ["Bayer 04 Leverkusen"] },                                 // 2026
 ];
 
 /* ── Das Gegenstück: Stationen, die wir zu Unrecht führen ────────────────────

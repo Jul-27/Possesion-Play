@@ -196,6 +196,10 @@ export const NAME_OVERRIDES = [
      Alias, und ihr Geburtsjahr stimmt mit unserem Datensatz überein. Geprüft von
      data-pipeline/finde_doppel.mjs; das `to` ist jeweils der dewiki-Artikeltitel. */
   { from: "Anthony Lopez maresca",               by: 1990, to: "Anthony Lopes",                    src: "Q1392235", note: "Vandalismus im Label" },
+  /* Aufgefallen am 25.09.2026 beim Abgleich mit den Turniersieger-Kategorien: Der
+     Rest des alten Vandalismus stand noch als zweiter Datensatz im Bestand. */
+  { from: "Anthony Lopez",                       by: 1990, to: "Anthony Lopes",                    src: "Q1392235", note: "Dublette, Rest des Vandalismus oben" },
+  { from: "Sobrevalorado Nunes",                 by: 1971, to: "Paulo Nunes",                      src: "Q2734022", note: "Vandalismus im Label; enwiki/dewiki 'Paulo Nunes', Benfica 1997/98" },
   { from: "Cuauhtémoc Blanco Bravo",             by: 1973, to: "Cuauhtémoc Blanco",                src: "Q207644", note: "Dublette, gleiche QID" },
   { from: "Frédéric baldi",                      by: 1977, to: "Frédéric Kanouté",                 src: "Q218394", note: "Vandalismus im Label" },
   { from: "Gareth Bal",                          by: 1989, to: "Gareth Bale",                      src: "Q184586", note: "Vandalismus im Label" },

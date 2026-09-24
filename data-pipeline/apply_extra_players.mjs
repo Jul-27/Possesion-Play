@@ -100,6 +100,13 @@ export const EXTRA_PLAYERS = [
   { n: "Sepp van den Berg", by: 2001, clubs: ["S04", "M05"] },       // 2022–2023 · 2023–2024, beide Leihe
   { n: "Alexander Schwolow", by: 1992, clubs: ["S04"] },             // 2022–2023, Leihe
   { n: "Guido Burgstaller", by: 1989, clubs: ["S04"] },              // 2017–2020
+  /* „Fehler melden", 16.–23.09.2026. Jede Station aus der Karrieretabelle der
+     englischen Wikipedia (Infobox), Stand 25.09.2026. Samassékou: Salzburg zusätzlich
+     vom Owner bestätigt; sein Wikidata-Eintrag führte nur Liefering, offen seit 2015. */
+  { n: "Diadié Samassékou", by: 1996, clubs: ["RBS", "TSG"], pos: "MF",
+    cp: [["FCL", 2015, 2016], ["RBS", 2016, 2019], ["TSG", 2019, 2025]] },
+  { n: "Amin Younes",       by: 1993, clubs: ["S04"], cp: [["S04", 2024, 2026]] },
+  { n: "Kerim Alajbegović", by: 2007, clubs: ["B04"], cp: [["B04", 2026, 2026]] },
 ];
 
 /* Vereine, die bei einem Spieler nachweislich falsch stehen. Gegenstück zu

@@ -2,9 +2,11 @@
 /*
  * wikidata_honours_extra.mjs — ergänzt das Feld `t` in src/players.js ADDITIV um:
  *   BDO Ballon d'Or (P166 direkt am Spieler)
- *   EM  Europameister, CA Copa-América-Sieger, EL Europa-League-Sieger
- *       (Turnier-/Saison-Sieger P1346 × P54-Mitgliedszeitraum, wie WM/CL im
- *        Basis-Skript wikidata_honours.mjs)
+ *   EL  Europa-League-Sieger (Saison-Sieger P1346 × P54-Mitgliedszeitraum, wie CL im
+ *       Basis-Skript wikidata_honours.mjs)
+ * EM und CA kamen bis zum 25.09.2026 ebenfalls von hier, nach derselben Regel — und
+ * die taugt für Nationalmannschaften nicht (jeder Nationalspieler des Zeitraums wurde
+ * Europameister). Beide setzt jetzt wikipedia_turniersieger.mjs aus den Kaderkategorien.
  * Merge: t = union(bestehend, neu); pos/sl bleiben erhalten. Internet nötig.
  *   node data-pipeline/wikidata_honours_extra.mjs
  */
@@ -23,8 +25,6 @@ const UA = "PossessionPlay/1.0 (https://github.com/Jul-27; data enrichment)";
 
 // Erwartete QIDs + engl. Labels — werden VOR dem Lauf verifiziert (Abbruch bei Abweichung).
 const EXPECT = {
-  EM:  { qid: "Q260858", label: "UEFA European Championship" },
-  CA:  { qid: "Q178750", label: "Copa América" },
   EL:  { qid: "Q18760",  label: "UEFA Europa League" },
   BDO: { qid: "Q166177", label: "Ballon d'Or" },
 };
@@ -123,7 +123,7 @@ async function main() {
     }
     return c;
   };
-  for (const key of ["EM", "CA", "EL"]) {
+  for (const key of ["EL"]) {
     const rows = await fetchHonourPlayers(EXPECT[key].qid);
     console.log(`  ${key}: ${rows.length} Zeilen, ${add(rows, key)} Zuordnungen`);
     await sleep(1300);
@@ -136,7 +136,7 @@ async function main() {
   // 2) players.js laden, t ADDITIV mergen (pos/sl unangetastet)
   const mod = await import(pathToFileURL(PLAYERS_PATH).href + "?t=" + Date.now());
   const players = mod.PLAYERS.map((p) => ({ ...p, clubs: [...(p.clubs || [])], nat: [...(p.nat || [])] }));
-  const counts = { BDO: 0, EM: 0, CA: 0, EL: 0 };
+  const counts = { BDO: 0, EL: 0 };
   let touched = 0;
 
   /* --korrigiere: NUR die Europa League. Sie ist der einzige Wettbewerb hier, der über
@@ -183,7 +183,7 @@ async function main() {
   stampDataInfo();
   console.log(`\nFertig: ${touched} Spieler ergänzt`, counts, "-> src/players.js");
   // Stichproben zur Plausibilität
-  for (const key of ["BDO", "EM", "CA", "EL"]) {
+  for (const key of ["BDO", "EL"]) {
     const sample = players.filter((p) => (p.t || []).includes(key)).sort((a, b) => (b.sl || 0) - (a.sl || 0)).slice(0, 5).map((p) => p.n);
     console.log(`  ${key}-Beispiele:`, sample.join(", "));
   }
