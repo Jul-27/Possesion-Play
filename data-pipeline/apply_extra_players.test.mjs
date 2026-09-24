@@ -56,10 +56,14 @@ test("die kuratierten Tabellen sind wohlgeformt", () => {
    Eintrag liefe still ins Leere. Deshalb gegen die echten Vereine prüfen. */
 test("die kuratierten Tabellen nennen nur existierende Vereine", async () => {
   const { CLUBS } = await import("../src/gameData.js");
+  const { WELT_VEREINE } = await import("../src/careerWorld.js");
   const keys = new Set(CLUBS.map((c) => c.key));
+  /* cp führt auch die Vereine der Karriere-Welt (wikidata_league_squads --welt),
+     clubs[] dagegen nur die 47 Spielvereine. */
+  const cpKeys = new Set([...keys, ...WELT_VEREINE.map((v) => v.key)]);
   for (const x of EXTRA_PLAYERS) {
     for (const c of x.clubs || []) assert.ok(keys.has(c), `EXTRA_PLAYERS: ${x.n} nennt unbekannten Verein ${c}`);
-    for (const [c] of x.cp || []) assert.ok(keys.has(c), `EXTRA_PLAYERS: ${x.n} hat cp für unbekannten Verein ${c}`);
+    for (const [c] of x.cp || []) assert.ok(cpKeys.has(c), `EXTRA_PLAYERS: ${x.n} hat cp für unbekannten Verein ${c}`);
   }
   for (const [k, v] of Object.entries(WRONG_CLUBS)) {
     for (const c of v) assert.ok(keys.has(c), `WRONG_CLUBS: ${k} nennt unbekannten Verein ${c}`);

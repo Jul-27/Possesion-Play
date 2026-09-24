@@ -16,9 +16,12 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const PLAYERS_PATH = join(HERE, "..", "src", "players.js");
 const UA = "PossessionPlay/1.0 (https://github.com/Jul-27; data enrichment)";
 
-// Honour-Key -> Wikidata-Wettbewerb (verifiziert: Label + vorhandene Saison-Sieger)
+/* Honour-Key -> Wikidata-Wettbewerb (verifiziert: Label + vorhandene Saison-Sieger).
+   Die WM steht hier nicht mehr: Sieger × Zugehörigkeit zur Nationalmannschaft machte
+   jeden Nationalspieler zum Weltmeister, dessen Zeitraum das Turnierjahr einschloss.
+   Sie kommt jetzt aus wikipedia_turniersieger.mjs (Kaderkategorien). */
 export const COMP_QID = {
-  CL:"Q18756", WM:"Q19317",
+  CL:"Q18756",
   MBL:"Q82595", MPL:"Q9448", MLL:"Q324867", MSA:"Q15804", ML1:"Q13394",
   DFB:"Q150880", FAC:"Q11151", CDR:"Q483794", CIT:"Q169918",
 };

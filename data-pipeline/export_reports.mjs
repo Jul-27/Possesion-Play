@@ -59,6 +59,12 @@ export const ABGELEHNT = [
     grund: "Karrieretabelle nennt Liverpool, Manchester City, Chelsea, Arsenal und "
       + "Feyenoord Rotterdam — kein PSV. Vermutlich mit Feyenoord verwechselt (26.08.2026).",
   },
+  {
+    n: "Eduardo Camavinga", by: 2002, club: "OSC Lille",
+    grund: "Karrieretabelle nennt auf de.wikipedia UND en.wikipedia nur Stade Rennes "
+      + "(mit Rennes II) und Real Madrid. Lille war der Wohnort der Familie, als er zwei "
+      + "Jahre alt war — nie ein Verein (25.09.2026).",
+  },
 ];
 
 const ABGELEHNT_KEY = new Set(ABGELEHNT.map((a) => `${norm(a.n)}|${a.by}|${norm(a.club)}`));

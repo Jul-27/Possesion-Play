@@ -44,6 +44,7 @@ import { recToString } from "./player_record.mjs";
 import { WRONG_CLUBS } from "./apply_extra_players.mjs";
 import { FALSCHE_CAREER_CLUBS } from "./extra_career_clubs.mjs";
 import { FALSCHE_TITEL } from "./wikidata_honours.mjs";
+import { TURNIER_KEYS } from "./wikipedia_turniersieger.mjs";
 import { baueDatei as baueKarussell } from "./wikidata_career_clubs.mjs";
 import { baueDatei as bauePfad } from "./wikidata_career_path.mjs";
 
@@ -109,6 +110,10 @@ async function players(standDir, anwenden) {
        widerlegt, kommt nicht zurück, sonst hielte der Schutz jeden Fehler fest, den
        die Quelle inzwischen korrigiert hat. */
     const widerlegt = new Set(FALSCHE_TITEL[`${normName(alt.n)}|${alt.by}`]?.weg || []);
+    /* WM, EM und CA setzt wikipedia_turniersieger.mjs aus den vollständigen Kader-
+       kategorien — dort ist „nicht in der Kategorie" eine Aussage, keine Quellenlücke.
+       Zurückgeholt würde hier nur, was der Schritt bewusst gestrichen hat. */
+    for (const k of TURNIER_KEYS) widerlegt.add(k);
     const tt = vereinigeListe((alt.t || []).filter((x) => !widerlegt.has(x)), neu.t);
     if (tt.fehlt.length) { neu.t = tt.wert; bericht.titel.push(`${alt.n}: ${tt.fehlt.join(", ")}`); }
 

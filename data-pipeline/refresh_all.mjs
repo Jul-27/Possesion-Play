@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /*
  * refresh_all.mjs — kompletter Wikidata-Refresh in der EINZIG korrekten
- * Reihenfolge (honours setzt t neu, honours_extra ergänzt danach BDO/EM/CA/EL,
+ * Reihenfolge (honours setzt t neu, honours_extra ergänzt danach BDO/EL,
+ * wikipedia_turniersieger setzt am Ende WM/EM/CA,
  * apply_name_overrides zieht die kuratierten Namen nach, wikidata_images baut den
  * Bildindex danach auf den korrigierten Namen auf).
  * Bricht beim ersten Fehler ab. Dauer: ~15–40 min (Rate-Limits).
@@ -26,7 +27,7 @@ const CHAIN = [
   ["wikidata_roster.mjs"],        // 1) Spieler/Vereine/sl
   ["wikidata_national.mjs"],      // 1b) Nationalteam-Kader (nat auch für Vereinlose)
   ["wikidata_honours.mjs"],       // 2) t: 11 Basis-Wettbewerbe (setzt neu)
-  ["wikidata_honours_extra.mjs"], // 3) t += BDO/EM/CA/EL (additiv, NACH 2!)
+  ["wikidata_honours_extra.mjs"], // 3) t += BDO/EL (additiv, NACH 2!)
   ["wikidata_positions.mjs"],     // 4) pos über die Kader
   ["backfill_positions.mjs"],     // 4b) pos für alle, die dort durchfallen (QID-Auflösung)
   ["wikidata_careers.mjs"],       // 5) cp
@@ -88,6 +89,11 @@ const CHAIN = [
      korrigierten Namen sehen muss — dieselbe Begründung wie bei den Fotos. Setzt `pp`
      neben `pos`; die grobe Gruppe bleibt unangetastet. Braucht rund 35 Minuten. */
   ["wikipedia_positions.mjs"],
+  /* 11) WM, EM und Copa América aus den Kaderkategorien der deutschen und englischen
+     Wikipedia. Ganz am Ende, damit jeder Spieler aus den Kaderläufen dabei ist, und
+     nach den Namenskorrekturen (Schlüssel norm(name)|by). Setzt die drei Titel NEU —
+     keine_station_verlieren holt sie deshalb nicht zurück. */
+  ["wikipedia_turniersieger.mjs"],
 ];
 
 /* Stand sichern, damit verify_refresh.mjs am Ende Verluste erkennen kann. Wikidata
