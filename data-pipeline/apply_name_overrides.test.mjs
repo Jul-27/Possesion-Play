@@ -148,3 +148,20 @@ test("ohne byTo bleibt das Geburtsjahr unangetastet", () => {
   assert.equal(players[0].by, 1989);
   assert.equal(players[0].n, "Gareth Bale");
 });
+
+test("applyOverrides folgt Ketten über Tabellen hinweg bis zum Endziel", async () => {
+  const { applyOverrides } = await import("./apply_name_overrides.mjs");
+  const players = [
+    { n: "Mykhaylo Mudryk", by: 2001, clubs: ["CHE"] },
+    { n: "Mykhailo Mudryk", by: 2001, clubs: [], t: ["X"] },
+    { n: "Mychajlo Mudryk", by: 2001, clubs: ["SHK"] },
+  ];
+  const { players: out } = applyOverrides(players, [
+    { from: "Mykhaylo Mudryk", by: 2001, to: "Mykhailo Mudryk", src: "Q1" },
+    { from: "Mykhailo Mudryk", by: 2001, to: "Mychajlo Mudryk", src: "Q1" },
+  ], []);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].n, "Mychajlo Mudryk");
+  assert.deepEqual(out[0].clubs, ["CHE", "SHK"]);
+  assert.deepEqual(out[0].t, ["X"]);
+});
