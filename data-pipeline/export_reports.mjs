@@ -71,6 +71,35 @@ const ABGELEHNT_KEY = new Set(ABGELEHNT.map((a) => `${norm(a.n)}|${a.by}|${norm(
 export const istAbgelehnt = (playerKey, clubName) =>
   ABGELEHNT_KEY.has(`${playerKey}|${norm(String(clubName || ""))}`);
 
+/* ── TITEL UND NATIONEN (seit 25.09.2026) ─────────────────────────────────────
+   Die Meldung trägt ihre Art in `kind`; club_key/club_name sind dann das Ziel
+   (club_key „WM", club_name „Weltmeister"). Die kuratierte Tabelle dazu:
+     · Titel  -> HONOUR_OVERRIDES in wikidata_honours.mjs (additiv). ACHTUNG bei WM, EM
+       und CA: die setzt wikipedia_turniersieger.mjs aus den Kaderkategorien, ein
+       Override würde dort wieder gestrichen — dann gehört der Spieler in die Kategorie
+       der Wikipedia, oder die Meldung ist falsch.
+     · Nation -> EXTRA_PLAYERS mit `nat` (wird ergänzt, nicht ersetzt). */
+const TURNIERTITEL = new Set(["WM", "EM", "CA"]);
+
+function artAusgabe(zeile, spieler) {
+  const kind = zeile.kind;
+  const key = zeile.club_key || null;
+  const liste = kind === "titel" ? spieler?.t : spieler?.nat;
+  const bekannt = !!(key && liste?.includes(key));
+  const abgelehnt = istAbgelehnt(zeile.player_key, zeile.club_name);
+  const turnier = kind === "titel" && TURNIERTITEL.has(key);
+  const ziel = !spieler || bekannt || abgelehnt || turnier ? null : kind === "titel" ? "HONOUR_OVERRIDES" : "EXTRA_PLAYERS";
+  const hinweis = turnier
+    ? "Turniertitel: kommt aus den Kaderkategorien der Wikipedia (wikipedia_turniersieger.mjs), nicht aus HONOUR_OVERRIDES"
+    : null;
+  return {
+    kind, bekannt, abgelehnt, ziel, hinweis,
+    eintrag: !ziel ? null
+      : kind === "titel" ? { schluessel: zeile.player_key, t: [key] }
+        : { n: zeile.player_name, by: zeile.player_by, nat: [key] },
+  };
+}
+
 /* Eine Datenbankzeile in den Ausgabesatz übersetzen.
  *
  * `ziel` ist die wichtigste Information der Datei — es sagt, WOHIN die Korrektur
@@ -85,15 +114,18 @@ export const istAbgelehnt = (playerKey, clubName) =>
 export function zuAusgabe(zeile, spielerNachKey, karriere) {
   const key = zeile.club_key || null;
   const spieler = spielerNachKey.get(zeile.player_key) || null;
-  const name = key ? NAME_VON_KEY.get(key) || zeile.club_name : zeile.club_name;
+  const art = zeile.kind && zeile.kind !== "verein" ? artAusgabe(zeile, spieler) : null;
+  const name = art ? zeile.club_name : key ? NAME_VON_KEY.get(key) || zeile.club_name : zeile.club_name;
 
-  const bekannt = key
+  const bekannt = art ? art.bekannt : key
     ? !!spieler?.clubs?.includes(key)
     : (karriere?.byKey?.[zeile.player_key] || []).some((i) => karriere.clubs[i] === name);
 
-  const abgelehnt = istAbgelehnt(zeile.player_key, name);
-  const ziel = !spieler || bekannt || abgelehnt ? null : key ? "EXTRA_PLAYERS" : "EXTRA_CAREER_CLUBS";
+  const abgelehnt = art ? art.abgelehnt : istAbgelehnt(zeile.player_key, name);
+  const ziel = art ? art.ziel : !spieler || bekannt || abgelehnt ? null : key ? "EXTRA_PLAYERS" : "EXTRA_CAREER_CLUBS";
   return {
+    kind: zeile.kind || "verein",
+    kontext: zeile.last_context || null,
     playerKey: zeile.player_key,
     playerName: zeile.player_name,
     playerBy: zeile.player_by,
@@ -111,14 +143,16 @@ export function zuAusgabe(zeile, spielerNachKey, karriere) {
     anwendbar: !!ziel,
     ziel,
     grund: !spieler ? "Spieler steht nicht in players.js — Name/Geburtsjahr prüfen"
-      : bekannt ? "Verein steht bereits beim Spieler — vermutlich ein Regel-, kein Datenproblem"
+      : bekannt ? `${art ? (art.kind === "titel" ? "Titel" : "Nation") : "Verein"} steht bereits beim Spieler — `
+        + "vermutlich ein Regelproblem oder ein zweiter Datensatz desselben Spielers"
+      : art?.hinweis ? art.hinweis
       : abgelehnt ? "Geprüft und abgelehnt: "
         + ABGELEHNT.find((x) => norm(x.n) === norm(zeile.player_name) && x.by === zeile.player_by)?.grund
       : null,
     /* Fertig zum Einfügen in die jeweilige Tabelle. Die Form unterscheidet sich nur
        im Vereinsfeld: Spielvereine über ihren Schlüssel, Karrierevereine über den
        Namen, weil sie keinen Schlüssel haben. */
-    eintrag: ziel
+    eintrag: art ? art.eintrag : ziel
       ? { n: zeile.player_name, by: zeile.player_by, clubs: [key || name] }
       : null,
   };
@@ -140,6 +174,7 @@ export function baueExport(zeilen, players, karriere = null) {
     // Blockweise zum Einfügen, damit nichts von Hand zusammengeklaubt werden muss.
     extraPlayers: nachZiel("EXTRA_PLAYERS"),
     extraCareerClubs: nachZiel("EXTRA_CAREER_CLUBS"),
+    honourOverrides: nachZiel("HONOUR_OVERRIDES"),
     reports,
   };
 }
@@ -166,9 +201,11 @@ async function main() {
     + ` (${daten.extraPlayers.length}× EXTRA_PLAYERS, ${daten.extraCareerClubs.length}× EXTRA_CAREER_CLUBS)\n`);
   for (const r of daten.reports) {
     const marke = r.anwendbar ? "✓" : "·";
-    console.log(`${marke} ${r.playerName} (${r.playerBy}) → ${r.clubName}`
+    const art = r.kind === "verein" ? "" : ` [${r.kind}]`;
+    console.log(`${marke} ${r.playerName} (${r.playerBy}) → ${r.clubName}${art}`
       + `  ${r.reports}× von ${r.reporters} Melder(n) · ${r.modes.join(", ") || "?"}`
       + (r.ziel ? `  → ${r.ziel}` : "")
+      + (r.kontext?.feld ? `\n    abgelehnt von Feld ${r.kontext.feld}` : "")
       + (r.grund ? `\n    ${r.grund}` : ""));
   }
 

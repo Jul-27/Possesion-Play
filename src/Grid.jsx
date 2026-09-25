@@ -3,14 +3,14 @@ import { supabase } from "./supabaseClient.js";
 import { Emblem } from "./Emblems.jsx";
 import {
   P, cname, norm, suggestPlayers, lookupDef,
-  buildGridSerial, gridCellMatches, gridWinner, START_SECONDS, fmtClock, liveRemaining,
+  buildGridSerial, gridCellMatches, gridWinner, START_SECONDS, fmtClock, liveRemaining, playerMatchesHex,
 } from "./gameData.js";
 import { loadPlayers } from "./playersStore.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
 import DataStamp from "./DataStamp.jsx";
 import { useLeaveEndsGame } from "./usePresence.js";
-import ReportButton from "./ReportButton.jsx";
+import ReportButton, { MeldeLink } from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
 import WaitForOpponent from "./WaitForOpponent.jsx";
@@ -169,8 +169,10 @@ export default function Grid({ code, clientId, onLeave }) {
     const rem = liveRemaining(clk, myPlayer, Date.now());
     const nextClocks = { ...clk, [myPlayer]: rem, started: new Date().toISOString() };
     if (!gridCellMatches(player, rowDefs[r], colDefs[c])) {
+      /* Gemeldet wird das Feld, das nicht passte — bei beiden das der Zeile. */
+      const fehlt = [rowDefs[r], colDefs[c]].find((d) => !playerMatchesHex(player, d));
       setLocalFeedback({ type: "err", text: `${player.n} passt nicht zu „${cname(rowDefs[r])}" × „${cname(colDefs[c])}".`,
-        detail: "Zug verfällt — der Gegner ist dran." });
+        detail: "Zug verfällt — der Gegner ist dran.", melden: { player, def: fehlt } });
       play("err");
       setSelected(null); setNameInput(""); setChosen(null); setSugOpen(false);
       writeMove({ turn: myPlayer === 1 ? 2 : 1, clocks: nextClocks,
@@ -311,7 +313,8 @@ export default function Grid({ code, clientId, onLeave }) {
         <div className="hint"><span className="turnpill" style={{ color: P[row.turn].c1, borderColor: P[row.turn].c1 }}><span className="dot" style={{ background: P[row.turn].c1 }} />{names[row.turn]} ist am Zug</span><span>— warte kurz</span></div>
       ))}
 
-      {fb && (<div className={`fb ${fb.type}`}>{fb.text}{fb.detail && <div className="fbDetail">{fb.detail}</div>}</div>)}
+      {fb && (<div className={`fb ${fb.type}`}>{fb.text}{fb.detail && <div className="fbDetail">{fb.detail}</div>}
+        {fb.melden && <MeldeLink mode="grid-duell" gameCode={code} player={fb.melden.player} def={fb.melden.def} />}</div>)}
       {opponentLeaving && !gameOver && (<div className="fb info">Gegner offline — das Spiel endet gleich, falls er nicht zurückkommt…</div>)}
 
       {status === "waiting" && <WaitForOpponent code={code} onLeave={onLeave} />}

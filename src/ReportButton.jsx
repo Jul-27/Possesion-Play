@@ -1,16 +1,17 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { suggestPlayers, lookupDef } from "./gameData.js";
+import { suggestPlayers, lookupDef, norm } from "./gameData.js";
 import { loadPlayers } from "./playersStore.js";
 import { loadCareerClubs } from "./careerClubsStore.js";
 import { createCareerIndex } from "./careerIndex.js";
 import { Emblem } from "./Emblems.jsx";
-import { clubKeyOf, reportFehlt, bereitsBekannt, modeName } from "./reports.js";
+import { clubKeyOf, reportFehlt, bereitsBekannt, modeName, REPORT_KINDS, zieleFuer, vorbelegungAus, kontextAus } from "./reports.js";
 import { submitReport } from "./reportClient.js";
 import { play } from "./sound.js";
 import Icon from "./Icons.jsx";
 
-/* 🚩 „Fehler melden" — eine Komponente für alle zwölf Spielmodi.
+/* 🚩 „Fehler melden" — eine Komponente für alle Spielmodi. Drei Meldearten (Verein,
+   Titel, Nation); aus einem abgelehnten Zug öffnet MeldeLink den Dialog vorbelegt.
 
    Steht als weiterer Knopf in der bestehenden .iconrow jedes Modus; die Modi geben
    nur ihren Schlüssel und (im Duell) den Spielcode mit. Nichts hier verändert
@@ -40,14 +41,39 @@ export default function ReportButton({ mode, gameCode = null }) {
   );
 }
 
-function ReportModal({ mode, gameCode, onClose }) {
+/* „Stimmt doch? Melden" — steht unter einer Ablehnung und öffnet den Dialog mit
+   Spieler, Art und Ziel aus dem abgelehnten Feld. Mitgeschickt wird das Feld, damit
+   sich der Zug später nachvollziehen lässt. Für Liga- und Sonderfelder gibt es
+   nichts zu melden (vorbelegungAus → null), dann erscheint kein Link. */
+export function MeldeLink({ mode, gameCode = null, player, def }) {
+  const [offen, setOffen] = useState(false);
+  const v = vorbelegungAus(def);
+  if (!v || !player) return null;
+  return (
+    <>
+      <button type="button" className="meldeLink" onClick={() => setOffen(true)}>
+        <Icon name="flag" size={13} /> Stimmt doch? Melden
+      </button>
+      {offen && createPortal(
+        <ReportModal mode={mode} gameCode={gameCode} onClose={() => setOffen(false)}
+          vorbelegung={{ player, ...v, kontext: kontextAus(def) }} />,
+        document.body
+      )}
+    </>
+  );
+}
+
+function ReportModal({ mode, gameCode, onClose, vorbelegung = null }) {
   const [players, setPlayers] = useState(null);
   const [idx, setIdx] = useState(null);
   const [ladeFehler, setLadeFehler] = useState("");
-  const [spielerQ, setSpielerQ] = useState("");
-  const [spieler, setSpieler] = useState(null);
-  const [vereinQ, setVereinQ] = useState("");
-  const [verein, setVerein] = useState(null);
+  const [kind, setKind] = useState(vorbelegung?.kind || "verein");
+  const [spielerQ, setSpielerQ] = useState(vorbelegung?.player?.n || "");
+  const [spieler, setSpieler] = useState(vorbelegung?.player || null);
+  const [vereinQ, setVereinQ] = useState(
+    typeof vorbelegung?.ziel === "string" ? vorbelegung.ziel : vorbelegung?.ziel?.name || "");
+  /* Das Ziel: bei Vereinen der Name, bei Titeln und Nationen { key, name }. */
+  const [verein, setVerein] = useState(vorbelegung?.ziel || null);
   const [status, setStatus] = useState("formular");   // formular | senden | ok | fehler
   const [fehler, setFehler] = useState("");
   const laeuft = useRef(false);
@@ -74,20 +100,32 @@ function ReportModal({ mode, gameCode, onClose }) {
     () => (players && spielerQ.trim().length >= 2 ? suggestPlayers(players, spielerQ, 8) : []),
     [players, spielerQ]
   );
-  const vereinTreffer = useMemo(
-    () => (idx && vereinQ.trim().length >= 2 ? idx.suggest(vereinQ, 8) : []),
-    [idx, vereinQ]
-  );
+  const vereinTreffer = useMemo(() => {
+    if (kind !== "verein") {
+      const q = norm(vereinQ.trim());
+      return zieleFuer(kind).filter((z) => !q || norm(z.name).includes(q) || norm(z.key).startsWith(q));
+    }
+    return idx && vereinQ.trim().length >= 2 ? idx.suggest(vereinQ, 8) : [];
+  }, [idx, vereinQ, kind]);
 
-  const fehltNoch = reportFehlt(spieler, verein);
-  const schonDrin = spieler && verein && bereitsBekannt(spieler, verein);
+  const zielName = kind === "verein" ? verein : verein?.name;
+  const fehltNoch = reportFehlt(spieler, verein, kind);
+  const schonDrin = spieler && verein && bereitsBekannt(spieler, verein, kind);
+
+  function artWechseln(k) {
+    if (k === kind) return;
+    setKind(k); setVerein(null); setVereinQ("");
+  }
 
   async function senden() {
     if (laeuft.current || fehltNoch) return;      // Doppelklick läuft ins Leere
     laeuft.current = true;
     setStatus("senden"); setFehler("");
     try {
-      await submitReport({ player: spieler, clubName: verein, mode, gameCode });
+      /* Der Zusammenhang gilt nur, solange die Meldung zum abgelehnten Feld passt —
+         wer die Art wechselt, meldet etwas anderes. */
+      const kontext = vorbelegung && kind === vorbelegung.kind ? vorbelegung.kontext : null;
+      await submitReport({ player: spieler, kind, ziel: verein, kontext, mode, gameCode });
       setStatus("ok"); play("ok");
       setTimeout(onClose, 1900);
     } catch (e) {
@@ -109,7 +147,7 @@ function ReportModal({ mode, gameCode, onClose }) {
           <>
             <div className="fb ok" style={{ marginTop: 14 }}>✓ Fehler erfolgreich gemeldet. Danke!</div>
             <p className="ruleP">
-              <b>{spieler.n}</b> → <b>{verein}</b> ist notiert. Die Zuordnung wird geprüft und mit dem
+              <b>{spieler.n}</b> → <b>{zielName}</b> ist notiert. Die Angabe wird geprüft und mit dem
               nächsten Datenlauf ergänzt — dein laufendes Spiel bleibt unverändert.
             </p>
             <div className="closeline">
@@ -118,10 +156,19 @@ function ReportModal({ mode, gameCode, onClose }) {
           </>
         ) : (
           <>
+            <div className="repArten" role="group" aria-label="Was fehlt?">
+              {Object.entries(REPORT_KINDS).map(([k, v]) => (
+                <button key={k} type="button" className={"chip" + (kind === k ? " on" : "")}
+                  disabled={status === "senden"} onClick={() => artWechseln(k)}>{v.name}</button>
+              ))}
+            </div>
             <p className="ruleP">
-              Fehlt bei einem Spieler ein Verein, bei dem er wirklich gespielt hat? Melde das Paar.
-              Es wird geprüft und mit dem nächsten Datenlauf ergänzt — nicht sofort übernommen.
+              {REPORT_KINDS[kind].frage} Melde es — es wird geprüft und mit dem nächsten
+              Datenlauf ergänzt, nicht sofort übernommen.
             </p>
+            {vorbelegung?.kontext && kind === vorbelegung.kind && (
+              <div className="fb info">Aus dem abgelehnten Zug: Feld „{vorbelegung.kontext.feldName}“.</div>
+            )}
 
             {ladeFehler ? <div className="fb err">{ladeFehler}</div> : !players || !idx ? (
               <div className="qlogEmpty">Lade Spieler- und Vereinsdaten…</div>
@@ -146,33 +193,58 @@ function ReportModal({ mode, gameCode, onClose }) {
                   schluessel={(p) => p.n + p.by}
                 />
 
-                <Feld
-                  label="Verein"
-                  placeholder="Verein eingeben (ab 2 Buchstaben)…"
-                  query={vereinQ}
-                  gewaehlt={verein}
-                  onQuery={(v) => { setVereinQ(v); setVerein(null); }}
-                  onClear={() => { setVerein(null); setVereinQ(""); }}
-                  treffer={verein ? [] : vereinTreffer}
-                  zeile={(name) => {
-                    const key = clubKeyOf(name);
-                    const def = key ? lookupDef("club", key) : null;
-                    return (
-                      <>
-                        <span className="repClub">{def && <Emblem def={def} />}{name}</span>
-                        {key && <span className="sugMeta">{key}</span>}
-                      </>
-                    );
-                  }}
-                  onPick={(name) => { setVerein(name); setVereinQ(name); }}
-                  schluessel={(name) => name}
-                />
+                {kind === "verein" ? (
+                  <Feld
+                    label="Verein"
+                    placeholder="Verein eingeben (ab 2 Buchstaben)…"
+                    query={vereinQ}
+                    gewaehlt={verein}
+                    onQuery={(v) => { setVereinQ(v); setVerein(null); }}
+                    onClear={() => { setVerein(null); setVereinQ(""); }}
+                    treffer={verein ? [] : vereinTreffer}
+                    zeile={(name) => {
+                      const key = clubKeyOf(name);
+                      const def = key ? lookupDef("club", key) : null;
+                      return (
+                        <>
+                          <span className="repClub">{def && <Emblem def={def} />}{name}</span>
+                          {key && <span className="sugMeta">{key}</span>}
+                        </>
+                      );
+                    }}
+                    onPick={(name) => { setVerein(name); setVereinQ(name); }}
+                    schluessel={(name) => name}
+                  />
+                ) : (
+                  <Feld
+                    key={kind}
+                    label={REPORT_KINDS[kind].name}
+                    placeholder={kind === "titel" ? "Titel suchen…" : "Nation suchen…"}
+                    query={vereinQ}
+                    gewaehlt={verein?.name}
+                    onQuery={(v) => { setVereinQ(v); setVerein(null); }}
+                    onClear={() => { setVerein(null); setVereinQ(""); }}
+                    treffer={verein ? [] : vereinTreffer}
+                    immer
+                    zeile={(z) => {
+                      const def = lookupDef(kind === "titel" ? "honour" : "nat", z.key);
+                      return (
+                        <>
+                          <span className="repClub">{def && <Emblem def={def} />}{z.name}</span>
+                          <span className="sugMeta">{z.key}</span>
+                        </>
+                      );
+                    }}
+                    onPick={(z) => { setVerein(z); setVereinQ(z.name); }}
+                    schluessel={(z) => z.key}
+                  />
+                )}
 
                 {schonDrin && (
                   <div className="fb info">
-                    Diese Zuordnung kennt das Spiel bereits. Wenn ein Feld sie trotzdem nicht wertet,
-                    liegt es an der Regel des Feldes, nicht an den Daten — melde sie trotzdem, wenn du
-                    dir sicher bist.
+                    Diese Angabe kennt das Spiel bereits. Wenn ein Feld sie trotzdem nicht wertet,
+                    liegt es an der Regel des Feldes oder an einem zweiten Datensatz desselben
+                    Spielers — melde sie trotzdem, wenn du dir sicher bist.
                   </div>
                 )}
                 {status === "fehler" && <div className="fb err">Speichern fehlgeschlagen: {fehler}</div>}
@@ -200,7 +272,7 @@ function ReportModal({ mode, gameCode, onClose }) {
 /* Ein Suchfeld mit Trefferliste. Die Liste läuft IM FLUSS statt als absolutes
    Dropdown wie sonst im Spiel: .modal hat overflow:hidden, ein überstehendes
    Dropdown würde am Rand des Fensters abgeschnitten. */
-function Feld({ label, placeholder, query, gewaehlt, onQuery, onClear, treffer, zeile, onPick, schluessel, inputRef }) {
+function Feld({ label, placeholder, query, gewaehlt, onQuery, onClear, treffer, zeile, onPick, schluessel, inputRef, immer = false }) {
   return (
     <div className="repFeld">
       <label className="repLabel">{label}</label>
@@ -217,7 +289,7 @@ function Feld({ label, placeholder, query, gewaehlt, onQuery, onClear, treffer, 
             <div key={schluessel(t)} className="sugItem" onClick={() => onPick(t)}>{zeile(t)}</div>
           ))}
         </div>
-      ) : query.trim().length >= 2 ? (
+      ) : query.trim().length >= 2 || (immer && query.trim()) ? (
         <div className="repLeer">Kein Treffer.</div>
       ) : null}
     </div>

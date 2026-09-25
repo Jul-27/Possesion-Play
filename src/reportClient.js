@@ -10,9 +10,9 @@ import { DATA_ASOF } from "./dataInfo.js";
 import { reportPayload } from "./reports.js";
 
 /** Meldung abgeben. Wirft mit lesbarer Meldung, wenn es schiefgeht. */
-export async function submitReport({ player, clubName, mode, gameCode = null }) {
+export async function submitReport({ player, clubName, ziel, kind = "verein", kontext = null, mode, gameCode = null }) {
   const args = reportPayload({
-    player, clubName, mode, gameCode,
+    player, clubName, ziel, kind, kontext, mode, gameCode,
     clientId: getClientId(),
     dataAsof: DATA_ASOF,
   });

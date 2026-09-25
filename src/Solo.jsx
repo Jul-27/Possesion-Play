@@ -13,7 +13,7 @@ import { shareSolo } from "./share.js";
 import { SOLO_STATS_KEY, updateSoloStats, soloStatsLine } from "./soloStats.js";
 import { dailyRnd, challengeState, recordChallenge, challengeStats } from "./dailyChallenge.js";
 import { submit as lbSubmit } from "./leaderboard.js";
-import ReportButton from "./ReportButton.jsx";
+import ReportButton, { MeldeLink } from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
 import { merkeSpieler } from "./collection.js";
@@ -79,7 +79,7 @@ export default function Solo({ onLeave }) {
     if (!playerMatchesHex(player, board[selected].def)) {
       setMisses((m) => m + 1);
       setFeedback({ type: "err", text: `${player.n} passt nicht zu „${cname(board[selected].def)}".`,
-        detail: "Kein Zugverlust im Training — probier's gleich nochmal." });
+        detail: "Kein Zugverlust im Training — probier's gleich nochmal.", melden: { player, def: board[selected].def } });
       play("err");
       setNameInput(""); setChosen(null); setSugOpen(false);
       return;
@@ -174,7 +174,8 @@ export default function Solo({ onLeave }) {
           </div>
           {/* Meldung INS Panel: als Geschwister läge sie über dem Autocomplete-Dropdown
               (.ppRoot > * setzt z-index:1, wodurch dessen z-index:20 im Panel gefangen bleibt). */}
-          {feedback && (<div className={`fb ${feedback.type}`}>{feedback.text}{feedback.detail && <div className="fbDetail">{feedback.detail}</div>}</div>)}
+          {feedback && (<div className={`fb ${feedback.type}`}>{feedback.text}{feedback.detail && <div className="fbDetail">{feedback.detail}</div>}
+            {feedback.melden && <MeldeLink mode="hex" player={feedback.melden.player} def={feedback.melden.def} />}</div>)}
           <div className="minirow">
             <button className="btn ghost" onClick={() => { setSelected(null); setNameInput(""); setChosen(null); setSugOpen(false); }}>Anderes Feld</button>
           </div>
