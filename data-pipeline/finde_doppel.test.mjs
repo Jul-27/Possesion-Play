@@ -131,3 +131,38 @@ test("ausTiteln: eindeutige ID mit passendem Jahr, sonst null", async () => {
   assert.equal(ausTiteln(["Q1", "Q2"], ents, [1986]), null, "en und de uneins");
   assert.equal(ausTiteln([], ents, [1986]), null);
 });
+
+test("Kandidaten: verschiedene Apostrophe sind derselbe Name", () => {
+  assert.deepEqual(paar([sp("Samuel Eto'o", 1981, ["BAR"]), sp("Samuel Eto’o", 1981, ["INT"])]),
+    ["Samuel Eto'o ↔ Samuel Eto’o"]);
+});
+
+test("kandidatenAusLabels: englisches und deutsches Label derselben Person auf zwei Datensätzen", async () => {
+  const { kandidatenAusLabels } = await import("./finde_doppel.mjs");
+  const players = [sp("Andriy Yarmolenko", 1989), sp("Andrij Jarmolenko", 1989), sp("Andriy Shevchenko", 1976)];
+  const p = kandidatenAusLabels(players, [
+    { namen: ["Andriy Yarmolenko", "Andrij Jarmolenko"], by: 1989 },
+    { namen: ["Andriy Shevchenko", "Andrij Schewtschenko"], by: 1976 },   // nur einer im Bestand
+    { namen: ["Andriy Yarmolenko", "Andrij Jarmolenko"], by: 1990 },      // falsches Jahr
+  ]);
+  assert.deepEqual(p.map(({ neu, alt }) => `${neu.n} ↔ ${alt.n}`), ["Andrij Jarmolenko ↔ Andriy Yarmolenko"]);
+});
+
+test("besterName: eintippbarer Apostroph vor deutschem Artikel, Sperrliste vor allem", async () => {
+  const { besterName } = await import("./finde_doppel.mjs");
+  const [, eto] = ent("Q12", { labels: { en: "Samuel Eto'o" }, dewiki: "Samuel Eto’o" });
+  assert.deepEqual(Object.values(besterName(sp("Samuel Eto’o", 1981), sp("Samuel Eto'o", 1981), eto)).map((x) => x.n ?? x),
+    ["Samuel Eto'o", "tippbar"]);
+  const [, ito] = ent("Q13", { dewiki: "Jun’ya Itō" });
+  assert.equal(besterName(sp("Jun’ya Itō", 1993), sp("Junya Itō", 1993), ito).p.n, "Junya Itō");
+  const [, warley] = ent("Q14", { labels: { en: "Zé cuscuz da pimba" } });
+  assert.equal(besterName(sp("Warley Silva dos Santos", 1978), sp("Zé cuscuz da pimba", 1978), warley).p.n,
+    "Warley Silva dos Santos");
+});
+
+test("besterName: ein von Hand gepflegter Zielname wird nie wegbenannt", async () => {
+  const { besterName } = await import("./finde_doppel.mjs");
+  const [, e] = ent("Q15", { labels: { en: "Javier Hernández" }, dewiki: "Chicharito" });
+  const r = besterName(sp("Javier Hernández", 1988), sp("Chicharito", 1988), e, new Set(["Javier Hernández|1988"]));
+  assert.deepEqual([r.p.n, r.regel], ["Javier Hernández", "kuratiert"]);
+});

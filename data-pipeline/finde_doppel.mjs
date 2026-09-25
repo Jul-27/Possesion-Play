@@ -63,7 +63,9 @@ export function kandidaten(vorher, nachher) {
      · derselbe Name, ein Jahr auseinander, mit gemeinsamem Verein (Didi).
    Brüder erfüllt die zweite Regel auch (Frank/Ronald de Boer) — deshalb bleibt der
    Beleg an EINER Wikidata-Entität Pflicht. */
-const teile = (s) => norm(s).split(/[\s-]+/).filter(Boolean);
+/* Apostrophe gleichsetzen: „Samuel Eto'o" und „Samuel Eto’o" standen als zwei
+   Personen im Bestand, weil norm() die beiden Zeichen unterscheidet. */
+const teile = (s) => norm(s).replace(/[’‘`´]/g, "'").split(/[\s-]+/).filter(Boolean);
 const stationen = (p) => new Set([...(p.clubs || []), ...(p.cp || []).map((c) => c[0])]);
 
 export function kandidatenImBestand(players) {
@@ -89,6 +91,46 @@ export function kandidatenImBestand(players) {
     }
   }
   return paare;
+}
+
+/* ── DRITTE QUELLE: EINE PERSON, ZWEI LABELS ────────────────────────────────
+   Umschriften fallen durch beide Regeln oben — „Andriy Yarmolenko" und „Andrij
+   Jarmolenko" teilen kein einziges Namensteil. Wikidata verrät sie trotzdem: Eine
+   Kaderabfrage liefert je Person das englische UND das deutsche Label. Zeigen beide
+   auf zwei verschiedene Datensätze mit gleichem Jahrgang, ist das ein Kandidat.
+   `zeilen`: [{ namen: [en, de], by }] aus den Nationalmannschaftskadern. */
+export function kandidatenAusLabels(players, zeilen) {
+  const idx = new Map(players.map((p) => [`${norm(p.n)}|${p.by}`, p]));
+  const paare = new Map();
+  for (const { namen, by } of zeilen) {
+    const treffer = [...new Set(namen.filter(Boolean).map((n) => idx.get(`${norm(n)}|${by}`)).filter(Boolean))];
+    for (let i = 0; i < treffer.length; i++) for (let j = i + 1; j < treffer.length; j++) {
+      const [a, b] = [treffer[i], treffer[j]].sort((x, y) => x.n.localeCompare(y.n));
+      paare.set(`${a.n}|${b.n}|${by}`, { neu: a, alt: b });
+    }
+  }
+  return [...paare.values()];
+}
+
+async function kaderZeilen(teams) {
+  const zeilen = [];
+  for (const qid of teams) {
+    const q = `SELECT DISTINCT ?en ?de ?by WHERE { ?p p:P54 ?st . ?st ps:P54 wd:${qid} .
+      ?p wdt:P106 wd:Q937857 ; wdt:P569 ?d . BIND(YEAR(?d) AS ?by)
+      ?p rdfs:label ?en FILTER(LANG(?en) = "en") ?p rdfs:label ?de FILTER(LANG(?de) = "de")
+      FILTER(?en != ?de) }`;
+    let rows = null;
+    for (let v = 0; v < 6 && !rows; v++) {
+      const r = await fetch("https://query.wikidata.org/sparql?format=json&query=" + encodeURIComponent(q),
+        { headers: { "User-Agent": UA, Accept: "application/sparql-results+json" } }).catch(() => null);
+      if (r?.ok) { try { rows = (await r.json()).results.bindings; } catch { /* nochmal */ } }
+      if (!rows) await sleep(10000 * (v + 1));
+    }
+    if (!rows) throw new Error(`Kader ${qid}: WDQS antwortet nicht`);
+    for (const b of rows) if (b.by) zeilen.push({ namen: [b.en.value, b.de.value], by: Number(b.by.value) });
+    await sleep(1200);
+  }
+  return zeilen;
 }
 
 /** Alle Namen einer Entität: Labels und Aliase in allen Sprachen, plus dewiki-Titel. */
@@ -174,13 +216,35 @@ export function ausTiteln(qids, ents, jahre) {
 }
 
 /** Welcher Name bleibt? { p, regel }.
+    0. Sperrliste (KEIN_ZIEL); bei reinem Apostroph-Unterschied der eintippbare Name
     1. der deutsche Artikeltitel — von Menschen gepflegt und kaum vandaliert; das
        englische Label war es nicht: André Onana hieß dort „Andrcu Onana", Darko
        Brašanac „Garikoitz Brašanac" (gemessen am 25.09.2026)
     2. der Rufname, wenn er ganz im anderen Namen steckt — „Pablo Iñiguez" statt
        „Pablo Íñiguez de Heredia Larraz", auch wenn das englische Label der Vollname ist
     3. das englische Label, 4. das deutsche Label, 5. sonst der kürzere Name. */
-export function besterName(a, b, e) {
+/* Namen, die nie Ziel werden dürfen — vandalierte oder verschriebene englische
+   Labels, die ein Paar sonst über Regel 3 gewönnen (gefunden am 25.09.2026). */
+export const KEIN_ZIEL = new Set([
+  "Zé cuscuz da pimba",   // Warley Silva dos Santos, Q-Label vandaliert
+  "Macnelly Torress",     // Macnelly Torres, doppeltes s im Label
+]);
+
+const TYPO_APOSTROPH = /[’‘`´]/;
+const ohneApostroph = (s) => norm(s).replace(/['’‘`´]/g, "");
+
+export function besterName(a, b, e, geschuetzt = new Set()) {
+  /* Von Hand gepflegte Zielnamen (NAME_OVERRIDES ohne diese Datei) sind geprüft und
+     teils gemeldet — „Javier Hernández" bleibt, auch wenn der deutsche Artikel
+     „Chicharito" heißt. */
+  const g = (p) => geschuetzt.has(`${p.n}|${p.by}`);
+  if (g(a) !== g(b)) return { p: g(a) ? a : b, regel: "kuratiert" };
+  if (KEIN_ZIEL.has(a.n) !== KEIN_ZIEL.has(b.n)) return { p: KEIN_ZIEL.has(a.n) ? b : a, regel: "sperrliste" };
+  /* 0. Unterscheiden sich die Namen nur im Apostroph, gewinnt der eintippbare:
+     Die deutsche Wikipedia schreibt „Eto’o", im Spiel tippt jeder „eto'o". */
+  if (ohneApostroph(a.n) === ohneApostroph(b.n) && TYPO_APOSTROPH.test(a.n) !== TYPO_APOSTROPH.test(b.n)) {
+    return { p: TYPO_APOSTROPH.test(a.n) ? b : a, regel: "tippbar" };
+  }
   const gleich = (p, soll) => soll && norm(p.n) === norm(soll);
   const dewiki = e.dewiki && ohneKlammer(e.dewiki);
   for (const p of [a, b]) if (gleich(p, dewiki)) return { p, regel: "dewiki" };
@@ -195,7 +259,20 @@ export function besterName(a, b, e) {
 
 async function pruefeBestand(ausgabe) {
   const players = (await import(new URL("../src/players.js", import.meta.url).href + "?t=" + Date.now())).PLAYERS;
-  const paare = kandidatenImBestand(players);
+  const { NAT_TEAM_QID } = await import("./wikidata_national.mjs");
+  const { NAME_OVERRIDES } = await import("./name_overrides.mjs");
+  const { DUBLETTEN } = await import("./dubletten.mjs");
+  const eigene = new Set(DUBLETTEN.map((o) => `${o.from}|${o.by}`));
+  const geschuetzt = new Set(NAME_OVERRIDES.filter((o) => !eigene.has(`${o.from}|${o.by}`))
+    .map((o) => `${o.to}|${o.byTo ?? o.by}`));
+  const ausLabels = kandidatenAusLabels(players, await kaderZeilen(Object.values(NAT_TEAM_QID)));
+  const schon = new Set();
+  const paare = [];
+  for (const x of [...kandidatenImBestand(players), ...ausLabels]) {
+    const k = [`${x.neu.n}|${x.neu.by}`, `${x.alt.n}|${x.alt.by}`].sort().join("~");
+    if (!schon.has(k)) { schon.add(k); paare.push(x); }
+  }
+  console.log(`  davon ${ausLabels.length} aus Kader-Labels (Umschriften)`);
   const beteiligt = new Map();
   for (const { neu, alt } of paare) for (const p of [neu, alt]) beteiligt.set(`${p.n}|${p.by}`, p);
   console.log(`${paare.length} Kandidatenpaare, ${beteiligt.size} Datensätze — Suche bei Wikidata …`);
@@ -302,7 +379,7 @@ async function pruefeBestand(ausgabe) {
       const j = jahrBelegt.get(k);
       if (!j) { offen.push({ a: `${neu.n}|${neu.by}`, b: `${alt.n}|${alt.by}`, qa, qb, grund: "Jahrgang unklar" }); continue; }
       ziel = neu.by === j ? neu : alt;
-    } else ({ p: ziel, regel } = besterName(neu, alt, e));
+    } else ({ p: ziel, regel } = besterName(neu, alt, e, geschuetzt));
     const weg = ziel === neu ? alt : neu;
     belegt.push({ from: weg.n, by: weg.by, to: ziel.n, ...(ziel.by !== weg.by ? { byTo: ziel.by } : {}), src: qa,
       sl: Math.max(neu.sl || 0, alt.sl || 0), regel, en: e.en, dewiki: e.dewiki });
