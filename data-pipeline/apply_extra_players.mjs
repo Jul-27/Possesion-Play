@@ -157,7 +157,9 @@ export function applyExtras(players, extras = EXTRA_PLAYERS, wrong = WRONG_CLUBS
   for (const x of extras) {
     const cur = byKey.get(norm(x.n) + "|" + x.by);
     if (cur) {
-      if (x.nat && !(cur.nat || []).length) cur.nat = [...x.nat];
+      /* Ergänzen statt nur leere Felder füllen — wie wikidata_national.mjs seit dem
+         25.09.2026: Eine gemeldete Nation kommt zur Staatsangehörigkeit dazu. */
+      if (x.nat) cur.nat = [...new Set([...(cur.nat || []), ...x.nat])];
       if (x.clubs) cur.clubs = [...new Set([...(cur.clubs || []), ...x.clubs])].sort();
       if (x.t) cur.t = [...new Set([...(cur.t || []), ...x.t])].sort();
       if (x.cp) cur.cp = [...(cur.cp || []).filter((c) => !x.cp.some((y) => y[0] === c[0])), ...x.cp].sort((a, b) => a[1] - b[1]);

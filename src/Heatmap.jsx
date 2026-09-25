@@ -13,7 +13,7 @@ import ShareButton from "./ShareButton.jsx";
 import { shareHeat } from "./share.js";
 import { dailyRnd, challengeState, recordChallenge, challengeStats } from "./dailyChallenge.js";
 import { submit as lbSubmit } from "./leaderboard.js";
-import ReportButton from "./ReportButton.jsx";
+import ReportButton, { MeldeLink } from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
 import { merkeSpieler } from "./collection.js";
@@ -75,7 +75,7 @@ export default function Heatmap({ onLeave }) {
     if (!zug) {
       setMisses((m) => m + 1);
       setFeedback({ type: "err", text: `${player.n} passt nicht zu „${cname(board[selected].def)}".`,
-        detail: "Kein Punktabzug — probier's gleich nochmal." });
+        detail: "Kein Punktabzug — probier's gleich nochmal.", melden: { player, def: board[selected].def } });
       play("err");
       setNameInput(""); setChosen(null); setSugOpen(false);
       return;
@@ -200,7 +200,8 @@ export default function Heatmap({ onLeave }) {
             </div>
             <button className="btn primary" disabled={!chosen && !nameInput.trim()} onClick={handleSubmit}>Prüfen</button>
           </div>
-          {feedback && (<div className={`fb ${feedback.type}`}>{feedback.text}{feedback.detail && <div className="fbDetail">{feedback.detail}</div>}</div>)}
+          {feedback && (<div className={`fb ${feedback.type}`}>{feedback.text}{feedback.detail && <div className="fbDetail">{feedback.detail}</div>}
+            {feedback.melden && <MeldeLink mode="heat" player={feedback.melden.player} def={feedback.melden.def} />}</div>)}
           <div className="minirow">
             <button className="btn ghost" onClick={() => { setSelected(null); setNameInput(""); setChosen(null); setSugOpen(false); }}>Anderes Feld</button>
           </div>

@@ -484,6 +484,17 @@ Nicht anwendbare Meldungen sind mit `grund` markiert:
 * **Spieler nicht in players.js** — Name oder Geburtsjahr prüfen.
 * **bereits bekannt** — der Verein steht schon beim Spieler, also ein Regelproblem.
 
+Seit 25.09.2026 gibt es drei Meldearten (`kind`): **verein**, **titel**, **nation**.
+Bei Titeln und Nationen tragen `club_key`/`club_name` das Ziel („WM“/„Weltmeister“).
+Der Export schlägt dafür `HONOUR_OVERRIDES` bzw. `EXTRA_PLAYERS` mit `nat` vor — nur
+nicht für WM, EM und Copa América: Die kommen aus den Kaderkategorien der Wikipedia
+(`wikipedia_turniersieger.mjs`), ein Override würde dort wieder gestrichen.
+
+Wird eine Antwort im Spiel abgelehnt, erscheint „Stimmt doch? Melden“ (Hex-Duell,
+Hex-Training, Heatmap, Raster-Duell). Die Meldung trägt dann in `last_context` das
+ablehnende Feld (`{"feld": "honour:WM", "feldName": "Weltmeister"}`), der Export zeigt
+es als „abgelehnt von Feld …“. Schema: `supabase/migrations/20260925_meldungen_arten.sql`.
+
 Erledigte Meldungen abhaken (sie fallen dann aus dem Export):
 
 ```sql

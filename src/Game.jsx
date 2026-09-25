@@ -10,7 +10,7 @@ import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
 import DataStamp from "./DataStamp.jsx";
 import { useLeaveEndsGame } from "./usePresence.js";
-import ReportButton from "./ReportButton.jsx";
+import ReportButton, { MeldeLink } from "./ReportButton.jsx";
 import GameTop from "./GameTop.jsx";
 import Icon from "./Icons.jsx";
 import WaitForOpponent from "./WaitForOpponent.jsx";
@@ -181,7 +181,7 @@ export default function Game({ code, clientId, onLeave }) {
     ids.forEach((i) => { results[i] = playerMatchesHex(player, board[i].def); });
     if (results[selected] !== true) {
       setLocalFeedback({ type: "err", text: `${player.n} passt nicht zu „${cname(board[selected].def)}".`,
-        detail: "Zug verfällt — der Gegner ist dran." });
+        detail: "Zug verfällt — der Gegner ist dran.", melden: { player, def: board[selected].def } });
       play("err");
       setSelected(null); setNameInput(""); setChosen(null); setSugOpen(false);
       const rem = liveRemaining(clk, myPlayer, Date.now());
@@ -329,7 +329,8 @@ export default function Game({ code, clientId, onLeave }) {
         </div>
       ))}
 
-      {fb && (<div className={`fb ${fb.type}`}>{fb.text}{fb.detail && <div className="fbDetail">{fb.detail}</div>}</div>)}
+      {fb && (<div className={`fb ${fb.type}`}>{fb.text}{fb.detail && <div className="fbDetail">{fb.detail}</div>}
+        {fb.melden && <MeldeLink mode="hex-duell" gameCode={code} player={fb.melden.player} def={fb.melden.def} />}</div>)}
       {opponentLeaving && !gameOver && (<div className="fb info">Gegner offline — das Spiel endet gleich, falls er nicht zurückkommt…</div>)}
 
       {/* Warten auf Mitspieler */}

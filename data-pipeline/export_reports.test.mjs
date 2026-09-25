@@ -127,3 +127,34 @@ test("istAbgelehnt trifft nur das gemeldete Paar", () => {
   assert.equal(istAbgelehnt("raheem sterling|1994", "Feyenoord Rotterdam"), false, "nur dieser Verein");
   assert.equal(istAbgelehnt("harry kane|1993", "PSV Eindhoven"), false, "nur dieser Spieler");
 });
+
+/* ── Titel und Nationen (seit 25.09.2026) ─────────────────────────────────── */
+
+test("eine Nationsmeldung bringt einen EXTRA_PLAYERS-Eintrag mit nat, samt abgelehntem Feld", () => {
+  const a = zuAusgabe(zeile({ kind: "nation", club_key: "SWE", club_name: "Schweden",
+    last_context: { feld: "nat:SWE", feldName: "Schweden" } }), karte([P("Fábio Vieira", 2000)]));
+  assert.equal(a.kind, "nation");
+  assert.equal(a.ziel, "EXTRA_PLAYERS");
+  assert.deepEqual(a.eintrag, { n: "Fábio Vieira", by: 2000, nat: ["SWE"] });
+  assert.equal(a.clubName, "Schweden", "der Name wird nicht aus der Vereinsliste ersetzt");
+  assert.deepEqual(a.kontext, { feld: "nat:SWE", feldName: "Schweden" });
+});
+
+test("eine Titelmeldung geht nach HONOUR_OVERRIDES — außer bei Turniertiteln", () => {
+  const players = karte([P("Fábio Vieira", 2000)]);
+  const cl = zuAusgabe(zeile({ kind: "titel", club_key: "CL", club_name: "Champions-League-Sieger" }), players);
+  assert.equal(cl.ziel, "HONOUR_OVERRIDES");
+  assert.deepEqual(cl.eintrag, { schluessel: "fabio vieira|2000", t: ["CL"] });
+  const wm = zuAusgabe(zeile({ kind: "titel", club_key: "WM", club_name: "Weltmeister" }), players);
+  assert.equal(wm.ziel, null, "WM setzen die Kaderkategorien, ein Override würde wieder gestrichen");
+  assert.match(wm.grund, /Kaderkategorien/);
+});
+
+test("steht der Titel schon beim Spieler, ist es kein Datenproblem", () => {
+  const torres = { ...P("Ferran Torres", 2000), t: ["WM"] };
+  const a = zuAusgabe(zeile({ player_key: "ferran torres|2000", player_name: "Ferran Torres",
+    kind: "titel", club_key: "WM", club_name: "Weltmeister" }), karte([torres]));
+  assert.equal(a.bereitsBekannt, true);
+  assert.equal(a.ziel, null);
+  assert.match(a.grund, /Titel steht bereits/);
+});
