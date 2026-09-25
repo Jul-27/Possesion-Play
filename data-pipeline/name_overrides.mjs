@@ -20,6 +20,8 @@
  * ausgeschlossen statt geraten (siehe EXCLUDED_PLAYERS).
  */
 
+import { DUBLETTEN } from "./dubletten.mjs";
+
 // { from, by, to, src, note? } — `from` ist der aktuelle Name in players.js,
 // `by` das Geburtsjahr (Schlüssel zusammen mit dem Namen), `src` die belegende QID.
 export const NAME_OVERRIDES = [
@@ -229,6 +231,8 @@ export const NAME_OVERRIDES = [
      Artikel von Guilherme Ramos, weil dessen Jahrgang 1997 passte, und hätte mir
      beinahe dessen Karriere als Capaldos untergeschoben. */
   { from: "Nicolás Capaldo",                     by: 1997, to: "Nicolás Capaldo",   byTo: 1998,     src: "Q60842498", note: "P569 = 14.09.1998, ebenso de- und en.wikipedia" },
+  /* ── Dubletten im Bestand (25.09.2026), belegt je Zeile — siehe dubletten.mjs ── */
+  ...DUBLETTEN,
 ];
 
 // Records, die aus dem Datensatz verschwinden. `aliases` fängt Schreibweisen ab,

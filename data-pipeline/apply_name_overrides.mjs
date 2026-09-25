@@ -11,6 +11,7 @@ import { norm, deriveLastName } from "./wikidata_roster.mjs";
 import { NAME_OVERRIDES, EXCLUDED_PLAYERS } from "./name_overrides.mjs";
 import { stampFixes } from "./stamp.mjs";
 import { recToString } from "./player_record.mjs";
+import { REGELN, abbildungAus, umschluesselnText } from "./nebendateien_umschluesseln.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PLAYERS_PATH = join(HERE, "..", "src", "players.js");
@@ -60,12 +61,30 @@ export function mergeInto(a, b) {
   return a;
 }
 
+/* KETTEN BIS ZUM ENDZIEL. Zwei Tabellen können sich verketten: Eine ältere Zeile
+   benennt „Mykhaylo Mudryk" in „Mykhailo Mudryk" um, eine neuere diesen in
+   „Mychajlo Mudryk". Jeder Datensatz wird nur einmal umbenannt — ohne das Verfolgen
+   bliebe er beim Zwischennamen stehen, als eigene Person neben dem Endziel. */
+export function endziele(overrides) {
+  const byFrom = new Map(overrides.map((o) => [o.from + "|" + o.by, o]));
+  return new Map(overrides.map((o) => {
+    let n = o.to, by = o.byTo ?? o.by;
+    const gesehen = new Set([o.from + "|" + o.by]);
+    while (byFrom.has(n + "|" + by) && !gesehen.has(n + "|" + by)) {
+      gesehen.add(n + "|" + by);
+      const w = byFrom.get(n + "|" + by);
+      n = w.to; by = w.byTo ?? w.by;
+    }
+    return [o.from + "|" + o.by, { ...o, to: n, ...(by !== o.by ? { byTo: by } : {}) }];
+  }));
+}
+
 export function applyOverrides(players, overrides = NAME_OVERRIDES, excluded = EXCLUDED_PLAYERS) {
   const stats = { renamed: 0, merged: 0, removed: 0 };
 
   let list = players.filter((p) => { const drop = isExcluded(p, excluded); if (drop) stats.removed++; return !drop; });
 
-  const byFrom = new Map(overrides.map((o) => [o.from + "|" + o.by, o]));
+  const byFrom = endziele(overrides);
   for (const p of list) {
     const o = byFrom.get(p.n + "|" + p.by);
     if (!o) continue;
@@ -105,6 +124,16 @@ async function main() {
   writeFileSync(PLAYERS_PATH, header + "export const PLAYERS = [\n  " + players.map(recToString).join(",\n  ") + "\n];\n");
   stampFixes(); // rein kuratiert — DATA_ASOF bleibt unberührt
   console.log(`Fertig: ${stats.renamed} umbenannt, ${stats.merged} verschmolzen, ${stats.removed} entfernt -> ${players.length} Spieler.`);
+
+  /* Dieselben Umbenennungen in den Nebendateien, sonst hingen Foto, Einsätze und
+     Karussell-Stationen am verschwundenen Datensatz. */
+  const abbildung = abbildungAus([...endziele(NAME_OVERRIDES).values()]);
+  for (const [datei, regel] of Object.entries(REGELN)) {
+    const pfad = join(HERE, "..", "src", datei);
+    const r = umschluesselnText(readFileSync(pfad, "utf8"), abbildung, regel);
+    if (r.umbenannt || r.verschmolzen) writeFileSync(pfad, r.text);
+    console.log(`  ${datei}: ${r.umbenannt} umbenannt, ${r.verschmolzen} verschmolzen`);
+  }
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) main();

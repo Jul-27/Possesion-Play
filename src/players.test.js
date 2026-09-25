@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { PLAYERS } from "./players.js";
 import { NAME_OVERRIDES, EXCLUDED_PLAYERS } from "../data-pipeline/name_overrides.mjs";
+import { endziele } from "../data-pipeline/apply_name_overrides.mjs";
 
 const names = new Set(PLAYERS.map((p) => p.n));
 
@@ -33,8 +34,11 @@ test("players.js: jeder korrigierte Name ist im Datensatz angekommen", () => {
   /* `byTo` schlüsselt zusätzlich das Geburtsjahr um (Pepe, Quaresma — dort ist das
      Datum in Wikidata selbst kaputt). Der Zieldatensatz steht dann unter dem
      KORRIGIERTEN Jahr; unter dem alten zu suchen ginge zwangsläufig ins Leere. */
+  /* Verkettete Zeilen („Mykhaylo" → „Mykhailo" → „Mychajlo Mudryk") zählen mit ihrem
+     ENDziel — das Zwischenziel verschwindet beim Verschmelzen bestimmungsgemäß. */
   const zielJahr = (o) => o.byTo ?? o.by;
-  const missing = NAME_OVERRIDES.filter((o) => !PLAYERS.some((p) => p.n === o.to && p.by === zielJahr(o)));
+  const missing = [...endziele(NAME_OVERRIDES).values()]
+    .filter((o) => !PLAYERS.some((p) => p.n === o.to && p.by === zielJahr(o)));
   assert.deepEqual(missing.map((o) => `${o.to} (${zielJahr(o)})`), []);
 });
 

@@ -144,6 +144,27 @@ node -e "import('./src/players.js').then(m=>console.log(m.PLAYERS.filter(p=>/^Q\
 node --test src/players.test.js
 ```
 
+### Dubletten
+
+Ändert Wikidata ein Label oder führt es zwei Geburtsjahre, legt ein Lauf einen
+zweiten Datensatz derselben Person an — Vereine und Titel verteilen sich dann auf
+zwei halbe Spieler. Am 25.09.2026 waren es 393 Paare (Xavi / Xavi Hernández,
+Alisson / Alisson Becker, zweimal Enzo Maresca …); sie stehen in `dubletten.mjs`.
+
+```bash
+node data-pipeline/finde_doppel.mjs --bestand doppel.json   # sucht, schreibt nichts
+```
+
+Verschmolzen wird nur, was belegt ist: Beide Namen führen über einen Artikeltitel
+(en/de, samt Weiterleitungen) zur selben Wikidata-Entität mit passendem Jahrgang;
+Rufnamen ohne Artikel nur über eine eindeutige Wikidata-Suche. Bei zwei Jahrgängen
+entscheiden die Kategorien „Geboren JJJJ" / „JJJJ births". Bleibender Name ist der
+deutsche Artikeltitel, sonst der Rufname, sonst das englische Label.
+
+`apply_name_overrides.mjs` verfolgt Ketten zwischen den Tabellen bis zum Endziel und
+zieht die Nebendateien mit (`nebendateien_umschluesseln.mjs`: Karussell,
+Karriere-Pfad, Einsätze, Fotos).
+
 ## Caveats
 
 - Auch mit der Transferhistorie sind sehr alte / Jugend- / Leihstationen nicht
