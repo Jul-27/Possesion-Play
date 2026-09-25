@@ -166,3 +166,12 @@ test("besterName: ein von Hand gepflegter Zielname wird nie wegbenannt", async (
   const r = besterName(sp("Javier Hernández", 1988), sp("Chicharito", 1988), e, new Set(["Javier Hernández|1988"]));
   assert.deepEqual([r.p.n, r.regel], ["Javier Hernández", "kuratiert"]);
 });
+
+test("besterName: ein deutscher Titel mit Vatersnamen verliert gegen den tippbaren Namen", async () => {
+  const { besterName } = await import("./finde_doppel.mjs");
+  const [, e] = ent("Q16", { labels: { en: "Andrey Arshavin" }, dewiki: "Andrei Sergejewitsch Arschawin" });
+  assert.equal(besterName(sp("Andrei Sergejewitsch Arschawin", 1981), sp("Andrey Arshavin", 1981), e).p.n, "Andrey Arshavin");
+  const [, f] = ent("Q17", { labels: { en: "Andriy Yarmolenko" }, dewiki: "Andrij Jarmolenko" });
+  assert.equal(besterName(sp("Andriy Yarmolenko", 1989), sp("Andrij Jarmolenko", 1989), f).p.n, "Andrij Jarmolenko",
+    "ohne Vatersnamen bleibt die deutsche Umschrift");
+});

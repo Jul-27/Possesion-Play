@@ -95,6 +95,20 @@ python make_game_json.py      # -> ./out/players_game.js  (schreibt "export cons
 Sowohl Notebook als auch lokales Skript schreiben `export const PLAYERS = …`,
 sodass `players_game.js` 1:1 nach `src/players.js` übernommen werden kann.
 
+## Nationen (Feld `nat`)
+
+`wikidata_national.mjs` holt die Kader der A-Nationalteams (`NAT_TEAM_QID`) und
+ergänzt deren Code bei jedem Spieler, den es über englisches oder deutsches Label
+wiederfindet — auch wenn schon eine Staatsangehörigkeit eingetragen ist (Çalhanoğlu:
+GER und TUR). Neue Datensätze legt es nur ab Jahrgang 1970 an.
+
+Seit 25.09.2026 sind es 39 Nationen. Aufgenommen wurde jede mit mindestens 30
+bekannten Spielern (`sl` ≥ 30) im Bestand; die schwächste der alten, die
+Elfenbeinküste, hat 48. Knapp darunter: Algerien (29), Chile (26), Ungarn, Rumänien,
+Bosnien (je um 24), Nordirland (21), Ägypten (14). Eine neue Nation braucht drei
+Dinge: den Eintrag in `NAT_TEAM_QID`, einen in `NATIONS` (`src/gameData.js`) mit
+Flagge, und bei neuer Flaggenform eine Zeichnung in `src/Emblems.jsx`.
+
 ## Titel/Honours (Feld `t`)
 
 Das Notebook berechnet zusätzlich pro Spieler die gewonnenen Titel (Feld `t`):

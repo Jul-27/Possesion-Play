@@ -247,7 +247,13 @@ export function besterName(a, b, e, geschuetzt = new Set()) {
   }
   const gleich = (p, soll) => soll && norm(p.n) === norm(soll);
   const dewiki = e.dewiki && ohneKlammer(e.dewiki);
-  for (const p of [a, b]) if (gleich(p, dewiki)) return { p, regel: "dewiki" };
+  /* Russische Artikel führen den Vatersnamen im Titel („Andrei Sergejewitsch
+     Arschawin") — den tippt niemand. Dann entscheidet der andere Name. */
+  const vatersname = (p) => teile(p.n).some((t) => /(witsch|wna)$/.test(t));
+  for (const p of [a, b]) {
+    const anderer = p === a ? b : a;
+    if (gleich(p, dewiki) && !(vatersname(p) && !vatersname(anderer))) return { p, regel: "dewiki" };
+  }
   const [ta, tb] = [teile(a.n), teile(b.n)];
   if (ta.length < tb.length && ta.every((t) => tb.includes(t))) return { p: a, regel: "rufname" };
   if (tb.length < ta.length && tb.every((t) => ta.includes(t))) return { p: b, regel: "rufname" };

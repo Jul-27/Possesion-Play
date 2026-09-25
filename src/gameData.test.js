@@ -315,8 +315,11 @@ test("buildGuessSerial: gültiger, bekannter Kandidat", async () => {
 });
 
 import { NATIONS } from "./gameData.js";
-test("NATIONS enthält Österreich (19 Nationen)", () => {
-  assert.equal(NATIONS.length, 19);
+test("NATIONS: 39 Nationen, jede mit Flagge und passendem Nationalteam", async () => {
+  assert.equal(NATIONS.length, 39);
+  const { NAT_TEAM_QID } = await import("../data-pipeline/wikidata_national.mjs");
+  assert.deepEqual(NATIONS.map((n) => n.key).sort(), Object.keys(NAT_TEAM_QID).sort());
+  for (const n of NATIONS) assert.ok(n.flag?.kind && n.name, `${n.key}: Flagge oder Name fehlt`);
   assert.equal(lookupDef("nat", "AUT").name, "Österreich");
 });
 
