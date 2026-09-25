@@ -81,6 +81,28 @@ export const NATIONS = [
   { key: "COL", label: "COL", name: "Kolumbien",       flag: { kind: "hw", colors: ["#FCD116", "#003893", "#CE1126"], weights: [2, 1, 1] } },
   { key: "USA", label: "USA", name: "USA",             flag: { kind: "canton" } },
   { key: "AUT", label: "AUT", name: "Österreich",      flag: { kind: "h",  colors: ["#ED2939", "#ffffff", "#ED2939"] } },
+  /* Seit 25.09.2026: jede Nation mit mindestens 30 bekannten Spielern im Bestand
+     (Kader aus data-pipeline/wikidata_national.mjs). */
+  { key: "URU", label: "URU", name: "Uruguay",         flag: { kind: "uruguay" } },
+  { key: "SRB", label: "SRB", name: "Serbien",         flag: { kind: "h",  colors: ["#C6363C", "#0C4076", "#fff"] } },
+  { key: "SUI", label: "SUI", name: "Schweiz",         flag: { kind: "swiss" } },
+  { key: "DEN", label: "DEN", name: "Dänemark",        flag: { kind: "nordic", colors: ["#C8102E", "#fff"] } },
+  { key: "SWE", label: "SWE", name: "Schweden",        flag: { kind: "nordic", colors: ["#006AA7", "#FECC00"] } },
+  { key: "CZE", label: "CZE", name: "Tschechien",      flag: { kind: "czech" } },
+  { key: "POL", label: "POL", name: "Polen",           flag: { kind: "h",  colors: ["#fff", "#DC143C"] } },
+  { key: "AUS", label: "AUS", name: "Australien",      flag: { kind: "australia" } },
+  { key: "IRL", label: "IRL", name: "Irland",          flag: { kind: "v",  colors: ["#169B62", "#fff", "#FF883E"] } },
+  { key: "MAR", label: "MAR", name: "Marokko",         flag: { kind: "h",  colors: ["#C1272D"], star: { color: "#006233", outline: true } } },
+  { key: "GHA", label: "GHA", name: "Ghana",           flag: { kind: "h",  colors: ["#CE1126", "#FCD116", "#006B3F"], star: { color: "#000", r: 4.2 } } },
+  { key: "WAL", label: "WAL", name: "Wales",           flag: { kind: "wales" } },
+  { key: "TUR", label: "TUR", name: "Türkei",          flag: { kind: "crescent" } },
+  { key: "RUS", label: "RUS", name: "Russland",        flag: { kind: "h",  colors: ["#fff", "#0039A6", "#D52B1E"] } },
+  { key: "UKR", label: "UKR", name: "Ukraine",         flag: { kind: "h",  colors: ["#0057B7", "#FFD700"] } },
+  { key: "CMR", label: "CMR", name: "Kamerun",         flag: { kind: "v",  colors: ["#007A5E", "#CE1126", "#FCD116"], star: { color: "#FCD116", r: 4.2 } } },
+  { key: "GRE", label: "GRE", name: "Griechenland",    flag: { kind: "greece" } },
+  { key: "SCO", label: "SCO", name: "Schottland",      flag: { kind: "saltire" } },
+  { key: "KOR", label: "KOR", name: "Südkorea",        flag: { kind: "korea" } },
+  { key: "NOR", label: "NOR", name: "Norwegen",        flag: { kind: "nordic", colors: ["#BA0C2F", "#fff", "#00205B"] } },
 ].map((n) => ({ ...n, type: "nat" }));
 
 // ── Karrierezeiträume (Feld cp: [[clubKey, von, bis], ...]; bis 0 = offen) ──
