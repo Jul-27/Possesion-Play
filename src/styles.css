@@ -1424,7 +1424,42 @@ body::after {
 .ukVerein .ukZahlen { gap: 14px; margin-top: 2px; justify-content: center; }
 .ukVerein .ukZahl { align-items: center; }
 .ukVerein .ukZahl b { font-size: 20px; }
-.ukVereinPokale { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; min-height: 26px; }
+.ukVereinPokale { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 10px 12px; min-height: 30px; }
+
+/* ── Titel als Stapel ───────────────────────────────────────────────────────
+   Ruhend liegen gleiche Pokale fast deckungsgleich (je 3 px versetzt) — man sieht
+   die Tiefe, nicht die Menge. Beim Darüberfahren oder mit dem Fokus fächert der
+   Stapel auf 12 px je Pokal auf und legt sich dabei ÜBER die Nachbarn: Wüchse er in
+   der Breite, rutschte der nächste Stapel in eine neue Zeile, und der Zeiger stünde
+   plötzlich über einem anderen Titel. */
+.ukTitelGruppe { position: relative; display: inline-flex; align-items: flex-end; outline: none; cursor: default; }
+.ukTitelStapel {
+  position: relative; display: inline-block; height: 30px;
+  width: calc(30px + (var(--n) - 1) * 3px);
+}
+.ukTitelKopie {
+  position: absolute; bottom: 0; left: calc(var(--i) * 3px); z-index: calc(20 - var(--i));
+  transition: left .28s cubic-bezier(.2, .9, .3, 1);
+  filter: drop-shadow(-2px 1px 2px rgba(0, 0, 0, .35));
+}
+.ukTitelGruppe:hover, .ukTitelGruppe:focus { z-index: 50; }
+.ukTitelGruppe:hover .ukTitelKopie, .ukTitelGruppe:focus .ukTitelKopie { left: calc(var(--i) * 12px); }
+.ukTitelZahl {
+  position: absolute; right: -9px; top: -7px; z-index: 30;
+  padding: 1px 5px; border-radius: 999px; font-size: 10.5px; font-weight: 800; line-height: 1.35;
+  background: var(--kaText, #E9F1EC); color: var(--kaKarte, #131917);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .35); font-variant-numeric: tabular-nums;
+}
+.ukTitelBlase {
+  position: absolute; z-index: 40; bottom: calc(100% + 10px); left: 50%;
+  transform: translate(-50%, 4px); opacity: 0; pointer-events: none; white-space: nowrap;
+  padding: 6px 10px; border-radius: 9px; font-size: 12.5px; font-weight: 700;
+  background: #0E1412; color: #F2F7F4; border: 1px solid rgba(255, 255, 255, .14);
+  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, .6); transition: opacity .16s, transform .16s;
+}
+.ukTitelGruppe:hover .ukTitelBlase, .ukTitelGruppe:focus .ukTitelBlase { opacity: 1; transform: translate(-50%, 0); }
+.ukTitelGruppe:focus-visible .ukTitelStapel { outline: 2px solid var(--kaAkzent, #34C77B); outline-offset: 4px; border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) { .ukTitelKopie, .ukTitelBlase { transition: none; } }
 .ukFuss { margin: 14px 0 0; text-align: right; font-size: 10px; color: var(--kaLeise, #8CA89A); }
 
 @media (max-width: 760px) {

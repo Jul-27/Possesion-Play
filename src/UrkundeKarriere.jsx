@@ -1,5 +1,6 @@
 import { Emblem } from "./Emblems.jsx";
 import Trophaee from "./Trophaeen.jsx";
+import { TITEL_DATEN, titelGruppen } from "./karriere.js";
 
 /* Die Laufbahn-Zusammenfassung — das Bild, das am Ende bleibt.
 
@@ -31,6 +32,30 @@ const defAus = (s) => ({ type: "club", key: s.key, name: s.name, label: s.label 
 
 function Zahl({ wert, name }) {
   return <span className="ukZahl"><b>{wert}</b><small>{name}</small></span>;
+}
+
+/* EIN TITEL, WIE OFT AUCH IMMER GEWONNEN. Gleiche Titel liegen als Stapel
+   übereinander; beim Darüberfahren (oder Antippen — die Gruppe nimmt den Fokus)
+   fächert er sich auf, und eine Blase nennt Anzahl und Namen. Die Zahl steht
+   zusätzlich immer am Stapel: Auf dem Handy gibt es kein Darüberfahren. */
+const STAPEL_MAX = 8;
+function TitelGruppe({ titel, anzahl }) {
+  const name = TITEL_DATEN[titel]?.name || titel;
+  const text = anzahl > 1 ? `${anzahl}× ${name}` : name;
+  const kopien = Math.min(anzahl, STAPEL_MAX);
+  return (
+    <span className="ukTitelGruppe" tabIndex={0} aria-label={text} style={{ "--n": kopien }}>
+      <span className="ukTitelStapel">
+        {Array.from({ length: kopien }, (_, i) => (
+          <span key={i} className="ukTitelKopie" style={{ "--i": i }} aria-hidden="true">
+            <Trophaee titel={titel} groesse={30} />
+          </span>
+        ))}
+      </span>
+      {anzahl > 1 && <b className="ukTitelZahl" aria-hidden="true">{anzahl}×</b>}
+      <span className="ukTitelBlase" role="tooltip">{text}</span>
+    </span>
+  );
 }
 
 export default function UrkundeKarriere({
@@ -130,7 +155,7 @@ export default function UrkundeKarriere({
 
       <div className="ukVereine">
         {stationen.map((s, i) => (
-          <article key={`${s.key}-${i}`} className="ukVerein" style={{ "--ukFarbe": s.c1 }}>
+          <article key={`${s.key}-${i}`} className="ukVerein" style={{ "--ukFarbe": s.farbe || s.c1 }}>
             <span className="ukWappen"><Emblem def={defAus(s)} /></span>
             <b className="ukVereinName">{s.name}</b>
             <div className="ukZahlen">
@@ -141,8 +166,8 @@ export default function UrkundeKarriere({
             <div className="ukVereinPokale">
               {/* Ein Titel mit der Auswahl gehört ins Länderfeld, nicht auf die Karte des
                   Vereins, bei dem der Spieler damals unter Vertrag stand. */}
-              {(s.titel || []).filter((tk) => !NATIONAL.has(tk)).map((tk, n) => (
-                <Trophaee key={n} titel={tk} groesse={26} />
+              {titelGruppen((s.titel || []).filter((tk) => !NATIONAL.has(tk))).map((g) => (
+                <TitelGruppe key={g.key} titel={g.key} anzahl={g.anzahl} />
               ))}
             </div>
           </article>

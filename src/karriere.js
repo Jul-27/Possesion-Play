@@ -750,6 +750,16 @@ export const TITEL_REIHE = [
   "DFB", "FAC", "CDR", "CIT", "CDF", "TDP", "KNV", "OFB",
 ];
 
+/** Titel einer Station gruppiert: [{ key, anzahl }] in der Reihenfolge der Vitrine.
+    Vorher stand auf der Urkunde jeder Titel einzeln und namenlos — elf Pokale
+    nebeneinander, und niemand konnte sagen, welche es waren (Owner, 06.10.2026). */
+export function titelGruppen(keys = []) {
+  const zahl = new Map();
+  for (const k of keys) zahl.set(k, (zahl.get(k) || 0) + 1);
+  const rang = (k) => (TITEL_REIHE.includes(k) ? TITEL_REIHE.indexOf(k) : TITEL_REIHE.length);
+  return [...zahl].sort((a, b) => rang(a[0]) - rang(b[0])).map(([key, anzahl]) => ({ key, anzahl }));
+}
+
 export const titelName = (key) => TITEL_DATEN[key]?.name || key;
 export const titelForm = (key) => TITEL_DATEN[key]?.form || "pokal";
 
