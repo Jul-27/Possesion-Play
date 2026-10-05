@@ -1181,6 +1181,9 @@ export default function Karriere({ onLeave }) {
       const def = defVon({ key: z.key, name: z.verein });
       out.push({
         key: z.key, name: z.verein, label: def.label || z.key, c1: def.c1, c2: def.c2, pat: def.pat,
+        /* Die Karte tönt sich in der abgelesenen Vereinsfarbe — c1 bleibt für das
+           gezeichnete Ersatzwappen und war bei den meisten Vereinen eine Zufallsfarbe. */
+        farbe: farbeVon(z.key),
         spiele: z.spiele, tore: z.tore, vorlagen: z.vorlagen,
         gegentore: z.gegentore || 0, westen: z.westen || 0,
         titel: (z.titel || []).filter((x) => x !== "BDO"),

@@ -2134,3 +2134,11 @@ test("rangAufstieg meldet nur das Überschreiten einer Schwelle nach oben", () =
   assert.equal(K.rangAufstieg(63, 70), null, "innerhalb der Stufe");
   assert.equal(K.rangAufstieg(76, 74), null, "abwärts ist kein Aufstieg");
 });
+
+test("titelGruppen fasst gleiche Titel zusammen, das Seltenste zuerst", () => {
+  assert.deepEqual(K.titelGruppen(["MAT", "OFB", "MAT", "EL", "MAT"]),
+    [{ key: "EL", anzahl: 1 }, { key: "MAT", anzahl: 3 }, { key: "OFB", anzahl: 1 }]);
+  assert.deepEqual(K.titelGruppen([]), []);
+  assert.deepEqual(K.titelGruppen(["XYZ", "CL"]), [{ key: "CL", anzahl: 1 }, { key: "XYZ", anzahl: 1 }],
+    "Unbekanntes ans Ende");
+});
