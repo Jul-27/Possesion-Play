@@ -287,7 +287,17 @@ export const EL_GEWICHT = [0, 1, 5, 14, 20, 12];
 
 /* Der Rang hinter dem Rating — er färbt die Kachel. Vier Stufen, damit ein
    Aufstieg sichtbar ist: Ein Wert, der immer gleich aussieht, ist eine Zahl. */
-export const rangVon = (ovr) => (ovr >= 85 ? "platin" : ovr >= 75 ? "gold" : ovr >= 62 ? "silber" : "bronze");
+/* Die Stufen der Wertung, wie Sammelkarten. Die Schwellen sitzen auf UNSERER Skala
+   (Median-Höchstwert 74), nicht auf der des Vorbilds: Bei 70/80 wäre fast jede
+   Laufbahn Silber, kaum eine Gold. Seit 05.10.2026 tragen nicht nur die Kachel, sondern
+   auch jede Zahl in der Zeitleiste und die Kurve die Stufenfarbe. */
+export const RANG_SCHWELLEN = [["bronze", 0], ["silber", 62], ["gold", 75], ["platin", 85]];
+export const RANG_NAME = { bronze: "Bronze", silber: "Silber", gold: "Gold", platin: "Platin" };
+const rangIndex = (ovr) => RANG_SCHWELLEN.findLastIndex(([, ab]) => ovr >= ab);
+export const rangVon = (ovr) => RANG_SCHWELLEN[rangIndex(ovr)][0];
+/** Die neu erreichte Stufe, wenn der Wert eine Schwelle nach oben überschreitet — sonst null. */
+export const rangAufstieg = (vorher, nachher) =>
+  rangIndex(nachher) > rangIndex(vorher) ? RANG_SCHWELLEN[rangIndex(nachher)][0] : null;
 
 /* ── Marktwert ─────────────────────────────────────────────────────────────────
    Hängt allein am Wert, nicht am Verein — sonst wäre er nur eine zweite Anzeige

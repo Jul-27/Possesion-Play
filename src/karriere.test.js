@@ -2115,3 +2115,22 @@ test("die Eichung der Tagespunkte: ein mittlerer Bestwert trägt rund zwei Fünf
   assert.ok(nur(95) > 100, "ein Weltstar erreicht die 100 schon über den Bestwert");
   assert.ok(nur(90) < 100, "ein sehr guter Spieler braucht dafür Titel");
 });
+
+/* ── Die Stufen der Wertung ───────────────────────────────────────────────── */
+
+test("die Wertung hat vier Stufen mit festen Schwellen", () => {
+  assert.equal(K.rangVon(50), "bronze");
+  assert.equal(K.rangVon(61), "bronze");
+  assert.equal(K.rangVon(62), "silber");
+  assert.equal(K.rangVon(75), "gold");
+  assert.equal(K.rangVon(85), "platin");
+  assert.equal(K.rangVon(99), "platin");
+  for (const [rang] of K.RANG_SCHWELLEN) assert.ok(K.RANG_NAME[rang], `${rang} braucht einen Namen`);
+});
+
+test("rangAufstieg meldet nur das Überschreiten einer Schwelle nach oben", () => {
+  assert.equal(K.rangAufstieg(60, 63), "silber");
+  assert.equal(K.rangAufstieg(73, 86), "platin", "über zwei Schwellen zählt die erreichte");
+  assert.equal(K.rangAufstieg(63, 70), null, "innerhalb der Stufe");
+  assert.equal(K.rangAufstieg(76, 74), null, "abwärts ist kein Aufstieg");
+});
