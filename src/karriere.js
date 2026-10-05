@@ -26,6 +26,7 @@
    abgeleitet, danach ist die alte Skala nicht mehr im Spiel. */
 import { WELT_LIGEN, WELT_VEREINE } from "./careerWorld.js";
 import { namenVon, EIGENE, alleLaender } from "./laender.js";
+import { nameFuer } from "./karriereNamen.js";
 
 export const START_ALTER = 16;
 export const OVR_START = 50;
@@ -2036,14 +2037,24 @@ export const TAGES_LAENDER = ["GER", "ENG", "ESP", "ITA", "FRA", "PRT", "NED", "
    hängen an Bestwert, Titeln und Auszeichnungen, nicht an Toren. */
 export const TAGES_POSITIONEN = POSITIONEN.map((p) => p.key);
 
-/** Der Start des Tages — für alle gleich, aus dem Datum abgeleitet. */
+/** Der Start des Tages — für alle gleich, aus dem Datum abgeleitet.
+
+    TEMPO „INTENSIV" seit 05.10.2026 (Owner-Wunsch): jede Saison eine Weiche. Gemessen
+    an je 1500 simulierten Laufbahnen in der echten Welt hebt das die Tagespunkte —
+    Median 59 → 71, die volle 100 erreichen 19 statt 9 Prozent.
+
+    DER NAME kommt ebenfalls aus dem Datum, passend zur Nation (karriereNamen.js).
+    Er hat einen eigenen Zufall: Zöge er aus `z`, verschöbe er nichts — aber jede
+    spätere Ziehung dort würde dann vom Namen abhängen. */
 export function tagesStart(datum) {
   const seed = hashStr(`karriere:${datum}`);
   const z = rng(seed);
+  const land = TAGES_LAENDER[Math.floor(z() * TAGES_LAENDER.length)];
   return {
-    land: TAGES_LAENDER[Math.floor(z() * TAGES_LAENDER.length)],
+    land,
     pos: TAGES_POSITIONEN[Math.floor(z() * TAGES_POSITIONEN.length)],
-    tempo: "normal",
+    tempo: "intensiv",
+    name: nameFuer(land, rng(hashStr(`karriere:${datum}|name`))),
     seed,
     schluessel: `karriere:${datum}`,
   };
@@ -2055,17 +2066,31 @@ export function tagesStart(datum) {
    Skala, gedeckelt bei 100 — sonst entschiede sie die Saison allein.
 
    Drei Teile, alle aus der fertigen Laufbahn ablesbar:
-   · Bestwert — der höchste Wert der Laufbahn, ab 58 dreieinhalb Punkte je Punkt.
-     Er ist der Kern: Wer gut entscheidet, wird besser.
+   · Bestwert — der höchste Wert der Laufbahn, ab 57 je 2,7 Punkte (Stand der
+     Nacheichung unten). Er ist der Kern: Wer gut entscheidet, wird besser.
    · Titel — nach Gewicht: eine Meisterschaft 3, ein Pokal 2, Europa League 4,
-     Champions League 6, Kontinentalmeister 5, Weltmeister und Ballon d'Or je 8.
+     Champions League 6, Kontinentalmeister 5, Weltmeister und Ballon d'Or je 8;
+     die Summe zählt zu 80 Prozent.
    · Auszeichnungen — je 3 Punkte.
 
    GEEICHT AN 3000 SIMULIERTEN LAUFBAHNEN. Die erste Fassung (ab 55, anderthalb je
    Punkt) ergab einen Median von 28 und liess 90 % unter 44 — die Karriere wäre in der
    Saisontabelle nur halb so viel wert gewesen wie ein Rätsel, und gut und schlecht
    lagen dicht beieinander. Jetzt: Median 51, oberes Viertel ab 66, die besten zehn
-   Prozent ab 85, knapp fünf Prozent erreichen 100. */
+   Prozent ab 85, knapp fünf Prozent erreichen 100.
+
+   NACHGEEICHT AM 05.10.2026, als die Karriere des Tages auf Tempo „Intensiv" ging.
+   Jede Saison eine Entscheidung hob die Punkte deutlich — an je 2400 simulierten
+   Laufbahnen in der echten Welt: Median 60 → 71, die volle 100 bei 19 statt 9 %.
+   Gesucht waren Gewichte, mit denen „Intensiv" wieder die Verteilung von „Normal"
+   trifft: Bestwert ab 57 mit 2,7 (statt ab 58 mit 3,5), Titelpunkte × 0,8,
+   Auszeichnungen unverändert. Ergebnis 47/59/76/96 (Viertel, Median, oberes Viertel,
+   beste zehn Prozent) gegen 46/60/76/96 vorher; an einem zweiten, frischen Satz
+   Laufbahnen 48/60/76/97 gegen 47/60/77/96. */
+export const TAGES_BASIS = 57;
+export const TAGES_JE_PUNKT = 2.7;
+export const TAGES_TITEL_FAKTOR = 0.8;
+export const TAGES_JE_AUSZEICHNUNG = 3;
 export const TAGES_TITEL_PUNKTE = { CL: 6, EL: 4, WM: 8, EM: 5, CA: 5, BDO: 8 };
 export function titelPunkte(key) {
   if (TAGES_TITEL_PUNKTE[key] !== undefined) return TAGES_TITEL_PUNKTE[key];
@@ -2076,10 +2101,11 @@ export function titelPunkte(key) {
 
 export function tagesPunkte(k) {
   const best = bestwert(k);
-  const ausBestwert = Math.max(0, Math.round((best - 58) * 3.5));
-  const ausTiteln = Object.entries(k.titel || {}).reduce((s, [key, n]) => s + titelPunkte(key) * n, 0);
+  const ausBestwert = Math.max(0, Math.round((best - TAGES_BASIS) * TAGES_JE_PUNKT));
+  const ausTiteln = Math.round(TAGES_TITEL_FAKTOR
+    * Object.entries(k.titel || {}).reduce((s, [key, n]) => s + titelPunkte(key) * n, 0));
   const auszeichnungen = erreichteAuszeichnungen(k).length;
-  const ausAuszeichnungen = auszeichnungen * 3;
+  const ausAuszeichnungen = auszeichnungen * TAGES_JE_AUSZEICHNUNG;
   const roh = ausBestwert + ausTiteln + ausAuszeichnungen;
   return {
     punkte: Math.max(1, Math.min(100, roh)),

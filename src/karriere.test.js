@@ -2057,7 +2057,8 @@ test("der Tagesstart ist für alle gleich und wechselt mit dem Datum", () => {
   assert.deepEqual(a, b);
   assert.ok(K.TAGES_LAENDER.includes(a.land));
   assert.ok(K.TAGES_POSITIONEN.includes(a.pos));
-  assert.equal(a.tempo, "normal");
+  assert.equal(a.tempo, "intensiv", "die Karriere des Tages läuft immer im Tempo Intensiv");
+  assert.ok(a.name, "und mit einem Namen zur Nation");
   assert.notEqual(a.seed, c.seed);
   /* Über ein Jahr kommt jedes Land und jede Position vor. */
   const laender = new Set(), pos = new Set();
@@ -2091,7 +2092,7 @@ test("die Tagespunkte liegen auf der Skala der anderen Tagesrätsel", () => {
   const mittel = { ...leer, ovr: 73, verlauf: [{ ovr: 73 }], titel: { DFB: 2 } };
   const m = K.tagesPunkte(mittel);
   assert.equal(m.punkte, m.teile.bestwert + m.teile.titel + m.teile.auszeichnungen);
-  assert.equal(m.teile.titel, 4, "zwei Pokale zu je 2");
+  assert.equal(m.teile.titel, 3, "zwei Pokale zu je 2, mal 0,8");
   assert.equal(K.titelPunkte("WM"), 8);
   assert.equal(K.titelPunkte("MPL"), 3);
 });
@@ -2104,12 +2105,13 @@ test("die Bilanz wächst über Laufbahnen und merkt sich jede Auszeichnung einma
     auszeichnungen: ["grenzgaenger", "wanderer"] });
 });
 
-test("die Eichung der Tagespunkte: ein mittlerer Bestwert trägt rund die Hälfte", () => {
-  /* Geeicht an 3000 simulierten Laufbahnen (Median des Bestwerts 72). Ändert sich
+test("die Eichung der Tagespunkte: ein mittlerer Bestwert trägt rund zwei Fünftel", () => {
+  /* Nachgeeicht am 05.10.2026 für Tempo „Intensiv" (siehe tagesPunkte). Ändert sich
      die Formel, soll das hier bewusst auffallen — die Saisontabelle hängt daran. */
   const nur = (best) => K.tagesPunkte({ ovr: best, verlauf: [{ ovr: best }], titel: {}, gesamt: { spiele: 0, tore: 0, vorlagen: 0 }, vereine: [], laender: [] }).teile.bestwert;
-  assert.equal(nur(58), 0);
-  assert.equal(nur(72), 49);
-  assert.equal(nur(80), 77);
-  assert.ok(nur(90) > 100, "ein Weltstar erreicht die 100 schon über den Bestwert");
+  assert.equal(nur(57), 0);
+  assert.equal(nur(72), 41);
+  assert.equal(nur(80), 62);
+  assert.ok(nur(95) > 100, "ein Weltstar erreicht die 100 schon über den Bestwert");
+  assert.ok(nur(90) < 100, "ein sehr guter Spieler braucht dafür Titel");
 });

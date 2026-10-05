@@ -357,7 +357,7 @@ function TagesBlock({ heute, tag, onStart }) {
   const nr = dailyNumber(heute);
   /* KEIN „aus": „aus Vereinigte Staaten", „aus Niederlande" — Ländernamen mit Artikel
      müssten gebeugt werden. Dieselbe Lösung wie beim Verbandswechsel: ohne Präposition. */
-  const was = `${K.posDaten(st.pos).name} · ${landFlagge(st.land)} ${landName(st.land)}`;
+  const was = `${st.name ? st.name + " · " : ""}${K.posDaten(st.pos).name} · ${landFlagge(st.land)} ${landName(st.land)}`;
   if (tag.ergebnis && !tag.ergebnis.abgebrochen) {
     return (
       <div className="kaTag fertig">
@@ -380,8 +380,8 @@ function TagesBlock({ heute, tag, onStart }) {
     <div className="kaTag">
       <span className="kaTagKopf">Karriere des Tages #{nr}</span>
       <b>{was}</b>
-      <small>Für alle derselbe Start — gleiches Talent, gleiche Vereine, gleicher Zufall.
-        Ein Versuch, er zählt für die Bestenliste.</small>
+      <small>Für alle derselbe Start — gleiches Talent, gleiche Vereine, gleicher Zufall,
+        Tempo {K.TEMPO[st.tempo].name}. Ein Versuch, er zählt für die Bestenliste.</small>
       <button className="btn primary" onClick={onStart}>Karriere des Tages spielen</button>
     </div>
   );
@@ -669,14 +669,14 @@ export default function Karriere({ onLeave }) {
   // ── Ablauf ─────────────────────────────────────────────────────────────────
 
   function starte(tages = false) {
-    /* In der Karriere des Tages kommen Land, Position, Tempo und Zufall aus dem Datum
-       — für alle gleich. Name, Nummer und Fuss bleiben frei; sie ändern am Spiel
-       nichts. Der Zufall des Laufs hängt NICHT am Namen, sonst bekäme jeder, der einen
-       anderen eintippt, andere Jugendvereine. */
+    /* In der Karriere des Tages kommen Land, Position, Tempo, Name und Zufall aus dem
+       Datum — für alle gleich. Nummer und Fuss bleiben frei; sie ändern am Spiel
+       nichts. Der Name kommt seit 05.10.2026 mit (passend zur Nation) — vorher spielte
+       fast jeder als „Namenlos". Der Zufall des Laufs hängt NICHT am Namen. */
     const st = tages ? K.tagesStart(heute) : null;
     const seed = st ? st.seed : Date.now() >>> 0;
     const neu = K.neueKarriere({
-      name: name.trim() || "Namenlos", nummer, fuss,
+      name: (st && st.name) || name.trim() || "Namenlos", nummer, fuss,
       land: st ? st.land : land, pos: st ? st.pos : pos, tempo: st ? st.tempo : tempo, seed,
       ...(st ? { schluessel: st.schluessel, tagesDatum: heute } : {}),
     });
