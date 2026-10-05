@@ -1345,6 +1345,13 @@ body::after {
 .kaAuszeichnung small { font-size: 12px; color: var(--muted); }
 .kaEndeKnoepfe { display: flex; gap: 10px; margin-top: 16px; }
 .kaEndeKnoepfe .btn { flex: 1; }
+/* Rückfrage „Neue Laufbahn?" — im Papierton des Modus statt im dunklen Haus-Modal. */
+.ppRoot.karriere .kaNeuModal { background: var(--kaKarte); color: var(--kaText); border-color: var(--kaRand);
+  box-shadow: 0 30px 70px -24px rgba(20, 32, 27, .45); }
+.ppRoot.karriere .kaNeuModal::before { background: var(--kaAkzent); }
+.ppRoot.karriere .kaNeuModal p { color: var(--kaLeise); }
+.ppRoot.karriere .kaNeuModal b { color: var(--kaText); }
+.ppRoot.karriere .overlay:has(.kaNeuModal) { background: rgba(20, 32, 27, .45); }
 
 /* ── Die Laufbahn-Zusammenfassung ───────────────────────────────────────────
    War ein SVG mit fester Breite, ist jetzt gewöhnliches HTML — damit die echten
