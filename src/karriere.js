@@ -26,6 +26,7 @@
    abgeleitet, danach ist die alte Skala nicht mehr im Spiel. */
 import { WELT_LIGEN, WELT_VEREINE } from "./careerWorld.js";
 import { namenVon, EIGENE, alleLaender } from "./laender.js";
+import { nameFuer } from "./karriereNamen.js";
 
 export const START_ALTER = 16;
 export const OVR_START = 50;
@@ -2036,14 +2037,24 @@ export const TAGES_LAENDER = ["GER", "ENG", "ESP", "ITA", "FRA", "PRT", "NED", "
    hängen an Bestwert, Titeln und Auszeichnungen, nicht an Toren. */
 export const TAGES_POSITIONEN = POSITIONEN.map((p) => p.key);
 
-/** Der Start des Tages — für alle gleich, aus dem Datum abgeleitet. */
+/** Der Start des Tages — für alle gleich, aus dem Datum abgeleitet.
+
+    TEMPO „INTENSIV" seit 05.10.2026 (Owner-Wunsch): jede Saison eine Weiche. Gemessen
+    an je 1500 simulierten Laufbahnen in der echten Welt hebt das die Tagespunkte —
+    Median 59 → 71, die volle 100 erreichen 19 statt 9 Prozent.
+
+    DER NAME kommt ebenfalls aus dem Datum, passend zur Nation (karriereNamen.js).
+    Er hat einen eigenen Zufall: Zöge er aus `z`, verschöbe er nichts — aber jede
+    spätere Ziehung dort würde dann vom Namen abhängen. */
 export function tagesStart(datum) {
   const seed = hashStr(`karriere:${datum}`);
   const z = rng(seed);
+  const land = TAGES_LAENDER[Math.floor(z() * TAGES_LAENDER.length)];
   return {
-    land: TAGES_LAENDER[Math.floor(z() * TAGES_LAENDER.length)],
+    land,
     pos: TAGES_POSITIONEN[Math.floor(z() * TAGES_POSITIONEN.length)],
-    tempo: "normal",
+    tempo: "intensiv",
+    name: nameFuer(land, rng(hashStr(`karriere:${datum}|name`))),
     seed,
     schluessel: `karriere:${datum}`,
   };

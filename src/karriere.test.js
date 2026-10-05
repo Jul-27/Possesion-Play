@@ -2057,7 +2057,8 @@ test("der Tagesstart ist für alle gleich und wechselt mit dem Datum", () => {
   assert.deepEqual(a, b);
   assert.ok(K.TAGES_LAENDER.includes(a.land));
   assert.ok(K.TAGES_POSITIONEN.includes(a.pos));
-  assert.equal(a.tempo, "normal");
+  assert.equal(a.tempo, "intensiv", "die Karriere des Tages läuft immer im Tempo Intensiv");
+  assert.ok(a.name, "und mit einem Namen zur Nation");
   assert.notEqual(a.seed, c.seed);
   /* Über ein Jahr kommt jedes Land und jede Position vor. */
   const laender = new Set(), pos = new Set();
