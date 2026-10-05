@@ -660,6 +660,19 @@ export default function Karriere({ onLeave }) {
 
   useEffect(() => () => clearTimeout(sperrUhr.current), []);
 
+  /* NEU BEGINNEN, MITTEN IN DER LAUFBAHN. Bisher ging das nur am Ende oder über ein
+     Neuladen der Seite (Owner-Wunsch, 05.10.2026). Eine Rückfrage steht davor, weil
+     nichts gespeichert wird — ein Fehlklick kostete sonst die ganze Laufbahn. Die
+     Karriere des Tages zählt danach als abgebrochen, und zwar sofort: Sie hat einen
+     Versuch am Tag, sonst wäre der Knopf ein Weg zum zweiten. */
+  const [neuFrage, setNeuFrage] = useState(false);
+  function zurueckZumStart() {
+    if (k?.tagesDatum && !k.beendet && abbruchVerbuchen(k.tagesDatum)) setTag(tagesZustand(k.tagesDatum));
+    clearTimeout(sperrUhr.current);
+    setSperre(false); setFeier(null); setNeuFrage(false);
+    setK(null); setKarte(null); setMeldung([]); setSaison(null);
+  }
+
   const welt = WELT;
   const bereit = welt.vereine.length > 0;
   /* Was erwartet den Spieler bei diesem Verein? Mit der Rolle, die spieleSchritt ihm
@@ -928,16 +941,41 @@ export default function Karriere({ onLeave }) {
         <Icon name={muted ? "mute" : "sound"} size={18} />
       </button>
       <ReportButton mode="karriere" />
+      {k && !k.beendet && (
+        <button className="iconbtn" onClick={() => setNeuFrage(true)} title="Neue Laufbahn">
+          <Icon name="neustart" size={18} />
+        </button>
+      )}
       <button className="iconbtn" onClick={onLeave} title="Zur Lobby"><Icon name="leave" size={18} /></button>
     </GameTop>
   );
+  /* Steht neben der Kopfzeile, nicht in ihr: .gtop ist animiert und wäre sonst der
+     Bezugsrahmen für position:fixed — das Overlay bedeckte nur die Kopfzeile. */
+  const neuDialog = neuFrage && (
+    <div className="overlay" onClick={() => setNeuFrage(false)}>
+      <div className="modal kaNeuModal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <h2>Neue Laufbahn?</h2>
+        {k?.tagesDatum ? (
+          <p>Die <b>Karriere des Tages</b> zählt dann als abgebrochen — sie hat einen Versuch
+            am Tag, heute gibt es keinen zweiten.</p>
+        ) : (
+          <p>Die laufende Laufbahn von <b>{k?.name}</b> geht verloren — sie wird nicht
+            gespeichert. Du landest wieder beim Start und wählst Nation, Position und Tempo neu.</p>
+        )}
+        <div className="kaEndeKnoepfe">
+          <button className="btn" onClick={() => setNeuFrage(false)}>Weiterspielen</button>
+          <button className="btn primary" onClick={zurueckZumStart}>Neue Laufbahn</button>
+        </div>
+      </div>
+    </div>
+  );
 
-  if (!bereit) return (<div className="ppRoot weit karriere">{kopf}<div className="panel"><p>Die Vereinswelt wird gebaut …</p></div></div>);
+  if (!bereit) return (<div className="ppRoot weit karriere">{kopf}{neuDialog}<div className="panel"><p>Die Vereinswelt wird gebaut …</p></div></div>);
 
   // Anlage
   if (!k) return (
     <div className="ppRoot weit karriere">
-      {kopf}
+      {kopf}{neuDialog}
       <div className="panel kaAnlage">
         <Bild pfad="/bilder/karriere-kopf.jpg" klasse="kaKopfbild" alt="" />
         <TagesBlock heute={heute} tag={tag} onStart={() => starte(true)} />
@@ -1174,7 +1212,7 @@ export default function Karriere({ onLeave }) {
   return (
     <div className="ppRoot weit karriere">
       {feier && <Titelfeier titel={feier} onFertig={() => setFeier(null)} />}
-      {kopf}
+      {kopf}{neuDialog}
       {/* AM ENDE DIE VOLLE BREITE. Die Zusammenfassung ist 1240 Pixel breit gedacht;
           in der schmalen Aktionsspalte schrumpfte sie auf ein Drittel, und die
           Vereinskarten wurden unleserlich. Die Laufbahn rutscht dafür darunter. */}

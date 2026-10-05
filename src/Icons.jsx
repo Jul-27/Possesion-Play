@@ -161,6 +161,12 @@ const FORMEN = {
   check: <path {...P} d="M4.5 12.5l5 5 10-11" />,
   pfeil: <><path {...P} d="M4.5 12h15" /><path {...P} d="M13.5 6l6 6-6 6" /></>,
   chevron: <path {...P} d="M6 9.5l6 6 6-6" />,
+
+  // Neu beginnen — Kreispfeil
+  neustart: <>
+    <path {...P} d="M4.6 12a7.4 7.4 0 1 0 2.2-5.3" />
+    <path {...P} d="M4.4 3.8v4.1h4.1" />
+  </>,
 };
 
 export const ICON_NAMEN = Object.keys(FORMEN);
