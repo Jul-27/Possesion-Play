@@ -3,6 +3,7 @@ import { CLUBS } from "./gameData.js";
 import { alleLaender, passtAufSuche, namenVon, EIGENE, flaggeVon } from "./laender.js";
 import { trikotVon, kontrast } from "./trikots.js";
 import { VEREINS_STAERKE } from "./careerStaerke.js";
+import { VEREINS_FARBE } from "./vereinsFarben.js";
 import * as K from "./karriere.js";
 import { play, isMuted, toggleMute } from "./sound.js";
 import Confetti from "./Confetti.jsx";
@@ -39,6 +40,21 @@ const landFlagge = (code) => flaggeVon(EIGENE[code] || code);
 const defVon = (v) => CLUBS.find((c) => c.key === v.key)
   || { key: v.key, name: v.name, label: v.key, c2: "#fff", pat: "solid",
        c1: `hsl(${K.hashStr(v.key) % 360} 52% 36%)` };
+
+/* ── Vereinsfarben ────────────────────────────────────────────────────────────
+   Kopf, Zeitleiste und Angebotskacheln tragen die Farbe des Vereins — wie im
+   Vorbild, wo man an der Tabelle auf einen Blick sieht, wo man überall war. Die
+   Farbe ist aus dem Wappen abgelesen (data-pipeline/vereinsfarben.mjs); ohne
+   lesbares Wappen ein neutrales Grau statt einer Zufallsfarbe, die etwas behauptete. */
+const farbeVon = (key) => VEREINS_FARBE[key] || "#4A5560";
+const schriftAuf = (farbe) => (kontrast(farbe, "#FFFFFF") >= 3 ? "#FFFFFF" : "#111111");
+const vf = (key) => (key ? { "--vf": farbeVon(key) } : undefined);
+
+/* Farbmodus des Karrieremodus — dunkel (Vorgabe) oder hell. Eine Vorliebe des
+   Betrachters, keine Laufbahn: darf im Browser bleiben (Owner-Wunsch, 05.10.2026). */
+const THEMA_KEY = "pp:karriereThema";
+const themaLesen = () => { try { return localStorage.getItem(THEMA_KEY) === "hell" ? "hell" : "dunkel"; } catch { return "dunkel"; } };
+const themaMerken = (t) => { try { localStorage.setItem(THEMA_KEY, t); } catch { /* ohne Speicher weiter */ } };
 
 /* ── Die Verlaufskurve ────────────────────────────────────────────────────────
    Die Zeitleiste als Tabelle sagt alles, aber sie erzählt nichts. Dieselben Zahlen
@@ -83,6 +99,20 @@ function Verlaufskurve({ verlauf, defVon }) {
           <text x={RAND.l - 6} y={y(v) + 4} textAnchor="end" fill="var(--muted)" fontSize="10">{v}</text>
         </g>
       ))}
+      {/* Die Stufen als Bänder hinter der Kurve: Man sieht, wann die Laufbahn von
+          Bronze nach Silber oder Gold kam — dieselben Farben wie Kachel und Tabelle. */}
+      {K.RANG_SCHWELLEN.map(([rang, ab], i) => {
+        const bis = K.RANG_SCHWELLEN[i + 1]?.[1] ?? 100;
+        const oben = Math.min(max, bis), unten = Math.max(min, ab);
+        if (oben <= unten) return null;
+        return (
+          <g key={rang} className="kaKurveBand" data-rang={rang}>
+            <rect x={RAND.l} y={y(oben)} width={B - RAND.l - RAND.r} height={y(unten) - y(oben)} />
+            {/* Links oben im Band: rechts steht der letzte Wert der Kurve. */}
+            <text x={RAND.l + 5} y={y(oben) + 10} textAnchor="start" fontSize="9">{K.RANG_NAME[rang]}</text>
+          </g>
+        );
+      })}
       <polygon points={flaeche} fill="url(#kaKurveF)" />
       <polyline points={punkte} fill="none" stroke="var(--teal)" strokeWidth="2"
         strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
@@ -335,7 +365,7 @@ function Titelfeier({ titel, onFertig }) {
 /* `aussicht` ist die Einschätzung aus einsatzAussicht — was einen dort erwartet. */
 function VereinsKarte({ verein, anlass, onClick, breit = false, gesperrt = false, aussicht = null }) {
   return (
-    <button type="button" className={"kaVerein" + (breit ? " breit" : "")}
+    <button type="button" className={"kaVerein" + (breit ? " breit" : "")} style={vf(verein.key)}
       disabled={gesperrt} onClick={onClick}>
       <span className="kaVereinAnlass">{anlass}</span>
       <b className="kaVereinName">{verein.name}</b>
@@ -616,6 +646,10 @@ const WELT = K.baueWelt((v) => VEREINS_STAERKE[v.key] ?? NaN);
 
 export default function Karriere({ onLeave }) {
   const [muted, setMuted] = useState(isMuted());
+  const [thema, setThema] = useState(themaLesen);
+  const themaWechseln = () => { const t = thema === "dunkel" ? "hell" : "dunkel"; setThema(t); themaMerken(t); };
+  const istDunkel = thema === "dunkel";
+  const wurzel = "ppRoot weit karriere" + (istDunkel ? " dunkel" : "");
 
   // Anlage
   const [name, setName] = useState("");
@@ -825,7 +859,11 @@ export default function Karriere({ onLeave }) {
     clearTimeout(sperrUhr.current);
     setSperre(true);
     sperrUhr.current = setTimeout(() => setSperre(false), K.sperrDauer(k2.ovr - basis.ovr));
-    setMeldung([...neueTitel.map((t) => ({ art: "titel", titel: t })), ...ereignisse]);
+    /* Der Sprung in eine neue Stufe bekommt seinen Moment — wie beim Vorbild, wo
+       die Karte golden wird. Nur aufwärts; ein Abstieg steht ohnehin in der Kachel. */
+    const stufe = K.rangAufstieg(basis.ovr, k2.ovr);
+    setMeldung([...(stufe ? [{ art: "stufe", rang: stufe }] : []),
+      ...neueTitel.map((t) => ({ art: "titel", titel: t })), ...ereignisse]);
     /* DIE SAISON HATTE KEINEN MOMENT. Man klickte, und die Tabelle rechts hatte eine
        Zeile mehr — 66 Spiele, 13 Tore, 15 Vorlagen liefen unsichtbar vorbei. Jetzt
        steht die Bilanz über der nächsten Entscheidung. */
@@ -937,6 +975,9 @@ export default function Karriere({ onLeave }) {
   const kopf = (
     <GameTop icon="route" name="Karriere" ton="#34D399"
       zusatz={k ? <>{k.alter} Jahre · Stärke {k.ovr}</> : null}>
+      <button className="iconbtn" onClick={themaWechseln} title={istDunkel ? "Hell anzeigen" : "Dunkel anzeigen"}>
+        <Icon name={istDunkel ? "sonne" : "mond"} size={18} />
+      </button>
       <button className="iconbtn" onClick={() => { toggleMute(); setMuted(isMuted()); }} title="Ton">
         <Icon name={muted ? "mute" : "sound"} size={18} />
       </button>
@@ -970,11 +1011,11 @@ export default function Karriere({ onLeave }) {
     </div>
   );
 
-  if (!bereit) return (<div className="ppRoot weit karriere">{kopf}{neuDialog}<div className="panel"><p>Die Vereinswelt wird gebaut …</p></div></div>);
+  if (!bereit) return (<div className={wurzel}>{kopf}{neuDialog}<div className="panel"><p>Die Vereinswelt wird gebaut …</p></div></div>);
 
   // Anlage
   if (!k) return (
-    <div className="ppRoot weit karriere">
+    <div className={wurzel}>
       {kopf}{neuDialog}
       <div className="panel kaAnlage">
         <Bild pfad="/bilder/karriere-kopf.jpg" klasse="kaKopfbild" alt="" />
@@ -1081,8 +1122,9 @@ export default function Karriere({ onLeave }) {
             const klasse = !z ? (alter === letztesGespielt + 1 ? "naechste" : "leer")
               : alter === letztesGespielt ? "neu" : undefined;
             return (
-              <tr key={alter} className={klasse}>
-                <td>{alter}</td>
+              <tr key={alter} className={[klasse, z ? "getoent" : ""].filter(Boolean).join(" ") || undefined}
+                style={z ? vf(z.key) : undefined}>
+                <td>{z ? <span className="kaAlterMarke" style={{ color: schriftAuf(farbeVon(z.key)) }}>{alter}</span> : alter}</td>
                 {z ? (
                   <>
                     <td>
@@ -1091,7 +1133,7 @@ export default function Karriere({ onLeave }) {
                       {z.aus ? <small className="kaAus">{z.aus}</small> : null}
                       {z.titel.length ? <em>{z.titel.map((t, n) => <Trophaee key={n} titel={t} groesse={16} titelText={TITEL_NAME[t] || t} />)}</em> : null}
                     </td>
-                    <td><span className="kaRatingMarke">{z.ovr}</span></td>
+                    <td><span className="kaRatingMarke" data-rang={K.rangVon(z.ovr)}>{z.ovr}</span></td>
                     <td>{z.spiele}</td>
                     {torwart ? <><td>{z.gegentore ?? 0}</td><td>{z.westen ?? 0}</td></>
                              : <><td>{z.tore}</td><td>{z.vorlagen}</td></>}
@@ -1164,7 +1206,11 @@ export default function Karriere({ onLeave }) {
   })();
 
   const kopfzeile = (
-    <div className="kaKopf">
+    <div className={"kaKopf" + (k.verein ? " getoent" : "")} style={vf(k.verein?.key)}>
+      {/* Das Wappen des Vereins gross und blass im Hintergrund — der Kopf sagt so
+          ohne ein Wort, wo man gerade spielt. */}
+      {k.verein && <span className="kaKopfWasser" aria-hidden="true"
+        style={{ backgroundImage: `url(/logos/club/${k.verein.key}.png)` }} />}
       {/* Die Kachel wartet, bis die neue Zeile in der Zeitleiste steht. */}
       <div className="kaOvr" data-rang={K.rangVon(k.ovr)}>
         <small>RATING</small><b><Zaehler wert={k.ovr} warten={K.ZAEHLER_WARTEN} /></b>
@@ -1210,7 +1256,7 @@ export default function Karriere({ onLeave }) {
      bleibt beim Scrollen stehen; darunter faellt das Raster auf eine Spalte
      zurueck und alles steht wieder untereinander. */
   return (
-    <div className="ppRoot weit karriere">
+    <div className={wurzel}>
       {feier && <Titelfeier titel={feier} onFertig={() => setFeier(null)} />}
       {kopf}{neuDialog}
       {/* AM ENDE DIE VOLLE BREITE. Die Zusammenfassung ist 1240 Pixel breit gedacht;
@@ -1256,7 +1302,11 @@ export default function Karriere({ onLeave }) {
 
         {meldung.length > 0 && (
           <div className="kaMeldung">
-            {meldung.map((m, i) => m.art === "titel" ? (
+            {meldung.map((m, i) => m.art === "stufe" ? (
+              <span key={i} className="kaMeldungStufe" data-rang={m.rang}>
+                <i>{K.RANG_NAME[m.rang]}</i> erreicht
+              </span>
+            ) : m.art === "titel" ? (
               <span key={i} className="kaMeldungTitel">
                 <Trophaee titel={m.titel} groesse={20} titelText={TITEL_NAME[m.titel]} />
                 {TITEL_NAME[m.titel] || m.titel}

@@ -162,6 +162,13 @@ const FORMEN = {
   pfeil: <><path {...P} d="M4.5 12h15" /><path {...P} d="M13.5 6l6 6-6 6" /></>,
   chevron: <path {...P} d="M6 9.5l6 6 6-6" />,
 
+  // Farbmodus — Sonne (zu hell wechseln) und Mond (zu dunkel)
+  sonne: <>
+    <circle {...P} cx="12" cy="12" r="4" />
+    <path {...P} d="M12 2.8v2.1M12 19.1v2.1M2.8 12h2.1M19.1 12h2.1M5.5 5.5l1.5 1.5M17 17l1.5 1.5M5.5 18.5L7 17M17 7l1.5-1.5" />
+  </>,
+  mond: <path {...P} d="M19.5 14.6A7.8 7.8 0 019.4 4.5a7.8 7.8 0 1010.1 10.1z" />,
+
   // Neu beginnen — Kreispfeil
   neustart: <>
     <path {...P} d="M4.6 12a7.4 7.4 0 1 0 2.2-5.3" />
