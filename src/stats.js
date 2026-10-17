@@ -24,6 +24,7 @@ export function collectStats() {
   const heat = read("pp:heatBest");
   const carousel = read("pp:carouselStats");
   const karriere = read("pp:karriereStats");
+  const vier = read("pp:vierStats");
 
   return [
     entry("daily", "guess", "Steckbrief", null, daily, [
@@ -71,6 +72,11 @@ export function collectStats() {
       { label: "Titel gesamt", value: karriere?.titelGesamt || null },
       { label: "Auszeichnungen", value: karriere?.auszeichnungen?.length ? `${karriere.auszeichnungen.length} von 15` : null },
     ], challengeStats("karriere")?.streak || 0),
+
+    entry("vier", "vier", "Vier Wappen", "vier", vier, [
+      { label: "Bestwert", value: vier?.best ? `${vier.best} von 20` : null },
+      { label: "Wappen gesamt", value: vier?.total || null },
+    ], challengeStats("vier")?.streak || 0),
 
     entry("hex", "hex", "Hex-Training", "hex", solo, [
       { label: "Bestwert", value: solo?.bestMoves ? `${solo.bestMoves} Züge` : null },

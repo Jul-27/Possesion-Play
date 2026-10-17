@@ -51,4 +51,8 @@ test("Karriere des Tages: Punkte kommen gedeckelt aus tagesPunkte, Beschriftung 
   assert.equal(scoreFor("karriere", { punkte: 250 }), 100);
   assert.equal(scoreFor("karriere", { punkte: 0 }), 1);
   assert.equal(MODES.karriere.label(64, { bestwert: 81, titel: 4 }), "Bestwert 81 · 4 Titel");
+  assert.equal(MODES.vier.label(65, { punkte: 13 }), "13 von 20");
+  assert.equal(scoreFor("vier", { punkte: 13 }), 65);
+  assert.equal(scoreFor("vier", { punkte: 20 }), 100);
+  assert.equal(scoreFor("vier", {}), 0);
 });

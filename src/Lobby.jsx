@@ -208,7 +208,7 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
       <div className="dSectionRow"><span className="dSection">Gegen Freunde</span></div>
       <button className="dWide" aria-expanded={duelOpen} onClick={() => setDuelOpen((v) => !v)} style={{ "--ton": "#2DD4BF" }}>
         <span className="dWideIcon"><Icon name="duel" /></span>
-        <span className="dWideBody"><b>Duell starten</b><small>Vier Modi, erstellen oder mit Code beitreten</small></span>
+        <span className="dWideBody"><b>Duell starten</b><small>Fünf Modi, erstellen oder mit Code beitreten</small></span>
         <span className={`dWideChev ${duelOpen ? "open" : ""}`}><Icon name="chevron" size={18} /></span>
       </button>
 
@@ -275,6 +275,7 @@ const SOLO_MODI = [
   { key: "traumelf", name: "Traumelf",          icon: "crown", ton: "#FBBF24", text: "Draften und Saison spielen", daily: false },
   { key: "karriere", name: "Karriere",          icon: "trophy", ton: "#34D399", text: "Vom Talent zur Legende", daily: true },
   { key: "carousel", name: "Transferkarussell", icon: "carousel", ton: "#F472B6", text: "Gegen den Bot",         daily: false },
+  { key: "vier",     name: "Vier Wappen",       icon: "vier", ton: "#C084FC", text: "Ein Spieler, vier Vereine", daily: true },
 ];
 
 const DUELL_MODI = [

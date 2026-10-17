@@ -13,6 +13,7 @@ export const MODES = {
   heat:   { name: "Heatmap", icon: "flame", label: (s, d) => `Dichte ${(d?.density ?? 0).toFixed(2)}` },
   karriere: { name: "Karriere des Tages", icon: "trophy",
     label: (s, d) => `Bestwert ${d?.bestwert ?? "?"} · ${d?.titel ?? 0} Titel` },
+  vier:   { name: "Vier Wappen", icon: "vier", label: (s, d) => `${d?.punkte ?? "?"} von 20` },
 };
 
 export function scoreFor(mode, result = {}) {
@@ -28,6 +29,8 @@ export function scoreFor(mode, result = {}) {
     /* Die Karriere rechnet ihre Punkte selbst (tagesPunkte in karriere.js), schon
        auf die Skala der anderen Tagesrätsel gedeckelt. */
     case "karriere": return Math.max(1, Math.min(100, Math.round(result.punkte || 0)));
+    // Höchstens 20 Punkte (fünf Runden × vier Wappen) — auf 0–100 gestreckt.
+    case "vier":   return Math.max(0, Math.min(100, Math.round((result.punkte || 0) * 5)));
     default:       return 0;
   }
 }
