@@ -121,6 +121,8 @@ export const EXTRA_CAREER_CLUBS = [
   { n: "Noah Okafor",        by: 2000, clubs: ["Leeds United"] },                                        // 2025–
   { n: "Amin Younes",        by: 1993, clubs: ["FC Schalke 04"] },                                       // 2024–2026
   { n: "Kerim Alajbegović",  by: 2007, clubs: ["Bayer 04 Leverkusen"] },                                 // 2026
+  /* „Fehler melden", geprüft 17.10.2026 an der Infobox der englischen Wikipedia. */
+  { n: "Salif Sané",         by: 1990, clubs: ["FC Schalke 04"] },                                       // 2018–2022
 ];
 
 /* ── Das Gegenstück: Stationen, die wir zu Unrecht führen ────────────────────

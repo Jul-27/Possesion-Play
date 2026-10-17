@@ -107,6 +107,10 @@ export const EXTRA_PLAYERS = [
     cp: [["FCL", 2015, 2016], ["RBS", 2016, 2019], ["TSG", 2019, 2025]] },
   { n: "Amin Younes",       by: 1993, clubs: ["S04"], cp: [["S04", 2024, 2026]] },
   { n: "Kerim Alajbegović", by: 2007, clubs: ["B04"], cp: [["B04", 2026, 2026]] },
+  /* „Fehler melden" (Transferkarussell-Duell), geprüft 17.10.2026 an der Infobox der
+     englischen Wikipedia: Schalke 2018–2022. Wikidata (Q1572632) endet bei Hannover;
+     dort stand Hannover auch nur 2013–2014 statt bis 2018. */
+  { n: "Salif Sané",        by: 1990, clubs: ["S04"], cp: [["H96", 2013, 2018], ["S04", 2018, 2022]] },
 ];
 
 /* Vereine, die bei einem Spieler nachweislich falsch stehen. Gegenstück zu
