@@ -31386,7 +31386,7 @@ export const PLAYERS = [
   {"n": "Salif Diao", "ln": "Diao", "by": 1977, "nat": ["SEN"], "clubs": ["ASM","LIV"], "t": ["CL","FAC","ML1"], "sl": 30, "pos": "MF", "cp": [["ASM",1996,2000],["LIV",2002,2007],["STK",2007,2012]], "lg": ["L1","PL"], "span": [1996,2012]},
   {"n": "Salif Keita", "ln": "Keita", "by": 1975, "nat": ["SEN"], "clubs": [], "sl": 10, "pos": "ST", "lg": ["BL"], "span": [1991,2004]},
   {"n": "Salif Keïta", "ln": "Keïta", "by": 1946, "nat": [], "clubs": ["OM","SCP","VAL"], "t": ["ML1"], "sl": 27, "pos": "ST", "cp": [["OM",1972,1973],["VAL",1973,1976],["SCP",1976,1979]], "lg": ["L1","LL","PT"], "span": [1972,1979]},
-  {"n": "Salif Sané", "ln": "Sané", "by": 1990, "nat": ["SEN"], "clubs": [], "sl": 32, "pos": "ABW", "cp": [["GI1",2010,2012],["ASN",2011,2013],["H96",2013,2014]], "span": [2013,2014]},
+  {"n": "Salif Sané", "ln": "Sané", "by": 1990, "nat": ["SEN"], "clubs": ["S04"], "sl": 32, "pos": "ABW", "cp": [["GI1",2010,2012],["ASN",2011,2013],["H96",2013,2018],["S04",2018,2022]], "span": [2013,2014]},
   {"n": "Salih Altın", "ln": "Altın", "by": 1987, "nat": ["GER"], "clubs": ["S04"], "sl": 5, "pos": "MF"},
   {"n": "Salih Özcan", "ln": "Özcan", "by": 1998, "nat": ["GER"], "clubs": ["BVB","WOB"], "sl": 39, "pos": "MF", "cp": [["KOE",2016,2022],["KSV",2019,2020],["BVB",2022,2026],["WOB",2024,2025]], "lg": ["BL"], "span": [2016,0]},
   {"n": "Salih Uçan", "ln": "Uçan", "by": 1994, "nat": ["TUR"], "clubs": ["ROM"], "sl": 26, "pos": "MF", "cp": [["ROM",2014,0]], "lg": ["SA"], "span": [2012,0]},
