@@ -2261,3 +2261,158 @@ body::after {
 .vwSoloKarte { max-width: 320px; margin: 0 auto; }
 .vwZeile.solo { grid-template-columns: 22px auto 1fr; }
 @media (max-width: 420px) { .vwZeile.solo { grid-template-columns: 18px auto 1fr; } .vwZeile.solo .vwZeileWappen { grid-column: auto; } }
+
+/* ── Karriere kompakt (Oktober 2026) ─────────────────────────────────────────
+   Bei 1024 × 768 war die Seite 853 Pixel hoch — man scrollte für die eigene
+   Laufbahn. Die Höhe steckte rechts: Überschrift und Vitrine auf je einer eigenen
+   Zeile, eine 94 Pixel hohe Kurve und 25 Zeilen à 18 Pixel. Links kosteten Kopf und
+   Saisonleiste. Alles hier ist nur enger, nichts fällt weg. */
+.ppRoot.karriere .kaKopf.getoent { padding: 8px 12px 9px; }
+.ppRoot.karriere .kaKopf { padding-bottom: 9px; }
+.ppRoot.karriere .kaOvr { min-width: 80px; padding: 7px 8px 6px; }
+.ppRoot.karriere .kaOvr b { font-size: 36px; }
+.ppRoot.karriere .kaAlter { min-width: 62px; padding: 7px 8px 6px; }
+.ppRoot.karriere .kaAlter b { font-size: 29px; }
+.ppRoot.karriere .kaWer { gap: 4px; }
+.ppRoot.karriere .kaSaison { padding: 7px 14px; margin: 4px 0 8px; }
+.ppRoot.karriere .kaSaisonZahlen b { font-size: 20px; }
+
+.kaLaufbahnKopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ppRoot.karriere .kaLaufbahnKopf > h3 {
+  margin: 0; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--kaLeise);
+}
+.ppRoot.karriere .kaLaufbahnKopf .kaVitrine { padding: 0; justify-content: flex-end; gap: 8px; }
+.ppRoot.karriere .kaLaufbahnKopf .kaTitel { position: relative; }
+.kaTitelZahl {
+  position: absolute; right: -7px; bottom: -3px; padding: 0 4px; border-radius: 999px;
+  font-style: normal; font-size: 9.5px; font-weight: 800; line-height: 14px;
+  background: var(--gold); color: #1A1205;
+}
+.ppRoot.karriere .kaLaufbahn .kaLeiste { margin-top: 6px; }
+.ppRoot.karriere .kaKurve { margin: 2px 0 6px; }
+.ppRoot.karriere .kaLeiste table { font-size: 12.5px; }
+.ppRoot.karriere .kaLeiste td { padding-top: 1px; padding-bottom: 1px; }
+.ppRoot.karriere .kaLeiste tbody tr.leer td,
+.ppRoot.karriere .kaLeiste tbody tr.naechste td { height: 14px; }
+.ppRoot.karriere .kaLeiste .kaRatingMarke { padding: 0 6px; font-size: 11.5px; }
+.ppRoot.karriere .kaLeiste tfoot td { padding-top: 6px; }
+
+/* ── Positionen nach Mannschaftsteil ─────────────────────────────────────────
+   Tor, Abwehr, Mittelfeld, Angriff je eine Farbe — auf dem Spielfeld des
+   Startbildschirms und als Pille im Kopf. Gruppen aus POSITIONEN (karriere.js). */
+.karriere [data-gruppe="TOR"] { --pg: #F5B301; }
+.karriere [data-gruppe="ABW"] { --pg: #3B82F6; }
+.karriere [data-gruppe="MIT"] { --pg: #22C55E; }
+.karriere [data-gruppe="ANG"] { --pg: #EF4444; }
+.ppRoot.karriere .kaFeldPos[data-gruppe] {
+  border-color: var(--pg);
+  background: color-mix(in srgb, var(--pg) 16%, var(--kaKarte));
+}
+.ppRoot.karriere .kaFeldPos[data-gruppe]:hover { border-color: var(--pg); }
+.ppRoot.karriere .kaFeldPos.an[data-gruppe] {
+  background: var(--pg); border-color: transparent; color: #0B0F14;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pg) 35%, transparent);
+}
+.kaPillen { display: flex; flex-wrap: wrap; gap: 5px; }
+.kaPille, .kaPosPille {
+  display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px;
+  font-size: 11.5px; line-height: 1.5; white-space: nowrap;
+}
+.kaPille { color: var(--kaText); background: color-mix(in srgb, var(--kaText) 7%, transparent); border: 1px solid var(--kaRand); }
+.kaPosPille { font-weight: 800; letter-spacing: .04em; color: #0B0F14; background: var(--pg, var(--kaAkzent)); }
+
+/* ── Das Schlussbild ─────────────────────────────────────────────────────────
+   Das eigene Trikot hängt an einem Nagel, verblasst, unter einem Lichtkegel.
+   Es schwingt einmal aus und kommt zur Ruhe. */
+.kaSchluss { display: flex; flex-direction: column; align-items: center; text-align: center; animation: fade .6s both; }
+.kaSchlussWand {
+  position: relative; width: 100%; height: 300px; margin-bottom: 14px; overflow: hidden;
+  border-radius: 16px; border: 1px solid var(--kaRand);
+  background:
+    radial-gradient(ellipse 50% 70% at 50% 40%, rgba(255, 255, 255, .11), transparent 72%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .02) 0 2px, transparent 2px 66px),
+    linear-gradient(180deg, #1D2023, #0E1012);
+}
+.ppRoot.karriere:not(.dunkel) .kaSchlussWand {
+  background:
+    radial-gradient(ellipse 50% 70% at 50% 40%, rgba(255, 255, 255, .75), transparent 72%),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, .025) 0 2px, transparent 2px 66px),
+    linear-gradient(180deg, #E7E1D3, #D3CBBA);
+}
+.kaSchlussNagel {
+  position: absolute; z-index: 2; left: 50%; top: 26px; width: 10px; height: 10px; margin-left: -5px;
+  border-radius: 50%; background: radial-gradient(circle at 35% 35%, #DADADA, #6E6E6E 60%, #333);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, .6);
+}
+/* Die Schnur als zwei Diagonalen: vom Nagel zu den Schultern. */
+.kaSchlussSchnur {
+  position: absolute; left: 50%; top: 31px; width: 104px; height: 40px; transform: translateX(-50%);
+  background:
+    linear-gradient(to bottom right, transparent calc(50% - 1px), rgba(205, 205, 205, .6) 50%, transparent calc(50% + 1px)) left / 50% 100% no-repeat,
+    linear-gradient(to bottom left, transparent calc(50% - 1px), rgba(205, 205, 205, .6) 50%, transparent calc(50% + 1px)) right / 50% 100% no-repeat;
+}
+.ppRoot.karriere:not(.dunkel) .kaSchlussSchnur { filter: brightness(.45); }
+.kaSchlussTrikot {
+  position: absolute; left: 50%; top: 64px; width: 196px; margin-left: -98px;
+  transform-origin: 50% -38px; transform: rotate(-1.5deg);
+  filter: grayscale(.82) sepia(.18) brightness(.92) contrast(1.05);
+  animation: kaAusschwingen 2.8s cubic-bezier(.3, .7, .4, 1) both;
+}
+.kaSchlussTrikot .kaTrikot { display: block; max-width: none; filter: drop-shadow(0 18px 16px rgba(0, 0, 0, .55)); }
+@keyframes kaAusschwingen {
+  0% { transform: rotate(7deg); } 30% { transform: rotate(-4.5deg); }
+  58% { transform: rotate(2deg); } 80% { transform: rotate(-2deg); } 100% { transform: rotate(-1.5deg); }
+}
+@media (prefers-reduced-motion: reduce) { .kaSchlussTrikot { animation: none; } }
+.kaSchluss h2 {
+  font-family: 'Barlow Condensed', sans-serif; font-size: 30px; font-weight: 700;
+  letter-spacing: .05em; text-transform: uppercase; margin: 0 0 4px; color: var(--kaText);
+}
+.kaSchluss .kaEndeKnoepfe { width: 100%; max-width: 440px; }
+
+/* Drei Angebote nebeneinander, sobald die Laufbahn daneben steht: Als 2 + 1 kostete
+   die Angebotskarte eine ganze Kachelreihe (gemessen 977 Pixel Aktionsspalte bei
+   1024 × 768). Darunter bleibt es bei zwei Reihen mit mittiger dritter Kachel. */
+@media (min-width: 1000px) {
+  .ppRoot.karriere .kaVereine { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+  .ppRoot.karriere .kaVereine > .kaVerein:nth-child(3):last-child { grid-column: auto; width: auto; justify-self: stretch; }
+  .ppRoot.karriere .kaVereine > .kaVerein:only-child { grid-column: 2; }
+  .ppRoot.karriere .kaVerein:not(.breit) { gap: 7px; padding: 12px 8px 11px; }
+  .ppRoot.karriere .kaVerein:not(.breit) .kaVereinName { font-size: 18px; }
+  .ppRoot.karriere .kaVerein:not(.breit) .kaVereinWappen .emblem { width: 58px; height: 58px; }
+  .ppRoot.karriere .kaVerein:not(.breit) .kaVereinAnlass { font-size: 11px; letter-spacing: .14em; }
+  .ppRoot.karriere .kaVerein.breit { padding-block: 10px; }
+  .ppRoot.karriere .kaEntscheidung h3 { margin-top: 2px; }
+}
+/* „Bleiben" als flache Querkachel: Wappen links, Text rechts. Die Karriere-Kachel
+   (flex, Spalte) hatte die alte Querform von .kaVerein.breit überschrieben — die
+   Kachel stand so hoch wie drei Angebote. */
+.ppRoot.karriere .kaVerein.breit {
+  display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 14px; row-gap: 2px;
+  grid-template-areas: "wappen anlass" "wappen name" "wappen liga" "wappen aussicht";
+  text-align: left; padding: 11px 16px;
+}
+.ppRoot.karriere .kaVerein.breit .kaVereinWappen .emblem { width: 50px; height: 50px; }
+.ppRoot.karriere .kaVerein.breit .kaVereinName { text-align: left; font-size: 20px; }
+.ppRoot.karriere .kaVerein.breit .kaVereinLiga { text-align: left; }
+.ppRoot.karriere .kaVerein.breit .kaVereinAnlass { justify-self: start; }
+/* Auf dem Handy jede Vereinskachel quer — untereinander stand jede rund 230 Pixel
+   hoch, eine Angebotskarte mit Bleiben war fast 900 Pixel lang. */
+@media (max-width: 560px) {
+  .ppRoot.karriere .kaVerein:not(.breit) {
+    display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 14px; row-gap: 2px;
+    grid-template-areas: "wappen anlass" "wappen name" "wappen liga" "wappen aussicht";
+    text-align: left; padding: 11px 14px;
+  }
+  .ppRoot.karriere .kaVerein .kaVereinWappen { grid-area: wappen; }
+  .ppRoot.karriere .kaVerein .kaVereinAnlass { grid-area: anlass; justify-self: start; }
+  .ppRoot.karriere .kaVerein .kaVereinName { grid-area: name; text-align: left; font-size: 19px; }
+  .ppRoot.karriere .kaVerein .kaVereinLiga { grid-area: liga; text-align: left; }
+  .ppRoot.karriere .kaVerein .kaVereinAussicht { grid-area: aussicht; justify-self: start; margin-top: 4px; }
+  .ppRoot.karriere .kaVerein .kaVereinWappen .emblem { width: 48px; height: 48px; }
+  .ppRoot.karriere .kaVereine { gap: 8px; }
+}
+/* Zwei Knöpfe mit langen Wörtern („Zusammenfassung", „Neue Laufbahn") ragten auf
+   375 Pixeln 32 Pixel über den Rand. Bei Platzmangel brechen sie jetzt um. */
+.kaEndeKnoepfe { flex-wrap: wrap; }
+.kaEndeKnoepfe .btn { flex: 1 1 140px; min-width: 0; }
