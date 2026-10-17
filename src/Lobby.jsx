@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase, getClientId, getSavedName, saveName } from "./supabaseClient.js";
 import { buildBoardSerial, buildGridSerial, buildGuessSerial, genCode, START_SECONDS } from "./gameData.js";
 import { initCarousel } from "./carousel.js";
+import { neuesBrett } from "./vier.js";
 import { gastPlatzBeanspruchen } from "./duelJoinClient.js";
 import { loadPlayers } from "./playersStore.js";
 import { dailyDateStr, dailyNumber } from "./dailyLogic.js";
@@ -16,7 +17,7 @@ import { gesammelt } from "./collection.js";
 
 export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
   const [name, setName] = useState(getSavedName());
-  const [mode, setMode] = useState("hex"); // "hex" | "grid" | "guess"
+  const [mode, setMode] = useState("hex"); // "hex" | "grid" | "guess" | "carousel" | "vier"
   const [joinCode, setJoinCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -57,6 +58,12 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
         // Der ganze Spielstand steckt in last_move.car; die Frist startet erst beim Beitritt.
         board = { kind: "carousel" };
         last_move = { car: initCarousel(0), frist: 0, ende: null };
+      }
+      else if (mode === "vier") {
+        /* Der Stand liegt in board.stand, nicht in last_move — siehe vier.js. Die erste
+           Runde startet erst, wenn der Gegner da ist (vier_starten). */
+        board = neuesBrett(await loadPlayers());
+        last_move = {};
       }
       else { board = buildBoardSerial(); last_move = null; }
       const { error } = await supabase.from("games").insert({
@@ -275,4 +282,5 @@ const DUELL_MODI = [
   { key: "grid",  name: "Raster-Duell" },
   { key: "guess", name: "Errate den Star" },
   { key: "carousel", name: "Transferkarussell" },
+  { key: "vier",  name: "Vier Wappen" },
 ];

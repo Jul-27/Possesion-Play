@@ -52,11 +52,12 @@ export function beitrittsFelder(row, clientId, name, jetzt = Date.now()) {
   return felder;
 }
 
-/* Die vier Duell-Modi unter dem Namen, den auch die Lobby zeigt. `board.kind` fehlt
+/* Die fünf Duell-Modi unter dem Namen, den auch die Lobby zeigt. `board.kind` fehlt
    bei den ältesten Partien (dort war board noch ein reines Feld-Array) — die waren
    immer Hex. */
 export const DUELL_NAME = {
   hex: "Hex-Duell", grid: "Raster-Duell", guess: "Errate den Star", carousel: "Transferkarussell",
+  vier: "Vier Wappen",
 };
 export const duellName = (board) =>
   DUELL_NAME[board && !Array.isArray(board) ? board.kind : "hex"] || DUELL_NAME.hex;

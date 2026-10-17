@@ -43,6 +43,7 @@ export const REPORT_MODES = {
   "grid-duell":   { name: "Raster-Duell",           art: "duell" },
   "guess-duell":  { name: "Errate den Star",        art: "duell" },
   "carousel-duell": { name: "Transferkarussell-Duell", art: "duell" },
+  "vier-duell":   { name: "Vier Wappen",            art: "duell" },
 };
 
 export const modeName = (mode) => REPORT_MODES[mode]?.name || mode || "unbekannt";

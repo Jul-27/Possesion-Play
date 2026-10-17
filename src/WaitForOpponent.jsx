@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { einladungsLink } from "./duelJoin.js";
 
-/* „Warte auf Mitspieler" — eine Ansicht für alle vier Duell-Modi.
+/* „Warte auf Mitspieler" — eine Ansicht für alle Duell-Modi.
 
    Sie stand dreimal wortgleich in Game, Grid und Guess; das Karussell hatte eine
    eigene, die nur den Code kopierte, nicht den Link. Genau dort fiel es auf: Wer

@@ -2171,3 +2171,86 @@ body::after {
 .kaTagPunkte { font-family: 'Barlow Condensed', sans-serif; font-size: 40px; line-height: 1; color: var(--kaAkzent, #0B6B3A); }
 .kaTagPunkte small { font-size: 16px; color: var(--kaLeise); font-weight: 600; }
 .kaTagTeile { font-size: 12.5px; color: var(--kaText); }
+
+/* ── Vier Wappen (Duell) ─────────────────────────────────────────────────────
+   Violett als Modusfarbe, damit es sich vom Karussell (Rosa) und vom Raster
+   abhebt. Die vier Wappen sind das Brett — groß, im Quadrat, mit Namen, damit
+   auch ein unbekanntes Wappen sofort lesbar ist. */
+.vwStand { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; margin: 14px 0 10px; }
+.vwSeite {
+  display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0;
+  padding: 8px 10px; border-radius: 14px; border: 1px solid var(--line); background: var(--glass);
+  transition: border-color .2s, background .2s;
+}
+.vwSeite.fertig { border-color: #A78BFA; background: rgba(167, 139, 250, .12); }
+.vwWer { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vwPunkte { font-family: 'Barlow Condensed', sans-serif; font-size: 34px; line-height: 1; font-weight: 700; }
+.vwStatus { font-size: 11px; color: var(--muted); }
+.vwSeite.fertig .vwStatus { color: #C4B5FD; }
+.vwMitte { display: flex; justify-content: center; }
+
+.vwVorlauf { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 34px 16px; text-align: center; }
+.vwVorlaufTitel { font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #C4B5FD; }
+.vwCountdown { font-family: 'Barlow Condensed', sans-serif; font-size: 88px; line-height: 1; font-weight: 700; animation: vwPop .45s both; }
+/* Eigener Sprung: „pop" verschiebt um -50 % (für die Hex-Felder gebaut) und zog die
+   Zahl über den Rundentitel. */
+@keyframes vwPop { 0% { transform: scale(.55); opacity: .3; } 55% { transform: scale(1.12); opacity: 1; } 100% { transform: scale(1); } }
+.vwVorlaufHint { font-size: 13px; color: var(--muted); }
+
+.vwRaster { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; animation: boardIn .35s both; }
+.vwKachel {
+  display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 8px 12px;
+  border-radius: var(--radius); border: 1px solid var(--line); background: var(--glass);
+  transition: opacity .25s, border-color .25s, background .25s, filter .25s;
+}
+.vwWappen { display: grid; place-items: center; width: 64px; height: 64px; }
+.vwWappen .emblem { width: 64px; height: 64px; }
+.vwName { font-size: 13.5px; font-weight: 700; text-align: center; line-height: 1.25; }
+.vwKachel.an { border-color: var(--win); background: rgba(52, 211, 153, .10); }
+.vwKachel.aus { opacity: .45; filter: grayscale(.8); }
+
+.vwZeit { height: 8px; border-radius: 999px; background: var(--bg-3); overflow: hidden; }
+.vwZeit span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #A78BFA, var(--teal)); transition: width .2s linear; }
+.vwZeit span.knapp { background: var(--rose); }
+.vwZeitZahl { display: flex; justify-content: center; margin: 10px 0 12px; }
+.vwZeitZahl .timer { font-size: 16px; padding: 4px 12px; min-width: 0; }
+.vwGewaehlt { text-align: center; color: var(--muted); font-size: 14px; margin: 6px 0 2px; }
+.vwGewaehlt b { color: #fff; }
+
+.vwAufloesung { animation: dropIn .35s both; }
+.vwKarten { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.vwKarte {
+  display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0;
+  padding: 12px 8px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg-2); text-align: center;
+}
+.vwKarte.mein { border-color: rgba(167, 139, 250, .5); }
+.vwKarteWer { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.vwKarteSpieler { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.vwKarteSpieler b { font-size: 14px; line-height: 1.25; }
+.vwKeine { margin: 10px 0; color: var(--muted); font-size: 13px; }
+.vwPlus { font-family: 'Barlow Condensed', sans-serif; font-size: 30px; line-height: 1; color: var(--win); animation: vwPop .45s both; }
+.vwPlus.null { color: var(--muted); }
+.vwMini { display: flex; gap: 4px; justify-content: center; }
+.vwMiniWappen { display: grid; place-items: center; width: 22px; height: 22px; }
+.vwMiniWappen .emblem { width: 22px; height: 22px; }
+.vwMiniWappen.aus { opacity: .3; filter: grayscale(1); }
+.vwKarte .meldeLink { margin-top: 0; font-size: 11.5px; }
+.vwMoeglich { text-align: center; margin: 12px 0 0; }
+.vwWeiter { text-align: center; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); margin: 10px 0 0; }
+
+.vwUebersicht { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; text-align: left; }
+.vwZeile {
+  display: grid; grid-template-columns: 22px auto 1fr 1fr; align-items: center; gap: 8px;
+  padding: 7px 10px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line-soft); font-size: 12.5px;
+}
+.vwZeileNr { font-family: 'DM Mono', monospace; color: var(--muted); }
+.vwZeileWappen { display: flex; gap: 3px; }
+.vwZeileWappen .vwMiniWappen, .vwZeileWappen .vwMiniWappen .emblem { width: 18px; height: 18px; }
+.vwZeileWahl { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vwZeileWahl b { color: var(--win); font-family: 'DM Mono', monospace; }
+.vwZeileWahl b.null { color: var(--muted); }
+.vwZeileWahl.rechts { text-align: right; }
+@media (max-width: 420px) {
+  .vwZeile { grid-template-columns: 18px 1fr 1fr; }
+  .vwZeileWappen { grid-column: 2 / -1; }
+}

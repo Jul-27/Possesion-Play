@@ -52,9 +52,11 @@ export function CarChain({ moves, players, idx, me = 0, leer }) {
 
 /* Eingabe mit Vorschlägen. Vereine werden getippt, nicht aus einer Liste geklickt —
    bei 47 Vereinen wäre eine vollständige Liste ein Spickzettel. */
-export function CarInput({ kind, idx, value, onChange, onSubmit, vorschlaege, sugOpen, setSugOpen, sugActive, setSugActive }) {
+/* onPick bekommt den gewählten Vorschlag selbst — bei Namensgleichen (zwei
+   „Danilo") ist der Name allein nicht eindeutig, das Spielerobjekt schon. */
+export function CarInput({ kind, idx, value, onChange, onPick, onSubmit, vorschlaege, sugOpen, setSugOpen, sugActive, setSugActive, disabled = false }) {
   const ref = useRef(null);
-  const waehle = (v) => { onChange(kind === "club" ? v : v.n); setSugOpen(false); setSugActive(-1); ref.current?.focus(); };
+  const waehle = (v) => { onChange(kind === "club" ? v : v.n); onPick?.(v); setSugOpen(false); setSugActive(-1); ref.current?.focus(); };
   function onKey(e) {
     if (sugOpen && vorschlaege.length) {
       if (e.key === "ArrowDown") { e.preventDefault(); setSugActive(Math.min(sugActive + 1, vorschlaege.length - 1)); return; }
@@ -67,7 +69,7 @@ export function CarInput({ kind, idx, value, onChange, onSubmit, vorschlaege, su
   return (
     <div className="inrow">
       <div className="inwrap">
-        <input ref={ref} className="field" autoComplete="off" value={value}
+        <input ref={ref} className="field" autoComplete="off" value={value} disabled={disabled}
           placeholder={kind === "club" ? "Verein tippen…" : "Spielernamen tippen…"}
           onChange={(e) => { onChange(e.target.value); setSugOpen(true); setSugActive(-1); }}
           onKeyDown={onKey} onBlur={() => setTimeout(() => setSugOpen(false), 120)} onFocus={() => setSugOpen(true)} />
@@ -85,7 +87,7 @@ export function CarInput({ kind, idx, value, onChange, onSubmit, vorschlaege, su
           </div>
         )}
       </div>
-      <button className="btn primary" disabled={!value.trim()} onClick={onSubmit}>Nennen</button>
+      <button className="btn primary" disabled={disabled || !value.trim()} onClick={onSubmit}>Nennen</button>
     </div>
   );
 }
