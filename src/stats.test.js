@@ -14,9 +14,17 @@ const { collectStats, totals, hasAnyStats } = await import("./stats.js");
 test("Ohne Spielstand: alles leer, nichts wirft", () => {
   localStorage.clear();
   const e = collectStats();
-  assert.equal(e.length, 9, "alle neun Solo-Modi erscheinen, auch ungespielt — auch Heatmap, Karussell und Karriere");
+  assert.equal(e.length, 10, "alle zehn Solo-Modi erscheinen, auch ungespielt — auch Heatmap, Karussell, Karriere und Vier Wappen");
   assert.equal(hasAnyStats(e), false);
   assert.deepEqual(totals(e), { played: 0, modes: 0, bestStreak: 0 });
+});
+
+test("Vier Wappen: Bestwert und Wappen gesamt", () => {
+  localStorage.clear();
+  localStorage.setItem("pp:vierStats", JSON.stringify({ played: 3, best: 14, total: 31 }));
+  const v = collectStats().find((x) => x.key === "vier");
+  assert.equal(v.played, 3);
+  assert.deepEqual(v.lines, [{ label: "Bestwert", value: "14 von 20" }, { label: "Wappen gesamt", value: 31 }]);
 });
 
 test("Kaputter Speicherstand wirft nicht", () => {

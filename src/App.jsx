@@ -11,6 +11,7 @@ import Chain from "./Chain.jsx";
 import Carousel from "./Carousel.jsx";
 import CarouselDuel from "./CarouselDuel.jsx";
 import VierWappen from "./VierWappen.jsx";
+import VierTag from "./VierTag.jsx";
 import Heatmap from "./Heatmap.jsx";
 import SechsEcken from "./SechsEcken.jsx";
 import Traumelf from "./Traumelf.jsx";
@@ -197,6 +198,7 @@ export default function App() {
   if (solo === "ecken") return <SechsEcken onLeave={leave} />;
   if (solo === "traumelf") return <Traumelf onLeave={leave} />;
   if (solo === "karriere") return <Karriere onLeave={leave} />;
+  if (solo === "vier") return <VierTag onLeave={leave} />;
   if (solo === "sammlung") return <Collection onLeave={leave} />;
   return code
     ? <GameRouter code={code} clientId={clientId} onLeave={leave} />

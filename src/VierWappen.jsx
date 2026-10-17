@@ -311,8 +311,8 @@ export default function VierWappen({ code, clientId, onLeave }) {
   );
 }
 
-/** Die vier Wappen im Quadrat, mit Namen. */
-function WappenRaster({ vereine, abgehakt = null }) {
+/** Die vier Wappen im Quadrat, mit Namen. Auch im Solo (VierTag.jsx). */
+export function WappenRaster({ vereine, abgehakt = null }) {
   return (
     <div className="vwRaster">
       {vereine.map((k) => {
@@ -329,7 +329,7 @@ function WappenRaster({ vereine, abgehakt = null }) {
 }
 
 /** Kleine Wappenzeile einer Wahl: Treffer farbig, der Rest grau. */
-function MiniWappen({ vereine, hits }) {
+export function MiniWappen({ vereine, hits }) {
   return (
     <span className="vwMini">
       {vereine.map((k) => {
@@ -353,7 +353,7 @@ function WahlKarte({ wahl, name, vereine, nachKey, code, mein }) {
           <b className={`vwPlus ${hits.length ? "" : "null"}`}>+{hits.length}</b>
           {/* Ein grauer Verein, bei dem er doch war? Dann ist es ein Datenfehler. Nur auf
               der eigenen Karte — sechs Meldelinks auf einmal wären mehr Liste als Spiel. */}
-          {mein && vereine.filter((k) => !hits.includes(k)).map((k) => (
+          {mein && hits.length > 0 && vereine.filter((k) => !hits.includes(k)).map((k) => (
             <MeldeLink key={k} mode="vier-duell" gameCode={code} player={p} def={lookupDef("club", k)}
               text={`War doch bei ${lookupDef("club", k)?.name || k}?`} />
           ))}
