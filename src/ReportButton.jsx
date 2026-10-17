@@ -45,14 +45,14 @@ export default function ReportButton({ mode, gameCode = null }) {
    Spieler, Art und Ziel aus dem abgelehnten Feld. Mitgeschickt wird das Feld, damit
    sich der Zug später nachvollziehen lässt. Für Liga- und Sonderfelder gibt es
    nichts zu melden (vorbelegungAus → null), dann erscheint kein Link. */
-export function MeldeLink({ mode, gameCode = null, player, def }) {
+export function MeldeLink({ mode, gameCode = null, player, def, text = "Stimmt doch? Melden" }) {
   const [offen, setOffen] = useState(false);
   const v = vorbelegungAus(def);
   if (!v || !player) return null;
   return (
     <>
       <button type="button" className="meldeLink" onClick={() => setOffen(true)}>
-        <Icon name="flag" size={13} /> Stimmt doch? Melden
+        <Icon name="flag" size={13} /> {text}
       </button>
       {offen && createPortal(
         <ReportModal mode={mode} gameCode={gameCode} onClose={() => setOffen(false)}

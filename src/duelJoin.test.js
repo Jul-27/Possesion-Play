@@ -66,12 +66,23 @@ test("beitrittsFelder kommt auch mit einem lückenhaften Spiel zurecht", () => {
 
 /* Der Eingeladene soll sehen, wozu er eingeladen wird. `board.kind` fehlt bei den
    ältesten Partien — dort war board noch ein reines Feld-Array. */
-test("duellName kennt alle vier Modi und die alte Brettform", () => {
+test("duellName kennt alle fünf Modi und die alte Brettform", () => {
   assert.equal(duellName({ kind: "hex" }), "Hex-Duell");
   assert.equal(duellName({ kind: "grid" }), "Raster-Duell");
   assert.equal(duellName({ kind: "guess" }), "Errate den Star");
   assert.equal(duellName({ kind: "carousel" }), "Transferkarussell");
+  assert.equal(duellName({ kind: "vier" }), "Vier Wappen");
   assert.equal(duellName([{ type: "club" }]), "Hex-Duell", "altes Array-Brett");
   assert.equal(duellName(null), "Hex-Duell");
   assert.equal(duellName({ kind: "gibtsnicht" }), "Hex-Duell", "kein Absturz bei Unbekanntem");
+});
+
+/* Vier Wappen startet die Runde über die Datenbank (vier_starten, Server-Uhr) — der
+   Beitritt fasst den Spielstand in board deshalb nicht an und setzt keine Frist. */
+test("beitrittsFelder: Vier Wappen bekommt keine Karussell-Frist", () => {
+  const row = { board: { kind: "vier", runden: [], stand: { runde: 0, start: null } }, last_move: {}, names: { 1: "A" } };
+  const f = beitrittsFelder(row, "gast", "B", 1000);
+  assert.equal(f.status, "playing");
+  assert.equal(f.last_move, undefined);
+  assert.equal(f.board, undefined);
 });

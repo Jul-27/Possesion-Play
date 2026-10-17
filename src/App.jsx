@@ -10,6 +10,7 @@ import OddOne from "./OddOne.jsx";
 import Chain from "./Chain.jsx";
 import Carousel from "./Carousel.jsx";
 import CarouselDuel from "./CarouselDuel.jsx";
+import VierWappen from "./VierWappen.jsx";
 import Heatmap from "./Heatmap.jsx";
 import SechsEcken from "./SechsEcken.jsx";
 import Traumelf from "./Traumelf.jsx";
@@ -139,6 +140,7 @@ function GameRouter({ code, clientId, onLeave }) {
   if (kind === "grid") return <Grid code={code} clientId={clientId} onLeave={onLeave} />;
   if (kind === "guess") return <Guess code={code} clientId={clientId} onLeave={onLeave} />;
   if (kind === "carousel") return <CarouselDuel code={code} clientId={clientId} onLeave={onLeave} />;
+  if (kind === "vier") return <VierWappen code={code} clientId={clientId} onLeave={onLeave} />;
   return <Game code={code} clientId={clientId} onLeave={onLeave} />;
 }
 
