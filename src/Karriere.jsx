@@ -68,7 +68,9 @@ function Verlaufskurve({ verlauf, defVon }) {
   if (verlauf.length < 2) return null;
   /* Links Platz für die Skala: Ohne sie war die Kurve eine hübsche Linie, an der
      sich nicht ablesen liess, WIE STARK der Spieler an einer Stelle war. */
-  const B = 600, H = 132, RAND = { o: 14, u: 22, l: 30, r: 10 };
+  /* 106 statt 132 hoch: Die Kurve soll den Verlauf zeigen, nicht die halbe
+     Spalte füllen — mit ihr passt die ganze Laufbahn auf einen Bildschirm. */
+  const B = 600, H = 106, RAND = { o: 14, u: 22, l: 30, r: 10 };
   const werte = verlauf.map((z) => z.ovr);
   /* Die Skala läuft auf runde Zehner, damit die Linien beschriftbar sind. */
   const min = Math.max(0, Math.floor((Math.min(...werte) - 4) / 10) * 10);
@@ -306,6 +308,32 @@ function Trikot({ name, nummer, land }) {
   );
 }
 
+/* ── Das Schlussbild ──────────────────────────────────────────────────────────
+   Der Rücktritt sprang sofort in die Zusammenfassung — Zahlen, Karten, Urkunde,
+   alles auf einmal. Dazwischen fehlte der Moment, in dem eine Laufbahn einfach
+   vorbei ist. Jetzt hängt erst das eigene Trikot an der Wand, verblasst, mit Name
+   und Nummer; darunter die Bilanz in einer Zeile. Die Zusammenfassung kommt auf
+   Klick. (Die Idee stammt aus Copero, das Bild ist unser eigenes: das Trikot vom
+   Startbildschirm, das man selbst beschriftet hat.) */
+function Schlussbild({ k, grund, bilanz, onZusammenfassung, onNeu }) {
+  return (
+    <div className="kaSchluss">
+      <div className="kaSchlussWand" aria-hidden="true">
+        <span className="kaSchlussNagel" />
+        <span className="kaSchlussSchnur" />
+        <div className="kaSchlussTrikot"><Trikot name={k.name} nummer={k.nummer} land={k.land} /></div>
+      </div>
+      <h2>Laufbahn beendet</h2>
+      {grund && <p className="kaGrund">{grund}</p>}
+      <p className="kaBilanz">{bilanz}</p>
+      <div className="kaEndeKnoepfe">
+        <button className="btn primary" onClick={onZusammenfassung}>Zusammenfassung</button>
+        <button className="btn" onClick={onNeu}>Neue Laufbahn</button>
+      </div>
+    </div>
+  );
+}
+
 /* ── Die Titelfeier ───────────────────────────────────────────────────────────
    Ein gewonnener Titel stand als Zeile Text zwischen zwei Karten — man hat ihn
    überlesen. Jetzt bekommt er einen eigenen Moment: Die Trophäe fährt heran, ein
@@ -467,7 +495,7 @@ function Spielfeld({ pos, setPos }) {
         const [x, y] = FELD_PLATZ[p.key] || [50, 50];
         return (
           <button key={p.key} type="button" title={p.name}
-            className={"kaFeldPos" + (pos === p.key ? " an" : "")}
+            className={"kaFeldPos" + (pos === p.key ? " an" : "")} data-gruppe={p.gruppe}
             style={{ left: `${x}%`, top: `${y}%` }}
             onClick={() => setPos(p.key)}>{p.key}</button>
         );
@@ -678,6 +706,8 @@ export default function Karriere({ onLeave }) {
   const [meldung, setMeldung] = useState([]); // was im letzten Schritt geschah
   const [saison, setSaison] = useState(null);  // die Bilanz des letzten Schritts
   const [feier, setFeier] = useState(null);   // Titel, die gerade gefeiert werden
+  /* Nach dem Rücktritt erst das Schlussbild, dann auf Wunsch die Zusammenfassung. */
+  const [zusammenfassung, setZusammenfassung] = useState(false);
   /* Gesperrt, solange die Saison noch einläuft: Zeilen, Bilanz und Ratingkachel
      brauchen ihre Zeit, und wer vorher klickt, sieht nichts davon. */
   const [sperre, setSperre] = useState(false);
@@ -966,6 +996,7 @@ export default function Karriere({ onLeave }) {
       }, fertig.tagesDatum).then((ok) => setGemeldet(!!ok)).catch(() => setGemeldet(false));
     }
     setK(fertig);
+    setZusammenfassung(false);
     setKarte({ art: "ende", auszeichnungen: K.erreichteAuszeichnungen(fertig), grund });
     play("end");
   }
@@ -1199,8 +1230,10 @@ export default function Karriere({ onLeave }) {
         {eintraege.length
           ? eintraege.map((t) => (
               <span key={t} className="kaTitel" title={TITEL_NAME[t]}>
-                <Trophaee titel={t} groesse={34} titelText={TITEL_NAME[t]} />
-                <small>{TITEL_NAME[t]}{k.titel[t] > 1 ? ` ×${k.titel[t]}` : ""}</small>
+                <Trophaee titel={t} groesse={26} titelText={TITEL_NAME[t]} />
+                {/* Der Name steht im Tooltip und auf der Urkunde — unter jedem Pokal
+                    machte er die Kopfzeile dreimal so hoch. Die Anzahl bleibt sichtbar. */}
+                {k.titel[t] > 1 && <i className="kaTitelZahl">×{k.titel[t]}</i>}
               </span>
             ))
           : <span className="kaLeer">Vitrine leer</span>}
@@ -1227,8 +1260,15 @@ export default function Karriere({ onLeave }) {
       {k.verein && <span className="kaWappen"><Emblem def={defVon(k.verein)} /></span>}
       <div className="kaWer">
         <b>#{k.nummer} {k.name}</b>
+        {/* KLEINE PILLEN STATT EINER TEXTZEILE. „Mittelstürmer · Deutschland ·
+            Würzburger Kickers" brach auf zwei Zeilen um und kostete Höhe; die
+            Position ist farbig nach Mannschaftsteil wie auf dem Startbildschirm. */}
+        <span className="kaPillen">
+          <span className="kaPosPille" data-gruppe={K.posDaten(k.pos).gruppe} title={K.posDaten(k.pos).name}>{k.pos}</span>
+          <span className="kaPille">{landFlagge(k.land)} {landName(k.land)}</span>
+          {!k.verein && <span className="kaPille">vereinslos</span>}
+        </span>
         <small>
-          {K.posDaten(k.pos).name} · {landName(k.land)} · {k.verein ? k.verein.name : "vereinslos"}
           {k.national?.spiele
             ? <em className="kaNational">
                 {landFlagge(k.land)} {k.national.spiele} {k.national.spiele === 1 ? "Länderspiel" : "Länderspiele"}
@@ -1253,6 +1293,17 @@ export default function Karriere({ onLeave }) {
     </div>
   );
 
+  const bilanz = k.beendet ? (
+    <>
+      {k.verlauf.length ? `${k.verlauf[0].alter} bis ${k.alter}` : k.alter} ·{" "}
+      {k.gesamt.spiele} Spiele ·{" "}
+      {torwart
+        ? <>{k.gesamt.gegentore ?? 0} Gegentore · {k.gesamt.westen ?? 0} weiße Westen · </>
+        : <>{k.gesamt.tore} Tore · {k.gesamt.vorlagen} Vorlagen · </>}
+      {k.vereine.length} Verein{k.vereine.length === 1 ? "" : "e"}
+    </>
+  ) : null;
+
   /* DIE ZEITLEISTE STAND UNTER DEM SPIEL. Auf 600 Pixel Breite hing die ganze
      Laufbahn unterhalb der Entscheidung — wer sie ansehen wollte, scrollte an der
      Karte vorbei und wieder zurück. Bei genug Platz steht sie jetzt daneben und
@@ -1265,7 +1316,7 @@ export default function Karriere({ onLeave }) {
       {/* AM ENDE DIE VOLLE BREITE. Die Zusammenfassung ist 1240 Pixel breit gedacht;
           in der schmalen Aktionsspalte schrumpfte sie auf ein Drittel, und die
           Vereinskarten wurden unleserlich. Die Laufbahn rutscht dafür darunter. */}
-      <div className={"kaBuehne" + (karte?.art === "ende" ? " einspaltig" : "")}>
+      <div className={"kaBuehne" + (karte?.art === "ende" && zusammenfassung ? " einspaltig" : "")}>
       <div className="panel kaAktion">
         {kopfzeile}
 
@@ -1426,7 +1477,13 @@ export default function Karriere({ onLeave }) {
           </div>
         )}
 
-        {karte?.art === "ende" && (
+        {karte?.art === "ende" && !zusammenfassung && (
+          <Schlussbild k={k} grund={karte.grund} bilanz={bilanz}
+            onZusammenfassung={() => setZusammenfassung(true)}
+            onNeu={() => { setK(null); setKarte(null); setMeldung([]); setSaison(null); }} />
+        )}
+
+        {karte?.art === "ende" && zusammenfassung && (
           <div className="kaEnde">
             <Confetti farben={["#F5B301", "#4ADE80", "#E8F3ED", "#D98A02", "#7DF3C0"]} />
             <h2>Laufbahn beendet</h2>
@@ -1435,14 +1492,7 @@ export default function Karriere({ onLeave }) {
               <TagesErgebnis nummer={dailyNumber(k.tagesDatum)} wertung={tagesWertung}
                 gemeldet={gemeldet} mitGruppe={!!getGroup()} />
             )}
-            <p className="kaBilanz">
-              {k.verlauf.length ? `${k.verlauf[0].alter} bis ${k.alter}` : k.alter} ·{" "}
-              {k.gesamt.spiele} Spiele ·{" "}
-              {torwart
-                ? <>{k.gesamt.gegentore ?? 0} Gegentore · {k.gesamt.westen ?? 0} weiße Westen · </>
-                : <>{k.gesamt.tore} Tore · {k.gesamt.vorlagen} Vorlagen · </>}
-              {k.vereine.length} Verein{k.vereine.length === 1 ? "" : "e"}
-            </p>
+            <p className="kaBilanz">{bilanz}</p>
             {/* ERST JETZT WIRD DAS TALENT GENANNT. Es wird beim Anlegen verdeckt
                 gezogen und entscheidet, wie weit eine Laufbahn tragen kann — währenddessen
                 wäre es eine Vorhersage und keine Laufbahn mehr. Am Ende erklärt es,
@@ -1506,8 +1556,9 @@ export default function Karriere({ onLeave }) {
       </div>
 
       <aside className="panel kaLaufbahn">
-        <h3>Laufbahn</h3>
-        {vitrine}
+        {/* Überschrift und Vitrine teilen sich eine Zeile — vorher stand „Vitrine
+            leer" auf einer eigenen, und die Tabelle rutschte unter den Rand. */}
+        <div className="kaLaufbahnKopf"><h3>Laufbahn</h3>{vitrine}</div>
         {/* Die Tabelle steht von der ersten Sekunde an da, auch leer: Sie zeigt,
             wie viel Laufbahn noch vor einem liegt. */}
         {zeitleiste}
