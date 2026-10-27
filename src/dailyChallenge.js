@@ -12,7 +12,7 @@ import { dailyDateStr, dailyNumber, updateStreak } from "./dailyLogic.js";
 
 /* „karriere" ist die Karriere des Tages (Karriere.jsx) — nicht zu verwechseln mit
    „career", dem Karriere-Pfad. */
-export const CHALLENGE_MODES = ["career", "odd", "chain", "hex", "heat", "ecken", "karriere", "vier"];
+export const CHALLENGE_MODES = ["career", "odd", "chain", "hex", "heat", "ecken", "karriere", "vier", "gesucht"];
 
 function hashStr(s) {
   let h = 1779033703 ^ s.length;

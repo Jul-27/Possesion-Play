@@ -276,6 +276,7 @@ const SOLO_MODI = [
   { key: "karriere", name: "Karriere",          icon: "trophy", ton: "#34D399", text: "Vom Talent zur Legende", daily: true },
   { key: "carousel", name: "Transferkarussell", icon: "carousel", ton: "#F472B6", text: "Gegen den Bot",         daily: false },
   { key: "vier",     name: "Vier Wappen",       icon: "vier", ton: "#C084FC", text: "Ein Spieler, vier Vereine", daily: true },
+  { key: "gesucht",  name: "Der Gesuchte",      icon: "gesucht", ton: "#FB7185", text: "24 Karten, ein Gesuchter", daily: true },
 ];
 
 const DUELL_MODI = [

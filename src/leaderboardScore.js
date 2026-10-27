@@ -14,6 +14,8 @@ export const MODES = {
   karriere: { name: "Karriere des Tages", icon: "trophy",
     label: (s, d) => `Bestwert ${d?.bestwert ?? "?"} · ${d?.titel ?? 0} Titel` },
   vier:   { name: "Vier Wappen", icon: "vier", label: (s, d) => `${d?.punkte ?? "?"} von 20` },
+  gesucht: { name: "Der Gesuchte", icon: "gesucht",
+    label: (s, d) => (d?.geloest ? `${d.hinweise} ${d.hinweise === 1 ? "Hinweis" : "Hinweise"}${d.fehler ? ` · ${d.fehler} Fehler` : ""}` : "nicht gefunden") },
 };
 
 export function scoreFor(mode, result = {}) {
@@ -31,6 +33,8 @@ export function scoreFor(mode, result = {}) {
     case "karriere": return Math.max(1, Math.min(100, Math.round(result.punkte || 0)));
     // Höchstens 20 Punkte (fünf Runden × vier Wappen) — auf 0–100 gestreckt.
     case "vier":   return Math.max(0, Math.min(100, Math.round((result.punkte || 0) * 5)));
+    // 100–1000 Punkte im Spiel, durch zehn — dieselbe Skala wie die anderen.
+    case "gesucht": return Math.max(0, Math.min(100, Math.round((result.punkte || 0) / 10)));
     default:       return 0;
   }
 }

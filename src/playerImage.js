@@ -34,6 +34,9 @@ export function imageFor(player) {
 export function commonsUrl(path, width = COMMONS_WIDTH) {
   const i = path.lastIndexOf("/");
   const file = encodeURIComponent(path.slice(i + 1));
+  /* TIFF zeigt kein Browser an; Commons liefert die Vorschau als JPEG unter eigenem
+     Namen. Aufgefallen an Puskás (Puskas_(1971).tif), der nur Initialen zeigte. */
+  if (/\.tiff?$/i.test(file)) return `${COMMONS_BASE}${path.slice(0, i)}/${file}/lossy-page1-${width}px-${file}.jpg`;
   return `${COMMONS_BASE}${path.slice(0, i)}/${file}/${width}px-${file}`;
 }
 

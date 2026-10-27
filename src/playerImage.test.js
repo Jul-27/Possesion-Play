@@ -89,3 +89,10 @@ test("Echtdaten: indizierte Spieler lösen eine gültige URL auf", async (t) => 
     assert.match(url, /^(\/players\/Q\d+\.[a-z0-9]+|https:\/\/upload\.wikimedia\.org\/wikipedia\/commons\/thumb\/.+)$/);
   }
 });
+
+test("commonsUrl: TIFF bekommt die JPEG-Vorschau (Puskás)", () => {
+  assert.equal(
+    commonsUrl("4/41/Puskas_(1971).tif", 250),
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Puskas_(1971).tif/lossy-page1-250px-Puskas_(1971).tif.jpg",
+  );
+});
