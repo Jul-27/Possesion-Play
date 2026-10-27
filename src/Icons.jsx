@@ -175,6 +175,15 @@ const FORMEN = {
     <path {...P} d="M4.4 3.8v4.1h4.1" />
   </>,
 
+  // Der Gesuchte — Lupe über einer Spielerkarte
+  gesucht: <>
+    <rect {...P} x="3.5" y="3" width="10" height="13.5" rx="1.8" />
+    <circle {...P} cx="8.5" cy="7.6" r="2" /><path {...P} d="M5.6 13.2c.6-1.6 1.6-2.4 2.9-2.4s2.3.8 2.9 2.4" />
+    <circle {...P} cx="15.5" cy="15" r="3.6" /><path {...P} d="M18.2 17.7l2.8 2.8" />
+  </>,
+  // Gestrichen
+  kreuz: <path {...P} d="M6 6l12 12M18 6L6 18" />,
+
   // Vier Wappen — vier Schilde im Quadrat
   vier: <>
     <path {...P} d="M3.5 3h7v3.6c0 2.4-1.6 3.8-3.5 4.6C5.1 10.4 3.5 9 3.5 6.6z" />

@@ -25,6 +25,7 @@ export function collectStats() {
   const carousel = read("pp:carouselStats");
   const karriere = read("pp:karriereStats");
   const vier = read("pp:vierStats");
+  const gesucht = read("pp:gesuchtStats");
 
   return [
     entry("daily", "guess", "Steckbrief", null, daily, [
@@ -77,6 +78,11 @@ export function collectStats() {
       { label: "Bestwert", value: vier?.best ? `${vier.best} von 20` : null },
       { label: "Wappen gesamt", value: vier?.total || null },
     ], challengeStats("vier")?.streak || 0),
+
+    entry("gesucht", "gesucht", "Der Gesuchte", "gesucht", gesucht, [
+      { label: "gefunden", value: gesucht?.played ? `${gesucht.gefunden} von ${gesucht.played}` : null },
+      { label: "beste Serie", value: gesucht?.bestSerie ? `${gesucht.bestSerie} Punkte` : null },
+    ], challengeStats("gesucht")?.streak || 0),
 
     entry("hex", "hex", "Hex-Training", "hex", solo, [
       { label: "Bestwert", value: solo?.bestMoves ? `${solo.bestMoves} Züge` : null },

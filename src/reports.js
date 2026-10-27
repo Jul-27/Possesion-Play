@@ -40,11 +40,13 @@ export const REPORT_MODES = {
   traumelf:       { name: "Traumelf",               art: "solo" },
   karriere:       { name: "Karriere",               art: "solo" },
   vier:           { name: "Vier Wappen",            art: "solo" },
+  gesucht:        { name: "Der Gesuchte",           art: "solo" },
   "hex-duell":    { name: "Hex-Duell",              art: "duell" },
   "grid-duell":   { name: "Raster-Duell",           art: "duell" },
   "guess-duell":  { name: "Errate den Star",        art: "duell" },
   "carousel-duell": { name: "Transferkarussell-Duell", art: "duell" },
   "vier-duell":   { name: "Vier Wappen",            art: "duell" },
+  "gesucht-duell": { name: "Der Gesuchte · Duell",  art: "duell" },
 };
 
 export const modeName = (mode) => REPORT_MODES[mode]?.name || mode || "unbekannt";

@@ -36,10 +36,10 @@ test("jeder Spielverein ist über seinen Namen auflösbar", () => {
    eingegangene Meldungen weiter unter ihrem damaligen Namen erscheinen sollen. */
 test("alle Spielmodi sind erfasst und eindeutig", () => {
   const keys = Object.keys(REPORT_MODES);
-  assert.equal(keys.length, 18);
-  assert.equal(new Set(keys).size, 18);
-  assert.equal(keys.filter((k) => isDuel(k)).length, 5, "fünf Duell-Modi");
-  assert.equal(keys.filter((k) => !isDuel(k)).length, 13, "zwölf Solo-/Tagesmodi plus den abgelösten");
+  assert.equal(keys.length, 20);
+  assert.equal(new Set(keys).size, 20);
+  assert.equal(keys.filter((k) => isDuel(k)).length, 6, "sechs Duell-Modi");
+  assert.equal(keys.filter((k) => !isDuel(k)).length, 14, "dreizehn Solo-/Tagesmodi plus den abgelösten");
   for (const k of keys) assert.ok(REPORT_MODES[k].name, `${k} braucht einen Namen`);
 });
 

@@ -3,6 +3,7 @@ import { supabase, getClientId, getSavedName, saveName } from "./supabaseClient.
 import { buildBoardSerial, buildGridSerial, buildGuessSerial, genCode, START_SECONDS } from "./gameData.js";
 import { initCarousel } from "./carousel.js";
 import { neuesBrett } from "./vier.js";
+import { neuesBrettDuell } from "./gesuchtDuell.js";
 import { gastPlatzBeanspruchen } from "./duelJoinClient.js";
 import { loadPlayers } from "./playersStore.js";
 import { dailyDateStr, dailyNumber } from "./dailyLogic.js";
@@ -17,7 +18,7 @@ import { gesammelt } from "./collection.js";
 
 export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
   const [name, setName] = useState(getSavedName());
-  const [mode, setMode] = useState("hex"); // "hex" | "grid" | "guess" | "carousel" | "vier"
+  const [mode, setMode] = useState("hex"); // "hex" | "grid" | "guess" | "carousel" | "vier" | "gesucht"
   const [joinCode, setJoinCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -63,6 +64,11 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
         /* Der Stand liegt in board.stand, nicht in last_move — siehe vier.js. Die erste
            Runde startet erst, wenn der Gegner da ist (vier_starten). */
         board = neuesBrett(await loadPlayers());
+        last_move = {};
+      }
+      else if (mode === "gesucht") {
+        // Sieben Bretter liegen bereit; Stand in board.stand wie bei Vier Wappen.
+        board = neuesBrettDuell(await loadPlayers());
         last_move = {};
       }
       else { board = buildBoardSerial(); last_move = null; }
@@ -208,7 +214,7 @@ export default function Lobby({ onEnter, onDaily, onSolo, onStats, onBoard }) {
       <div className="dSectionRow"><span className="dSection">Gegen Freunde</span></div>
       <button className="dWide" aria-expanded={duelOpen} onClick={() => setDuelOpen((v) => !v)} style={{ "--ton": "#2DD4BF" }}>
         <span className="dWideIcon"><Icon name="duel" /></span>
-        <span className="dWideBody"><b>Duell starten</b><small>Fünf Modi, erstellen oder mit Code beitreten</small></span>
+        <span className="dWideBody"><b>Duell starten</b><small>Sechs Modi, erstellen oder mit Code beitreten</small></span>
         <span className={`dWideChev ${duelOpen ? "open" : ""}`}><Icon name="chevron" size={18} /></span>
       </button>
 
@@ -276,6 +282,7 @@ const SOLO_MODI = [
   { key: "karriere", name: "Karriere",          icon: "trophy", ton: "#34D399", text: "Vom Talent zur Legende", daily: true },
   { key: "carousel", name: "Transferkarussell", icon: "carousel", ton: "#F472B6", text: "Gegen den Bot",         daily: false },
   { key: "vier",     name: "Vier Wappen",       icon: "vier", ton: "#C084FC", text: "Ein Spieler, vier Vereine", daily: true },
+  { key: "gesucht",  name: "Der Gesuchte",      icon: "gesucht", ton: "#FB7185", text: "24 Karten, ein Gesuchter", daily: true },
 ];
 
 const DUELL_MODI = [
@@ -284,4 +291,5 @@ const DUELL_MODI = [
   { key: "guess", name: "Errate den Star" },
   { key: "carousel", name: "Transferkarussell" },
   { key: "vier",  name: "Vier Wappen" },
+  { key: "gesucht", name: "Der Gesuchte" },
 ];

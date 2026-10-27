@@ -55,4 +55,7 @@ test("Karriere des Tages: Punkte kommen gedeckelt aus tagesPunkte, Beschriftung 
   assert.equal(scoreFor("vier", { punkte: 13 }), 65);
   assert.equal(scoreFor("vier", { punkte: 20 }), 100);
   assert.equal(scoreFor("vier", {}), 0);
+  assert.equal(scoreFor("gesucht", { punkte: 700 }), 70);
+  assert.equal(MODES.gesucht.label(70, { geloest: true, hinweise: 4, fehler: 1 }), "4 Hinweise · 1 Fehler");
+  assert.equal(MODES.gesucht.label(0, { geloest: false }), "nicht gefunden");
 });

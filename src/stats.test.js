@@ -14,7 +14,7 @@ const { collectStats, totals, hasAnyStats } = await import("./stats.js");
 test("Ohne Spielstand: alles leer, nichts wirft", () => {
   localStorage.clear();
   const e = collectStats();
-  assert.equal(e.length, 10, "alle zehn Solo-Modi erscheinen, auch ungespielt — auch Heatmap, Karussell, Karriere und Vier Wappen");
+  assert.equal(e.length, 11, "alle elf Solo-Modi erscheinen, auch ungespielt — auch Heatmap, Karussell, Karriere, Vier Wappen und Der Gesuchte");
   assert.equal(hasAnyStats(e), false);
   assert.deepEqual(totals(e), { played: 0, modes: 0, bestStreak: 0 });
 });
