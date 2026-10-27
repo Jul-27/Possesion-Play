@@ -14271,7 +14271,7 @@ export const PLAYERS = [
   {"n": "Harry Jackson", "ln": "Jackson", "by": 1918, "nat": [], "clubs": ["MCI"], "sl": 4, "pos": "ST", "cp": [["MCI",1946,1948]], "lg": ["PL"], "span": [1942,1949]},
   {"n": "Harry Johnson", "ln": "Johnson", "by": 1913, "nat": [], "clubs": ["NEW"], "sl": 3, "pos": "ABW", "cp": [["NEW",1933,1937]], "lg": ["PL"], "span": [1933,1937]},
   {"n": "Harry Johnston", "ln": "Johnston", "by": 1871, "nat": [], "clubs": ["AVL"], "sl": 1, "pos": "MF"},
-  {"n": "Harry Kane", "ln": "Kane", "by": 1993, "nat": ["ENG"], "clubs": ["FCB","TOT"], "t": ["DFB","MBL"], "sl": 96, "pos": "ST", "cp": [["TOT",2009,2023],["FCMI",2012,2012],["NOR",2012,2013],["LEI",2013,2013],["FCB",2023,0]], "lg": ["BL","PL"], "span": [2009,0]},
+  {"n": "Harry Kane", "ln": "Kane", "by": 1993, "nat": ["ENG"], "clubs": ["FCB","TOT"], "t": ["BDO","DFB","MBL"], "sl": 96, "pos": "ST", "cp": [["TOT",2009,2023],["FCMI",2012,2012],["NOR",2012,2013],["LEI",2013,2013],["FCB",2023,0]], "lg": ["BL","PL"], "span": [2009,0]},
   {"n": "Harry Kaye", "ln": "Kaye", "by": 1919, "nat": [], "clubs": ["LIV"], "sl": 6, "pos": "MF", "pp": ["AM"]},
   {"n": "Harry Kewell", "ln": "Kewell", "by": 1978, "nat": ["AUS"], "clubs": ["LIV"], "t": ["CL","FAC"], "sl": 48, "pos": "ST", "cp": [["LIV",2003,2008]], "lg": ["PL"], "span": [1996,2011]},
   {"n": "Harry King", "ln": "King", "by": 1886, "nat": [], "clubs": ["ARS"], "sl": 5, "pos": "ST", "cp": [["ARS",1914,1915]], "lg": ["PL"], "span": [1907,1921]},

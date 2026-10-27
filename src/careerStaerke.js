@@ -15,7 +15,7 @@ export const ZWEITER_ANLAUF = ["SCAU","TSVH","FLO","SKA","SKN","SVA","1FCM","SSG
 /* Fingerabdruck der Eingaben. Eine Prüfung vergleicht ihn mit dem aktuellen
    Stand; weicht er ab, ist diese Tabelle veraltet. */
 export const STAERKE_QUELLE = {
-  "players.js": "d1b1a8309e60f67e",
+  "players.js": "59e4b4e1bab2dcb5",
   "appearances.js": "98c86a15d07f5d0a",
   "careerWorld.js": "414384f9ba5386a3",
   "draft.js": "9e80ea599ee08d85",
