@@ -2416,3 +2416,10 @@ body::after {
    375 Pixeln 32 Pixel über den Rand. Bei Platzmangel brechen sie jetzt um. */
 .kaEndeKnoepfe { flex-wrap: wrap; }
 .kaEndeKnoepfe .btn { flex: 1 1 140px; min-width: 0; }
+
+/* Flaggen-Emojis: zuerst die Flaggenschrift, die main.jsx nur auf Geräten ohne
+   Flaggen (Windows) anmeldet — sonst die Emoji-Schrift des Systems. */
+.flagge {
+  font-family: "Twemoji Country Flags", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-style: normal; font-weight: 400; letter-spacing: 0;
+}

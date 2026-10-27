@@ -31,6 +31,12 @@ const TITEL_REIHE = K.TITEL_REIHE;
    Schlüssel (GER, ENG, …), alle übrigen ihren ISO-Code — beide löst laender.js auf. */
 const landName = (code) => namenVon(EIGENE[code] || code) || code;
 const landFlagge = (code) => flaggeVon(EIGENE[code] || code);
+/* FLAGGEN SIND EMOJI-ZEICHEN, und Windows hat keine Länderflaggen in seiner
+   Emoji-Schrift — dort stand „DE" statt 🇩🇪. main.jsx lädt deshalb auf solchen Geräten
+   eine reine Flaggenschrift nach (country-flag-emoji-polyfill); greifen kann sie nur,
+   wo sie in der Schriftliste steht. Darum steht jede Flagge in einem Element mit der
+   Klasse „flagge" (styles.css). */
+const Flagge = ({ land, className = "" }) => <span className={("flagge " + className).trim()}>{landFlagge(land)}</span>;
 
 /* Ein Wappen braucht einen Schlüssel und Rückfallfarben. Für die 47 Spielvereine
    stehen die Farben in gameData; die übrigen 314 bekommen ein aus dem Schlüssel
@@ -415,7 +421,7 @@ function TagesBlock({ heute, tag, onStart }) {
   const nr = dailyNumber(heute);
   /* KEIN „aus": „aus Vereinigte Staaten", „aus Niederlande" — Ländernamen mit Artikel
      müssten gebeugt werden. Dieselbe Lösung wie beim Verbandswechsel: ohne Präposition. */
-  const was = `${st.name ? st.name + " · " : ""}${K.posDaten(st.pos).name} · ${landFlagge(st.land)} ${landName(st.land)}`;
+  const was = <>{st.name ? st.name + " · " : ""}{K.posDaten(st.pos).name} · <Flagge land={st.land} /> {landName(st.land)}</>;
   if (tag.ergebnis && !tag.ergebnis.abgebrochen) {
     return (
       <div className="kaTag fertig">
@@ -1087,7 +1093,7 @@ export default function Karriere({ onLeave }) {
               {alleLaender().filter((l) => passtAufSuche(l, landSuche)).map((l) => (
                 <button key={l.key} type="button" className={"kaLand" + (land === l.key ? " an" : "")}
                   onClick={() => setLand(l.key)}>
-                  <span className="kaLandFlagge">{l.flagge}</span>
+                  <span className="flagge kaLandFlagge">{l.flagge}</span>
                   <span className="kaLandName">{l.name}</span>
                 </button>
               ))}
@@ -1180,7 +1186,7 @@ export default function Karriere({ onLeave }) {
             kein Lebensjahr und deshalb keine eigene Zeile im Raster. */}
         <tfoot>
           <tr>
-            <td><span className="kaZeilenFlagge">{landFlagge(k.land)}</span></td>
+            <td><Flagge land={k.land} className="kaZeilenFlagge" /></td>
             <td>{landName(k.land)} <small>Auswahl</small></td>
             <td />
             <td>{k.national?.spiele || 0}</td>
@@ -1265,13 +1271,13 @@ export default function Karriere({ onLeave }) {
             Position ist farbig nach Mannschaftsteil wie auf dem Startbildschirm. */}
         <span className="kaPillen">
           <span className="kaPosPille" data-gruppe={K.posDaten(k.pos).gruppe} title={K.posDaten(k.pos).name}>{k.pos}</span>
-          <span className="kaPille">{landFlagge(k.land)} {landName(k.land)}</span>
+          <span className="kaPille"><Flagge land={k.land} /> {landName(k.land)}</span>
           {!k.verein && <span className="kaPille">vereinslos</span>}
         </span>
         <small>
           {k.national?.spiele
             ? <em className="kaNational">
-                {landFlagge(k.land)} {k.national.spiele} {k.national.spiele === 1 ? "Länderspiel" : "Länderspiele"}
+                <Flagge land={k.land} /> {k.national.spiele} {k.national.spiele === 1 ? "Länderspiel" : "Länderspiele"}
                 {/* Beim Torwart blieben hier zwei Nullen stehen — „0 Tore · 0 Vorlagen"
                     ist keine Bilanz, sondern eine Positionsbeschreibung. */}
                 {torwart ? null : <>
