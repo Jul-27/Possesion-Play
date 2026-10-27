@@ -13,6 +13,7 @@ import CarouselDuel from "./CarouselDuel.jsx";
 import VierWappen from "./VierWappen.jsx";
 import VierTag from "./VierTag.jsx";
 import DerGesuchte from "./DerGesuchte.jsx";
+import GesuchtDuell from "./GesuchtDuell.jsx";
 import Heatmap from "./Heatmap.jsx";
 import SechsEcken from "./SechsEcken.jsx";
 import Traumelf from "./Traumelf.jsx";
@@ -143,6 +144,7 @@ function GameRouter({ code, clientId, onLeave }) {
   if (kind === "guess") return <Guess code={code} clientId={clientId} onLeave={onLeave} />;
   if (kind === "carousel") return <CarouselDuel code={code} clientId={clientId} onLeave={onLeave} />;
   if (kind === "vier") return <VierWappen code={code} clientId={clientId} onLeave={onLeave} />;
+  if (kind === "gesucht") return <GesuchtDuell code={code} clientId={clientId} onLeave={onLeave} />;
   return <Game code={code} clientId={clientId} onLeave={onLeave} />;
 }
 

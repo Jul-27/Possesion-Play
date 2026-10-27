@@ -66,12 +66,13 @@ test("beitrittsFelder kommt auch mit einem lückenhaften Spiel zurecht", () => {
 
 /* Der Eingeladene soll sehen, wozu er eingeladen wird. `board.kind` fehlt bei den
    ältesten Partien — dort war board noch ein reines Feld-Array. */
-test("duellName kennt alle fünf Modi und die alte Brettform", () => {
+test("duellName kennt alle sechs Modi und die alte Brettform", () => {
   assert.equal(duellName({ kind: "hex" }), "Hex-Duell");
   assert.equal(duellName({ kind: "grid" }), "Raster-Duell");
   assert.equal(duellName({ kind: "guess" }), "Errate den Star");
   assert.equal(duellName({ kind: "carousel" }), "Transferkarussell");
   assert.equal(duellName({ kind: "vier" }), "Vier Wappen");
+  assert.equal(duellName({ kind: "gesucht" }), "Der Gesuchte");
   assert.equal(duellName([{ type: "club" }]), "Hex-Duell", "altes Array-Brett");
   assert.equal(duellName(null), "Hex-Duell");
   assert.equal(duellName({ kind: "gibtsnicht" }), "Hex-Duell", "kein Absturz bei Unbekanntem");
