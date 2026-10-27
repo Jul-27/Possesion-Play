@@ -59,7 +59,9 @@ export function norm(s) {
 // Key: norm(name)|Geburtsjahr -> zusätzliche Honour-Keys (additiv).
 export const HONOUR_OVERRIDES = {
   "florian wirtz|2003": ["DFB"],  // DFB-Pokal 2024 mit Leverkusen
-  "harry kane|1993": ["DFB"],
+  /* Ballon d'Or 2026, verliehen am 26.10.2026 in London — vom Owner gemeldet am
+     27.10.2026, bestätigt durch UEFA und ESPN. Wikidata führt ihn noch nicht. */
+  "harry kane|1993": ["DFB", "BDO"],
   // Bayern-Meister 2020/21 + 2021/22; sein Bayern-Eintrag ist in Wikidata inzwischen
   // verschwunden (nur noch PSG, fälschlich offen), daher greift die Query nicht.
   "tanguy nianzou|2002": ["MBL"],
